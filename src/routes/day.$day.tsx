@@ -195,22 +195,7 @@ function DayPage() {
                     <div className="mt-0.5 text-xs text-muted-foreground">No history yet</div>
                   )}
                 </div>
-                <Collapsible>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <TrendingUp className="mr-1 h-4 w-4" /> Chart
-                      <ChevronDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="col-span-full">
-                    {/* placed below; uses sibling pattern */}
-                  </CollapsibleContent>
-                </Collapsible>
               </div>
-
-              <details className="group border-t border-border/60">
-                <summary className="hidden" />
-              </details>
 
               <div className="space-y-2 px-4 pb-4">
                 {state[ex].map((row, idx) => (
