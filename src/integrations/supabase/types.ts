@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      set_logs: {
+        Row: {
+          created_at: string
+          exercise_name: string
+          id: string
+          reps: number | null
+          session_id: string
+          set_number: number
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string
+          exercise_name: string
+          id?: string
+          reps?: number | null
+          session_id: string
+          set_number: number
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string
+          exercise_name?: string
+          id?: string
+          reps?: number | null
+          session_id?: string
+          set_number?: number
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "set_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "workout_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_sessions: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          notes: string | null
+          performed_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
