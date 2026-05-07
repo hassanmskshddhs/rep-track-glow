@@ -13,11 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RestTimer } from "@/components/RestTimer";
 import { ExerciseChart } from "@/components/ExerciseChart";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+
+
 
 export const Route = createFileRoute("/day/$day")({
   component: DayPage,
