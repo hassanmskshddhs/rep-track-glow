@@ -187,9 +187,12 @@ function EditSessionDialog({
   const [draft, setDraft] = useState<Record<string, DraftSet[]>>({});
   const [saving, setSaving] = useState(false);
 
-  // initialize draft when a new session opens
-  const sessionId = session?.id;
-  if (sessionId && Object.keys(draft).length === 0) {
+  // initialize draft when session changes
+  useEffect(() => {
+    if (!session) {
+      setDraft({});
+      return;
+    }
     const init: Record<string, DraftSet[]> = {};
     const grouped = new Map<string, SetRow[]>();
     for (const x of session.sets) {
@@ -207,7 +210,7 @@ function EditSessionDialog({
         }));
     });
     setDraft(init);
-  }
+  }, [session?.id]);
 
   const close = () => {
     setDraft({});
