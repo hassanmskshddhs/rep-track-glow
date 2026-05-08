@@ -171,10 +171,13 @@ function DayPage({ day }: { day: string }) {
     );
   }
 
-  // Lazily ensure state keys match current config (covers edge cases)
-  if (Object.keys(state).length === 0) {
+  const resetInputs = () => {
+    if (!confirm("Clear all current inputs? This won't affect saved history.")) return;
     setState(Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
-  }
+    if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
+    toast.success("Inputs cleared");
+  };
+
 
   const update = (ex: string, idx: number, field: keyof SetRow, value: string) =>
     setState((s) => ({
