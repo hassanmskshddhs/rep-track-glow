@@ -353,15 +353,26 @@ function DayPage({ day }: { day: string }) {
             <div className="font-semibold">{totalSets} {totalSets === 1 ? "set" : "sets"} ready</div>
             <div className="text-xs text-muted-foreground">{config.name} session</div>
           </div>
-          <Button
-            size="lg"
-            className="font-bold shadow-[var(--shadow-glow)]"
-            onClick={logWorkout}
-            disabled={saving || totalSets === 0}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving…" : "Log Workout"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={resetInputs}
+              disabled={saving || totalSets === 0}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+            <Button
+              size="lg"
+              className="font-bold shadow-[var(--shadow-glow)]"
+              onClick={logWorkout}
+              disabled={saving || totalSets === 0}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? "Saving…" : "Log Workout"}
+            </Button>
+          </div>
         </div>
       </div>
     </main>
