@@ -69,10 +69,48 @@ function DayPage({ day }: { day: string }) {
 
   const config: DayConfig | null = builtIn ? DAYS[day as DayKey] : customDay ?? null;
 
-  const [state, setState] = useState<State>(() =>
-    config ? Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])) : {}
-  );
+  const draftKey = user ? `ironlog:draft:${user.id}:${day}` : null;
+
+  const [state, setState] = useState<State>({});
+  const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Hydrate state from localStorage / config once config is available
+  useEffect(() => {
+    if (!config || hydrated || typeof window === "undefined" || !draftKey) return;
+    let initial: State = Object.fromEntries(
+      config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])
+    );
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as State;
+        // merge: keep current exercises, prefer saved rows when present
+        initial = Object.fromEntries(
+          config.exercises.map((e) => [
+            e,
+            Array.isArray(parsed?.[e]) && parsed[e].length > 0
+              ? parsed[e].map((r) => ({ weight: String(r?.weight ?? ""), reps: String(r?.reps ?? "") }))
+              : [{ weight: "", reps: "" }],
+          ])
+        );
+      }
+    } catch {
+      // ignore corrupted draft
+    }
+    setState(initial);
+    setHydrated(true);
+  }, [config, hydrated, draftKey]);
+
+  // Persist draft on every change
+  useEffect(() => {
+    if (!hydrated || !draftKey || typeof window === "undefined") return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(state));
+    } catch {
+      // storage may be full or unavailable
+    }
+  }, [state, hydrated, draftKey]);
 
   const { data: customDays } = useQuery({
     queryKey: ["custom-days-list", user?.id],
