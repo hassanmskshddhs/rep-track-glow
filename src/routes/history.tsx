@@ -1,27 +1,49 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, Dumbbell } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, CalendarDays, Dumbbell, Pencil, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { DAYS, type DayKey } from "@/lib/exercises";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
   head: () => ({ meta: [{ title: "History — IronLog" }, { name: "description", content: "Your workout history." }] }),
 });
 
+type SetRow = {
+  id?: string;
+  exercise_name: string;
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+};
+
 type SessionWithSets = {
   id: string;
   day: string;
   performed_at: string;
-  sets: { exercise_name: string; set_number: number; weight: number | null; reps: number | null }[];
+  sets: SetRow[];
 };
 
 function HistoryPage() {
   const { user, loading } = useAuth();
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<SessionWithSets | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["history", user?.id],
@@ -38,14 +60,14 @@ function HistoryPage() {
       const ids = sessions.map((s) => s.id);
       const { data: sets, error: e2 } = await supabase
         .from("set_logs")
-        .select("session_id, exercise_name, set_number, weight, reps")
+        .select("id, session_id, exercise_name, set_number, weight, reps")
         .in("session_id", ids)
         .order("set_number", { ascending: true });
       if (e2) throw e2;
 
       return sessions.map((s) => ({
         ...s,
-        sets: (sets ?? []).filter((x) => x.session_id === s.id),
+        sets: (sets ?? []).filter((x) => x.session_id === s.id) as SetRow[],
       })) as SessionWithSets[];
     },
   });
@@ -77,8 +99,7 @@ function HistoryPage() {
           {data.map((s) => {
             const cfg = DAYS[s.day as DayKey];
             const accent = cfg?.accent ?? "primary";
-            // group sets by exercise
-            const grouped = new Map<string, typeof s.sets>();
+            const grouped = new Map<string, SetRow[]>();
             for (const x of s.sets) {
               const arr = grouped.get(x.exercise_name) ?? [];
               arr.push(x);
@@ -102,8 +123,13 @@ function HistoryPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {s.sets.length} {s.sets.length === 1 ? "set" : "sets"}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {s.sets.length} {s.sets.length === 1 ? "set" : "sets"}
+                    </span>
+                    <Button size="sm" variant="outline" onClick={() => setEditing(s)}>
+                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+                    </Button>
                   </div>
                 </header>
 
@@ -130,6 +156,194 @@ function HistoryPage() {
           })}
         </div>
       )}
+
+      <EditSessionDialog
+        session={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null);
+          qc.invalidateQueries({ queryKey: ["history", user.id] });
+          qc.invalidateQueries({ queryKey: ["last-sets"] });
+        }}
+        userId={user.id}
+      />
     </main>
+  );
+}
+
+type DraftSet = { id?: string; weight: string; reps: string };
+
+function EditSessionDialog({
+  session,
+  onClose,
+  onSaved,
+  userId,
+}: {
+  session: SessionWithSets | null;
+  onClose: () => void;
+  onSaved: () => void;
+  userId: string;
+}) {
+  const [draft, setDraft] = useState<Record<string, DraftSet[]>>({});
+  const [saving, setSaving] = useState(false);
+
+  // initialize draft when a new session opens
+  const sessionId = session?.id;
+  if (sessionId && Object.keys(draft).length === 0) {
+    const init: Record<string, DraftSet[]> = {};
+    const grouped = new Map<string, SetRow[]>();
+    for (const x of session.sets) {
+      const arr = grouped.get(x.exercise_name) ?? [];
+      arr.push(x);
+      grouped.set(x.exercise_name, arr);
+    }
+    grouped.forEach((rows, ex) => {
+      init[ex] = rows
+        .sort((a, b) => a.set_number - b.set_number)
+        .map((r) => ({
+          id: r.id,
+          weight: r.weight === null || r.weight === undefined ? "" : String(r.weight),
+          reps: r.reps === null || r.reps === undefined ? "" : String(r.reps),
+        }));
+    });
+    setDraft(init);
+  }
+
+  const close = () => {
+    setDraft({});
+    onClose();
+  };
+
+  if (!session) return null;
+
+  const update = (ex: string, idx: number, field: "weight" | "reps", value: string) =>
+    setDraft((d) => ({
+      ...d,
+      [ex]: d[ex].map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
+    }));
+
+  const addSet = (ex: string) =>
+    setDraft((d) => ({ ...d, [ex]: [...(d[ex] ?? []), { weight: "", reps: "" }] }));
+
+  const removeSet = (ex: string, idx: number) =>
+    setDraft((d) => ({ ...d, [ex]: d[ex].filter((_, i) => i !== idx) }));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      // Delete all existing rows for this session, re-insert from draft
+      const { error: dErr } = await supabase
+        .from("set_logs")
+        .delete()
+        .eq("session_id", session.id);
+      if (dErr) throw dErr;
+
+      const rows: {
+        session_id: string;
+        user_id: string;
+        exercise_name: string;
+        set_number: number;
+        weight: number | null;
+        reps: number | null;
+      }[] = [];
+      for (const [ex, sets] of Object.entries(draft)) {
+        sets.forEach((s, i) => {
+          const w = s.weight === "" ? null : Number(s.weight);
+          const r = s.reps === "" ? null : Number(s.reps);
+          if (w === null && r === null) return;
+          if (w !== null && (Number.isNaN(w) || w < 0 || w > 2000)) {
+            throw new Error(`Invalid weight for ${ex}`);
+          }
+          if (r !== null && (!Number.isInteger(r) || r < 0 || r > 1000)) {
+            throw new Error(`Invalid reps for ${ex}`);
+          }
+          rows.push({
+            session_id: session.id,
+            user_id: userId,
+            exercise_name: ex,
+            set_number: i + 1,
+            weight: w,
+            reps: r,
+          });
+        });
+      }
+
+      if (rows.length > 0) {
+        const { error: iErr } = await supabase.from("set_logs").insert(rows);
+        if (iErr) throw iErr;
+      }
+
+      toast.success("Session updated");
+      setDraft({});
+      onSaved();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to update session");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!session} onOpenChange={(o) => !o && close()}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Edit session</DialogTitle>
+          <DialogDescription>
+            {format(new Date(session.performed_at), "EEE, MMM d · h:mm a")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {Object.entries(draft).map(([ex, sets]) => (
+            <div key={ex} className="rounded-lg border border-border p-3">
+              <div className="mb-2 text-sm font-semibold">{ex}</div>
+              <div className="space-y-2">
+                {sets.map((row, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground">
+                      {idx + 1}
+                    </div>
+                    <Input
+                      type="number"
+                      placeholder="kg"
+                      value={row.weight}
+                      onChange={(e) => update(ex, idx, "weight", e.target.value)}
+                      className="h-9"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="reps"
+                      value={row.reps}
+                      onChange={(e) => update(ex, idx, "reps", e.target.value)}
+                      className="h-9"
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeSet(ex, idx)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="secondary" size="sm" className="w-full" onClick={() => addSet(ex)}>
+                  <Plus className="mr-1 h-4 w-4" /> Add set
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={close} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
