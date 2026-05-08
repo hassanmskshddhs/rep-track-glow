@@ -231,6 +231,7 @@ function DayPage({ day }: { day: string }) {
       );
       if (lErr) throw lErr;
 
+      if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
       toast.success(`Logged ${rows.length} sets · ${config.name}`);
       navigate({ to: "/history" });
     } catch (e: any) {
