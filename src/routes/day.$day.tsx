@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -69,10 +69,48 @@ function DayPage({ day }: { day: string }) {
 
   const config: DayConfig | null = builtIn ? DAYS[day as DayKey] : customDay ?? null;
 
-  const [state, setState] = useState<State>(() =>
-    config ? Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])) : {}
-  );
+  const draftKey = user ? `ironlog:draft:${user.id}:${day}` : null;
+
+  const [state, setState] = useState<State>({});
+  const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Hydrate state from localStorage / config once config is available
+  useEffect(() => {
+    if (!config || hydrated || typeof window === "undefined" || !draftKey) return;
+    let initial: State = Object.fromEntries(
+      config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])
+    );
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as State;
+        // merge: keep current exercises, prefer saved rows when present
+        initial = Object.fromEntries(
+          config.exercises.map((e) => [
+            e,
+            Array.isArray(parsed?.[e]) && parsed[e].length > 0
+              ? parsed[e].map((r) => ({ weight: String(r?.weight ?? ""), reps: String(r?.reps ?? "") }))
+              : [{ weight: "", reps: "" }],
+          ])
+        );
+      }
+    } catch {
+      // ignore corrupted draft
+    }
+    setState(initial);
+    setHydrated(true);
+  }, [config, hydrated, draftKey]);
+
+  // Persist draft on every change
+  useEffect(() => {
+    if (!hydrated || !draftKey || typeof window === "undefined") return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(state));
+    } catch {
+      // storage may be full or unavailable
+    }
+  }, [state, hydrated, draftKey]);
 
   const { data: customDays } = useQuery({
     queryKey: ["custom-days-list", user?.id],
@@ -133,10 +171,13 @@ function DayPage({ day }: { day: string }) {
     );
   }
 
-  // Lazily ensure state keys match current config (covers edge cases)
-  if (Object.keys(state).length === 0) {
+  const resetInputs = () => {
+    if (!confirm("Clear all current inputs? This won't affect saved history.")) return;
     setState(Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
-  }
+    if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
+    toast.success("Inputs cleared");
+  };
+
 
   const update = (ex: string, idx: number, field: keyof SetRow, value: string) =>
     setState((s) => ({
@@ -190,6 +231,7 @@ function DayPage({ day }: { day: string }) {
       );
       if (lErr) throw lErr;
 
+      if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
       toast.success(`Logged ${rows.length} sets · ${config.name}`);
       navigate({ to: "/history" });
     } catch (e: any) {
@@ -311,15 +353,26 @@ function DayPage({ day }: { day: string }) {
             <div className="font-semibold">{totalSets} {totalSets === 1 ? "set" : "sets"} ready</div>
             <div className="text-xs text-muted-foreground">{config.name} session</div>
           </div>
-          <Button
-            size="lg"
-            className="font-bold shadow-[var(--shadow-glow)]"
-            onClick={logWorkout}
-            disabled={saving || totalSets === 0}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving…" : "Log Workout"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={resetInputs}
+              disabled={saving || totalSets === 0}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+            <Button
+              size="lg"
+              className="font-bold shadow-[var(--shadow-glow)]"
+              onClick={logWorkout}
+              disabled={saving || totalSets === 0}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? "Saving…" : "Log Workout"}
+            </Button>
+          </div>
         </div>
       </div>
     </main>
