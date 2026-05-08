@@ -5,7 +5,7 @@ import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { DAYS, type DayKey, DAY_KEYS } from "@/lib/exercises";
+import { DAYS, DAY_KEYS, isBuiltInDay, type DayConfig, type DayKey } from "@/lib/exercises";
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,12 +14,10 @@ import { Input } from "@/components/ui/input";
 import { RestTimer } from "@/components/RestTimer";
 import { ExerciseChart } from "@/components/ExerciseChart";
 
-
-
 export const Route = createFileRoute("/day/$day")({
-  component: DayPage,
+  component: DayRoute,
   head: ({ params }) => {
-    const d = DAYS[params.day as DayKey];
+    const d = isBuiltInDay(params.day) ? DAYS[params.day as DayKey] : null;
     return {
       meta: [
         { title: d ? `${d.name} — IronLog` : "Workout — IronLog" },
@@ -29,6 +27,12 @@ export const Route = createFileRoute("/day/$day")({
   },
 });
 
+function DayRoute() {
+  const { day } = Route.useParams();
+  // Force remount on day change so all per-exercise state resets cleanly.
+  return <DayPage key={day} day={day} />;
+}
+
 type SetRow = { weight: string; reps: string };
 type State = Record<string, SetRow[]>;
 
@@ -37,24 +41,58 @@ const setSchema = z.object({
   reps: z.number().int().min(0).max(1000).nullable(),
 });
 
-function DayPage() {
+function DayPage({ day }: { day: string }) {
   const { user, loading } = useAuth();
-  const { day } = Route.useParams();
   const navigate = useNavigate();
-  const dayKey = day as DayKey;
-  const config = DAYS[dayKey];
+  const builtIn = isBuiltInDay(day);
+
+  // Load custom day from DB if not built-in
+  const { data: customDay, isLoading: customLoading, isError: customError } = useQuery({
+    queryKey: ["custom-day", day],
+    enabled: !!user && !builtIn,
+    queryFn: async (): Promise<DayConfig | null> => {
+      const { data, error } = await supabase
+        .from("custom_workout_days")
+        .select("name, subtitle, accent, exercises")
+        .eq("id", day)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        name: data.name,
+        subtitle: data.subtitle ?? "",
+        accent: data.accent ?? "primary",
+        exercises: Array.isArray(data.exercises) ? (data.exercises as string[]) : [],
+      };
+    },
+  });
+
+  const config: DayConfig | null = builtIn ? DAYS[day as DayKey] : customDay ?? null;
 
   const [state, setState] = useState<State>(() =>
     config ? Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])) : {}
   );
   const [saving, setSaving] = useState(false);
 
+  const { data: customDays } = useQuery({
+    queryKey: ["custom-days-list", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("custom_workout_days")
+        .select("id, name, accent")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const { data: lastSets } = useQuery({
-    queryKey: ["last-sets", user?.id, dayKey],
+    queryKey: ["last-sets", user?.id, day, config?.exercises?.join("|")],
     enabled: !!user && !!config,
     queryFn: async () => {
       const out: Record<string, { weight: number | null; reps: number | null } | null> = {};
-      for (const ex of config.exercises) {
+      for (const ex of config!.exercises) {
         const { data } = await supabase
           .from("set_logs")
           .select("weight, reps")
@@ -69,40 +107,61 @@ function DayPage() {
     },
   });
 
-  if (!config) {
+  if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
+  if (!user) return <AuthScreen />;
+
+  if (!builtIn && customLoading) {
+    return <div className="p-10 text-center text-muted-foreground">Loading workout…</div>;
+  }
+
+  if (!config || customError) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
-        <p className="text-muted-foreground">Unknown workout day.</p>
+        <p className="text-muted-foreground">This workout day couldn't be loaded.</p>
         <Link to="/" className="mt-4 inline-block text-primary underline">Back home</Link>
       </main>
     );
   }
-  if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
-  if (!user) return <AuthScreen />;
+
+  if (config.exercises.length === 0) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-12">
+        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">← Home</Link>
+        <h1 className="mt-3 text-2xl font-bold">{config.name}</h1>
+        <p className="mt-2 text-muted-foreground">No exercises in this workout yet.</p>
+      </main>
+    );
+  }
+
+  // Lazily ensure state keys match current config (covers edge cases)
+  if (Object.keys(state).length === 0) {
+    setState(Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
+  }
 
   const update = (ex: string, idx: number, field: keyof SetRow, value: string) =>
     setState((s) => ({
       ...s,
-      [ex]: s[ex].map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
+      [ex]: (s[ex] ?? [{ weight: "", reps: "" }]).map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
     }));
 
   const addSet = (ex: string) =>
-    setState((s) => ({ ...s, [ex]: [...s[ex], { weight: "", reps: "" }] }));
+    setState((s) => ({ ...s, [ex]: [...(s[ex] ?? []), { weight: "", reps: "" }] }));
 
   const removeSet = (ex: string, idx: number) =>
     setState((s) => ({
       ...s,
-      [ex]: s[ex].length > 1 ? s[ex].filter((_, i) => i !== idx) : s[ex],
+      [ex]: (s[ex] ?? []).length > 1 ? s[ex].filter((_, i) => i !== idx) : s[ex] ?? [{ weight: "", reps: "" }],
     }));
 
-  const totalSets = useMemo(
-    () => Object.values(state).reduce((a, sets) => a + sets.filter((s) => s.weight || s.reps).length, 0),
-    [state]
+  const totalSets = Object.values(state).reduce(
+    (a, sets) => a + (sets ?? []).filter((s) => s.weight || s.reps).length,
+    0
   );
 
   const logWorkout = async () => {
     const rows: { exercise_name: string; set_number: number; weight: number | null; reps: number | null }[] = [];
-    for (const [ex, sets] of Object.entries(state)) {
+    for (const ex of config.exercises) {
+      const sets = state[ex] ?? [];
       sets.forEach((s, i) => {
         const w = s.weight === "" ? null : Number(s.weight);
         const r = s.reps === "" ? null : Number(s.reps);
@@ -121,7 +180,7 @@ function DayPage() {
     try {
       const { data: session, error: sErr } = await supabase
         .from("workout_sessions")
-        .insert({ user_id: user.id, day: dayKey })
+        .insert({ user_id: user.id, day })
         .select("id")
         .single();
       if (sErr) throw sErr;
@@ -140,33 +199,38 @@ function DayPage() {
     }
   };
 
+  const tabs: { key: string; label: string; accent: string }[] = [
+    ...DAY_KEYS.map((k) => ({ key: k, label: DAYS[k].name, accent: DAYS[k].accent })),
+    ...((customDays ?? []).map((c) => ({ key: c.id, label: c.name, accent: c.accent ?? "primary" }))),
+  ];
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 pb-32">
       <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-1 h-4 w-4" /> All workouts
       </Link>
 
-      <div className="mt-3 flex items-center justify-between gap-4">
+      <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: `var(--${config.accent})` }}>
-            Day · {dayKey}
+            {builtIn ? `Day · ${day}` : "Custom Workout"}
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{config.name}</h1>
           <p className="text-sm text-muted-foreground">{config.subtitle}</p>
         </div>
-        <div className="flex gap-1">
-          {DAY_KEYS.map((k) => (
+        <div className="flex flex-wrap gap-1">
+          {tabs.map((t) => (
             <Link
-              key={k}
+              key={t.key}
               to="/day/$day"
-              params={{ day: k }}
+              params={{ day: t.key }}
               className="rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wider"
               style={{
-                backgroundColor: k === dayKey ? `color-mix(in oklab, var(--${DAYS[k].accent}) 25%, transparent)` : "transparent",
-                color: k === dayKey ? `var(--${DAYS[k].accent})` : "var(--muted-foreground)",
+                backgroundColor: t.key === day ? `color-mix(in oklab, var(--${t.accent}) 25%, transparent)` : "transparent",
+                color: t.key === day ? `var(--${t.accent})` : "var(--muted-foreground)",
               }}
             >
-              {k}
+              {t.label}
             </Link>
           ))}
         </div>
@@ -179,6 +243,7 @@ function DayPage() {
       <div className="mt-6 space-y-3">
         {config.exercises.map((ex) => {
           const last = lastSets?.[ex];
+          const sets = state[ex] ?? [{ weight: "", reps: "" }];
           return (
             <div key={ex} className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="flex items-center justify-between gap-3 p-4">
@@ -195,7 +260,7 @@ function DayPage() {
               </div>
 
               <div className="space-y-2 px-4 pb-4">
-                {state[ex].map((row, idx) => (
+                {sets.map((row, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold tabular-nums text-muted-foreground">
                       {idx + 1}
@@ -221,7 +286,7 @@ function DayPage() {
                       variant="ghost"
                       className="shrink-0 text-muted-foreground hover:text-destructive"
                       onClick={() => removeSet(ex, idx)}
-                      disabled={state[ex].length === 1}
+                      disabled={sets.length === 1}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

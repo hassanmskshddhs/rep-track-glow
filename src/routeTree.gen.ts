@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DayDayRouteImport } from './routes/day.$day'
+import { Route as CustomNewRouteImport } from './routes/custom.new'
 
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
@@ -28,34 +29,43 @@ const DayDayRoute = DayDayRouteImport.update({
   path: '/day/$day',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomNewRoute = CustomNewRouteImport.update({
+  id: '/custom/new',
+  path: '/custom/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history' | '/day/$day'
+  fullPaths: '/' | '/history' | '/custom/new' | '/day/$day'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/day/$day'
-  id: '__root__' | '/' | '/history' | '/day/$day'
+  to: '/' | '/history' | '/custom/new' | '/day/$day'
+  id: '__root__' | '/' | '/history' | '/custom/new' | '/day/$day'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryRoute: typeof HistoryRoute
+  CustomNewRoute: typeof CustomNewRoute
   DayDayRoute: typeof DayDayRoute
 }
 
@@ -82,12 +92,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DayDayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/custom/new': {
+      id: '/custom/new'
+      path: '/custom/new'
+      fullPath: '/custom/new'
+      preLoaderRoute: typeof CustomNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryRoute: HistoryRoute,
+  CustomNewRoute: CustomNewRoute,
   DayDayRoute: DayDayRoute,
 }
 export const routeTree = rootRouteImport

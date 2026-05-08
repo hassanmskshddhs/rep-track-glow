@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_workout_days: {
+        Row: {
+          accent: string
+          created_at: string
+          exercises: Json
+          id: string
+          name: string
+          subtitle: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent?: string
+          created_at?: string
+          exercises?: Json
+          id?: string
+          name: string
+          subtitle?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent?: string
+          created_at?: string
+          exercises?: Json
+          id?: string
+          name?: string
+          subtitle?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       set_logs: {
         Row: {
           created_at: string

@@ -1,6 +1,13 @@
 export type DayKey = "push" | "pull" | "legs" | "upper";
 
-export const DAYS: Record<DayKey, { name: string; subtitle: string; accent: string; exercises: string[] }> = {
+export type DayConfig = {
+  name: string;
+  subtitle: string;
+  accent: string;
+  exercises: string[];
+};
+
+export const DAYS: Record<DayKey, DayConfig> = {
   push: {
     name: "Push",
     subtitle: "Chest · Shoulders · Triceps",
@@ -64,3 +71,9 @@ export const DAYS: Record<DayKey, { name: string; subtitle: string; accent: stri
 };
 
 export const DAY_KEYS: DayKey[] = ["push", "pull", "legs", "upper"];
+
+export const ACCENT_OPTIONS = ["push", "pull", "legs", "upper", "primary"] as const;
+
+export function isBuiltInDay(key: string): key is DayKey {
+  return (DAY_KEYS as string[]).includes(key);
+}
