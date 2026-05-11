@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_notes: {
+        Row: {
+          created_at: string
+          exercise_name: string
+          id: string
+          note: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_name: string
+          id?: string
+          note?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_name?: string
+          id?: string
+          note?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       set_logs: {
         Row: {
           created_at: string
