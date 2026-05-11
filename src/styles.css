@@ -73,6 +73,8 @@
   --pull: oklch(0.68 0.16 230); /* blue */
   --legs: oklch(0.72 0.18 145); /* green */
   --upper: oklch(0.72 0.2 300); /* purple */
+  --progress: oklch(0.78 0.17 160); /* emerald — progression highlight */
+  --color-progress: var(--progress);
 
   --gradient-primary: linear-gradient(135deg, oklch(0.78 0.19 80), oklch(0.7 0.21 30));
   --gradient-card: linear-gradient(160deg, oklch(0.23 0.014 250), oklch(0.18 0.012 250));
