@@ -94,8 +94,7 @@ export function ShareWorkoutDialog({ open, onOpenChange, summary, onClose }: Pro
         try {
           const blob = await renderCardToPng(summary);
           const file = new File([blob], "workout.png", { type: "image/png" });
-          // @ts-expect-error canShare optional
-          if (navigator.canShare?.({ files: [file] })) {
+          if ((navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean }).canShare?.({ files: [file] })) {
             await navigator.share({ files: [file], title: summary.workoutName, text });
             return;
           }
