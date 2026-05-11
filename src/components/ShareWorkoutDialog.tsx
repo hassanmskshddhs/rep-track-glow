@@ -23,7 +23,7 @@ type Props = {
 };
 
 export function ShareWorkoutDialog({ open, onOpenChange, summary, onClose }: Props) {
-  const cardRef = useRef<HTMLDivElement>(null);
+  // (image is generated via canvas, no DOM ref needed)
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
