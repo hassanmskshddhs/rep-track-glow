@@ -118,7 +118,6 @@ export function ShareWorkoutDialog({ open, onOpenChange, summary, onClose }: Pro
         </DialogHeader>
 
         <div
-          ref={cardRef}
           className="relative overflow-hidden rounded-2xl p-5 text-foreground"
           style={{
             background:
