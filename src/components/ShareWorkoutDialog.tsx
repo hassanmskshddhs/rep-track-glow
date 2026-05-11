@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Share2, Copy, Download, Check } from "lucide-react";
 import { toast } from "sonner";
 
