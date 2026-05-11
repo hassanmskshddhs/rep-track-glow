@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -13,6 +14,7 @@ import appCss from "../styles.css?url";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
+import { registerServiceWorker } from "@/lib/pwa";
 
 function NotFoundComponent() {
   return (
@@ -43,19 +45,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "My Workout" },
-      { name: "description", content: "Wourkout Tracker" },
-      { property: "og:title", content: "My Workout" },
-      { name: "twitter:title", content: "My Workout" },
-      { property: "og:description", content: "Wourkout Tracker" },
-      { name: "twitter:description", content: "Wourkout Tracker" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" },
+      { name: "theme-color", content: "#0e1116" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "IronLog" },
+      { title: "IronLog — Track. Lift. Repeat." },
+      { name: "description", content: "Personal gym progression tracker — log workouts, track PRs, train offline." },
+      { property: "og:title", content: "IronLog" },
+      { name: "twitter:title", content: "IronLog" },
+      { property: "og:description", content: "Personal gym progression tracker — log workouts, track PRs, train offline." },
+      { name: "twitter:description", content: "Personal gym progression tracker — log workouts, track PRs, train offline." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2c8bd909-908d-4ef1-b588-88da2e87cefe/id-preview-e83063b7--411e44eb-9d0b-4989-81b3-643f9652b1f4.lovable.app-1778184569735.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2c8bd909-908d-4ef1-b588-88da2e87cefe/id-preview-e83063b7--411e44eb-9d0b-4989-81b3-643f9652b1f4.lovable.app-1778184569735.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -105,6 +118,7 @@ function Header() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => { registerServiceWorker(); }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
