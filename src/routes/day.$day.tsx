@@ -527,7 +527,10 @@ function DayPage({ day }: { day: string }) {
         })}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl">
+      <div
+        className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
+        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
+      >
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="text-sm">
             <div className="font-semibold">{totalSets} {totalSets === 1 ? "set" : "sets"} ready</div>

@@ -175,11 +175,11 @@ export function SplitForm({ initial, saving, submitLabel = "Create split", onSub
         <ExercisePicker selected={exercises} onChange={setExercises} />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 glass-strong border-t border-border/60">
-        <div
-          className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3"
-          style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
-        >
+      <div
+        className="fixed inset-x-0 z-30 glass-strong border-t border-border/60"
+        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
+      >
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="text-sm text-muted-foreground">{exercises.length} exercises</div>
           <Button
             size="lg"
