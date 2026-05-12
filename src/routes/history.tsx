@@ -45,6 +45,19 @@ function HistoryPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<SessionWithSets | null>(null);
 
+  const { data: splits } = useQuery({
+    queryKey: ["custom-days-list", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("custom_workout_days")
+        .select("id, name, accent");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const splitMap = new Map((splits ?? []).map((s) => [s.id, s]));
+
   const { data, isLoading } = useQuery({
     queryKey: ["history", user?.id],
     enabled: !!user,
