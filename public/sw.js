@@ -1,24 +1,41 @@
-// IronLog service worker — minimal, safe offline support.
+// IronLog service worker — robust offline support.
+//
 // Strategy:
-//   - HTML navigations: NetworkFirst (so new builds always replace the shell
-//     when online; falls back to last cached shell when offline).
-//   - Static same-origin GET assets (js/css/img/fonts): StaleWhileRevalidate.
-//   - Everything else (Supabase, APIs, cross-origin): pass-through, never cached.
+//   - install: precache app shell (/, /offline.html, manifest, icons)
+//   - HTML navigations: NetworkFirst → cached shell ("/") → /offline.html
+//   - Same-origin static assets (script/style/image/font): CacheFirst with
+//     background revalidate. Once seen online, they work offline forever.
+//   - Supabase / API / cross-origin: pass-through (never cached).
 
-const VERSION = "v1";
-const RUNTIME_CACHE = `ironlog-runtime-${VERSION}`;
+const VERSION = "v3";
 const SHELL_CACHE = `ironlog-shell-${VERSION}`;
-const OFFLINE_URL = "/";
+const RUNTIME_CACHE = `ironlog-runtime-${VERSION}`;
+
+const APP_SHELL_URL = "/";
+const OFFLINE_URL = "/offline.html";
+
+const PRECACHE_URLS = [
+  APP_SHELL_URL,
+  OFFLINE_URL,
+  "/manifest.webmanifest",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
-      try {
-        await cache.add(new Request(OFFLINE_URL, { cache: "reload" }));
-      } catch {
-        // ignore — first install offline
-      }
+      await Promise.all(
+        PRECACHE_URLS.map(async (url) => {
+          try {
+            await cache.add(new Request(url, { cache: "reload" }));
+          } catch {
+            // Ignore individual failures (e.g. first install offline).
+          }
+        }),
+      );
       await self.skipWaiting();
     })(),
   );
@@ -30,7 +47,7 @@ self.addEventListener("activate", (event) => {
       const keys = await caches.keys();
       await Promise.all(
         keys
-          .filter((k) => k !== RUNTIME_CACHE && k !== SHELL_CACHE)
+          .filter((k) => k !== SHELL_CACHE && k !== RUNTIME_CACHE)
           .map((k) => caches.delete(k)),
       );
       await self.clients.claim();
@@ -46,50 +63,65 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
 
-  // Only handle same-origin
+  // Only handle same-origin requests.
   if (url.origin !== self.location.origin) return;
 
-  // Skip Supabase / api endpoints under our origin
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/_serverFn")) return;
+  // Never cache API / server-fn endpoints.
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/_serverFn") ||
+    url.pathname.startsWith("/_build/")
+  ) {
+    return;
+  }
 
-  // HTML navigation → NetworkFirst
+  // HTML navigations → NetworkFirst with offline fallback.
   if (req.mode === "navigate") {
     event.respondWith(
       (async () => {
+        const cache = await caches.open(SHELL_CACHE);
         try {
           const fresh = await fetch(req);
-          const cache = await caches.open(SHELL_CACHE);
-          cache.put(OFFLINE_URL, fresh.clone()).catch(() => {});
+          // Update the shell snapshot whenever we successfully fetch HTML.
+          cache.put(APP_SHELL_URL, fresh.clone()).catch(() => {});
           return fresh;
         } catch {
-          const cache = await caches.open(SHELL_CACHE);
-          const cached = await cache.match(OFFLINE_URL);
-          return (
-            cached ??
-            new Response("<h1>Offline</h1>", {
-              status: 503,
-              headers: { "content-type": "text/html; charset=utf-8" },
-            })
-          );
+          const cachedShell = await cache.match(APP_SHELL_URL);
+          if (cachedShell) return cachedShell;
+          const offline = await cache.match(OFFLINE_URL);
+          if (offline) return offline;
+          return new Response("<h1>Offline</h1>", {
+            status: 503,
+            headers: { "content-type": "text/html; charset=utf-8" },
+          });
         }
       })(),
     );
     return;
   }
 
-  // Static assets → StaleWhileRevalidate
+  // Static assets → CacheFirst, revalidate in background.
   if (ASSET_DESTS.has(req.destination)) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(RUNTIME_CACHE);
         const cached = await cache.match(req);
-        const network = fetch(req)
-          .then((res) => {
-            if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
-            return res;
-          })
-          .catch(() => null);
-        return cached ?? (await network) ?? new Response("", { status: 504 });
+        if (cached) {
+          // Background refresh; ignore failures.
+          fetch(req)
+            .then((res) => {
+              if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
+            })
+            .catch(() => {});
+          return cached;
+        }
+        try {
+          const res = await fetch(req);
+          if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
+          return res;
+        } catch {
+          return new Response("", { status: 504 });
+        }
       })(),
     );
   }
