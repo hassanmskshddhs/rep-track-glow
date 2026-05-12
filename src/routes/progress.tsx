@@ -1,0 +1,170 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, TrendingUp, Dumbbell, Flame } from "lucide-react";
+import { format, startOfDay, subDays } from "date-fns";
+
+import { useAuth } from "@/lib/auth-context";
+import { AuthScreen } from "@/components/AuthScreen";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/progress")({
+  component: ProgressPage,
+  head: () => ({ meta: [{ title: "Progress — IronLog" }] }),
+});
+
+function ProgressPage() {
+  const { user, loading } = useAuth();
+
+  const { data: sets } = useQuery({
+    queryKey: ["progress-sets", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const since = subDays(new Date(), 29).toISOString();
+      const { data, error } = await supabase
+        .from("set_logs")
+        .select("exercise_name, weight, reps, created_at, session_id")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const stats = useMemo(() => {
+    const rows = sets ?? [];
+    const sessions = new Set(rows.map((r) => r.session_id));
+    const totalVolume = rows.reduce(
+      (a, r) => a + (r.weight ?? 0) * (r.reps ?? 0),
+      0,
+    );
+    const totalSets = rows.length;
+    const totalReps = rows.reduce((a, r) => a + (r.reps ?? 0), 0);
+
+    // PRs per exercise
+    const prMap = new Map<string, number>();
+    for (const r of rows) {
+      if (r.weight == null) continue;
+      const cur = prMap.get(r.exercise_name) ?? 0;
+      if (r.weight > cur) prMap.set(r.exercise_name, r.weight);
+    }
+    const prs = [...prMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+
+    // Daily volume for last 14 days
+    const dailyMap = new Map<string, number>();
+    for (let i = 13; i >= 0; i--) {
+      dailyMap.set(startOfDay(subDays(new Date(), i)).toISOString(), 0);
+    }
+    for (const r of rows) {
+      const key = startOfDay(new Date(r.created_at)).toISOString();
+      if (dailyMap.has(key)) {
+        dailyMap.set(key, (dailyMap.get(key) ?? 0) + (r.weight ?? 0) * (r.reps ?? 0));
+      }
+    }
+    const daily = [...dailyMap.entries()].map(([d, v]) => ({ date: new Date(d), volume: v }));
+    const maxVolume = Math.max(1, ...daily.map((d) => d.volume));
+
+    return {
+      sessions: sessions.size,
+      totalVolume,
+      totalSets,
+      totalReps,
+      prs,
+      daily,
+      maxVolume,
+    };
+  }, [sets]);
+
+  if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
+  if (!user) return <AuthScreen />;
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-6 animate-fade-in-up">
+      <Link
+        to="/"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="mr-1 h-4 w-4" /> Home
+      </Link>
+
+      <h1 className="mt-3 text-3xl font-extrabold tracking-tight md:text-4xl">Progress</h1>
+      <p className="text-sm text-muted-foreground">Last 30 days of your training.</p>
+
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Sessions" value={stats.sessions} icon={<Flame className="h-4 w-4" />} />
+        <Stat
+          label="Volume (kg)"
+          value={Math.round(stats.totalVolume).toLocaleString()}
+          icon={<TrendingUp className="h-4 w-4" />}
+        />
+        <Stat label="Sets" value={stats.totalSets} icon={<Dumbbell className="h-4 w-4" />} />
+        <Stat label="Reps" value={stats.totalReps} icon={<Dumbbell className="h-4 w-4" />} />
+      </div>
+
+      <section className="mt-6 glass rounded-2xl p-5 animate-fade-in-up stagger-1">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+          Daily volume · 14 days
+        </h3>
+        <div className="mt-4 flex h-32 items-end gap-1.5">
+          {stats.daily.map((d) => (
+            <div
+              key={d.date.toISOString()}
+              className="flex flex-1 flex-col items-center gap-1"
+              title={`${format(d.date, "MMM d")} · ${Math.round(d.volume).toLocaleString()} kg`}
+            >
+              <div
+                className={cn(
+                  "w-full rounded-t-md transition-all",
+                  d.volume > 0 ? "bg-primary" : "bg-muted/60",
+                )}
+                style={{
+                  height: `${Math.max(6, (d.volume / stats.maxVolume) * 100)}%`,
+                  minHeight: 6,
+                }}
+              />
+              <span className="text-[9px] text-muted-foreground">
+                {format(d.date, "EEEEE")}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 glass rounded-2xl p-5 animate-fade-in-up stagger-2">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+          Top weights (last 30 days)
+        </h3>
+        {stats.prs.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No PRs yet — log a session to start.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-border/50">
+            {stats.prs.map(([name, w]) => (
+              <li key={name} className="flex items-center justify-between py-2.5">
+                <span className="truncate pr-3 text-sm font-semibold">{name}</span>
+                <span className="rounded-md bg-primary/15 px-2.5 py-1 text-xs font-bold text-primary tabular-nums">
+                  {w}kg
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function Stat({ label, value, icon }: { label: string; value: number | string; icon: React.ReactNode }) {
+  return (
+    <div className="glass rounded-2xl p-4">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-1 text-2xl font-extrabold tabular-nums">{value}</div>
+    </div>
+  );
+}
