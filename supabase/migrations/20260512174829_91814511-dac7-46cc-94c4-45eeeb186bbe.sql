@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_workout_days ADD COLUMN IF NOT EXISTS muscle_groups text[] NOT NULL DEFAULT '{}';
