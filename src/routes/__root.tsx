@@ -8,11 +8,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { Dumbbell, History, LogOut } from "lucide-react";
+import { Dumbbell } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner";
+import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { registerServiceWorker } from "@/lib/pwa";
 
@@ -89,11 +90,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function Header() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   if (!user) return null;
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+    <header className="sticky top-0 z-30 glass-strong border-b border-border/60">
+      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
             <Dumbbell className="h-5 w-5" />
@@ -103,16 +104,19 @@ function Header() {
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Track. Lift. Repeat.</div>
           </div>
         </Link>
-        <nav className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/history"><History className="mr-1.5 h-4 w-4" />History</Link>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </nav>
       </div>
     </header>
+  );
+}
+
+function AppShell() {
+  const { user } = useAuth();
+  return (
+    <div className={`min-h-screen bg-background text-foreground animate-fade-in ${user ? "has-bottom-nav" : ""}`}>
+      <Header />
+      <Outlet />
+      {user && <BottomNav />}
+    </div>
   );
 }
 
@@ -122,10 +126,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="min-h-screen bg-background text-foreground">
-          <Header />
-          <Outlet />
-        </div>
+        <AppShell />
         <Toaster richColors position="top-center" theme="dark" />
       </AuthProvider>
     </QueryClientProvider>

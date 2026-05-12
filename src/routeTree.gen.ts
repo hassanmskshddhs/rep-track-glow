@@ -9,11 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DayDayRouteImport } from './routes/day.$day'
 import { Route as CustomNewRouteImport } from './routes/custom.new'
+import { Route as CustomIdEditRouteImport } from './routes/custom.$id.edit'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgressRoute = ProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -34,43 +47,96 @@ const CustomNewRoute = CustomNewRouteImport.update({
   path: '/custom/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomIdEditRoute = CustomIdEditRouteImport.update({
+  id: '/custom/$id/edit',
+  path: '/custom/$id/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/progress': typeof ProgressRoute
+  '/settings': typeof SettingsRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
+  '/custom/$id/edit': typeof CustomIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/progress': typeof ProgressRoute
+  '/settings': typeof SettingsRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
+  '/custom/$id/edit': typeof CustomIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/progress': typeof ProgressRoute
+  '/settings': typeof SettingsRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
+  '/custom/$id/edit': typeof CustomIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history' | '/custom/new' | '/day/$day'
+  fullPaths:
+    | '/'
+    | '/history'
+    | '/progress'
+    | '/settings'
+    | '/custom/new'
+    | '/day/$day'
+    | '/custom/$id/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/custom/new' | '/day/$day'
-  id: '__root__' | '/' | '/history' | '/custom/new' | '/day/$day'
+  to:
+    | '/'
+    | '/history'
+    | '/progress'
+    | '/settings'
+    | '/custom/new'
+    | '/day/$day'
+    | '/custom/$id/edit'
+  id:
+    | '__root__'
+    | '/'
+    | '/history'
+    | '/progress'
+    | '/settings'
+    | '/custom/new'
+    | '/day/$day'
+    | '/custom/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryRoute: typeof HistoryRoute
+  ProgressRoute: typeof ProgressRoute
+  SettingsRoute: typeof SettingsRoute
   CustomNewRoute: typeof CustomNewRoute
   DayDayRoute: typeof DayDayRoute
+  CustomIdEditRoute: typeof CustomIdEditRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progress': {
+      id: '/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history': {
       id: '/history'
       path: '/history'
@@ -99,14 +165,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/custom/$id/edit': {
+      id: '/custom/$id/edit'
+      path: '/custom/$id/edit'
+      fullPath: '/custom/$id/edit'
+      preLoaderRoute: typeof CustomIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryRoute: HistoryRoute,
+  ProgressRoute: ProgressRoute,
+  SettingsRoute: SettingsRoute,
   CustomNewRoute: CustomNewRoute,
   DayDayRoute: DayDayRoute,
+  CustomIdEditRoute: CustomIdEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

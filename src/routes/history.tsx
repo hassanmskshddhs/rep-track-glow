@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
-import { DAYS, type DayKey } from "@/lib/exercises";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,6 +44,19 @@ function HistoryPage() {
   const { user, loading } = useAuth();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<SessionWithSets | null>(null);
+
+  const { data: splits } = useQuery({
+    queryKey: ["custom-days-list", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("custom_workout_days")
+        .select("id, name, accent");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const splitMap = new Map((splits ?? []).map((s) => [s.id, s]));
 
   const { data, isLoading } = useQuery({
     queryKey: ["history", user?.id],
@@ -97,8 +110,8 @@ function HistoryPage() {
       ) : (
         <div className="mt-6 space-y-4">
           {data.map((s) => {
-            const cfg = DAYS[s.day as DayKey];
-            const accent = cfg?.accent ?? "primary";
+            const split = splitMap.get(s.day);
+            const accent = split?.accent ?? "primary";
             const grouped = new Map<string, SetRow[]>();
             for (const x of s.sets) {
               const arr = grouped.get(x.exercise_name) ?? [];
@@ -116,7 +129,7 @@ function HistoryPage() {
                       <Dumbbell className="h-5 w-5" style={{ color: `var(--${accent})` }} />
                     </div>
                     <div>
-                      <div className="font-bold">{cfg?.name ?? s.day}</div>
+                      <div className="font-bold">{split?.name ?? "Workout"}</div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <CalendarDays className="h-3 w-3" />
                         {format(new Date(s.performed_at), "EEE, MMM d · h:mm a")}

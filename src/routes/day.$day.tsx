@@ -5,7 +5,7 @@ import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2 } 
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { DAYS, DAY_KEYS, isBuiltInDay, type DayConfig, type DayKey } from "@/lib/exercises";
+import type { DayConfig } from "@/lib/exercises";
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,15 +18,12 @@ import { ShareWorkoutDialog, type WorkoutSummary } from "@/components/ShareWorko
 
 export const Route = createFileRoute("/day/$day")({
   component: DayRoute,
-  head: ({ params }) => {
-    const d = isBuiltInDay(params.day) ? DAYS[params.day as DayKey] : null;
-    return {
-      meta: [
-        { title: d ? `${d.name} — IronLog` : "Workout — IronLog" },
-        { name: "description", content: d ? `Log your ${d.name} session.` : "Log your workout." },
-      ],
-    };
-  },
+  head: () => ({
+    meta: [
+      { title: "Workout — IronLog" },
+      { name: "description", content: "Log your workout." },
+    ],
+  }),
 });
 
 function DayRoute() {
@@ -101,11 +98,10 @@ function buildTarget(
 function DayPage({ day }: { day: string }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const builtIn = isBuiltInDay(day);
 
   const { data: customDay, isLoading: customLoading, isError: customError } = useQuery({
     queryKey: ["custom-day", day],
-    enabled: !!user && !builtIn,
+    enabled: !!user,
     queryFn: async (): Promise<DayConfig | null> => {
       const { data, error } = await supabase
         .from("custom_workout_days")
@@ -123,7 +119,7 @@ function DayPage({ day }: { day: string }) {
     },
   });
 
-  const config: DayConfig | null = builtIn ? DAYS[day as DayKey] : customDay ?? null;
+  const config: DayConfig | null = customDay ?? null;
 
   const draftKey = user ? `ironlog:draft:${user.id}:${day}` : null;
 
@@ -249,7 +245,7 @@ function DayPage({ day }: { day: string }) {
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
   if (!user) return <AuthScreen />;
-  if (!builtIn && customLoading) {
+  if (customLoading) {
     return <div className="p-10 text-center text-muted-foreground">Loading workout…</div>;
   }
   if (!config || customError) {
@@ -393,10 +389,11 @@ function DayPage({ day }: { day: string }) {
     }
   };
 
-  const tabs: { key: string; label: string; accent: string }[] = [
-    ...DAY_KEYS.map((k) => ({ key: k, label: DAYS[k].name, accent: DAYS[k].accent })),
-    ...((customDays ?? []).map((c) => ({ key: c.id, label: c.name, accent: c.accent ?? "primary" }))),
-  ];
+  const tabs: { key: string; label: string; accent: string }[] = (customDays ?? []).map((c) => ({
+    key: c.id,
+    label: c.name,
+    accent: c.accent ?? "primary",
+  }));
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 pb-32">
@@ -407,7 +404,7 @@ function DayPage({ day }: { day: string }) {
       <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: `var(--${config.accent})` }}>
-            {builtIn ? `Day · ${day}` : "Custom Workout"}
+            Custom Workout
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{config.name}</h1>
           <p className="text-sm text-muted-foreground">{config.subtitle}</p>
@@ -530,7 +527,10 @@ function DayPage({ day }: { day: string }) {
         })}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl">
+      <div
+        className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
+        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
+      >
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="text-sm">
             <div className="font-semibold">{totalSets} {totalSets === 1 ? "set" : "sets"} ready</div>
