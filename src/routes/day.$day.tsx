@@ -393,8 +393,9 @@ function DayPage({ day }: { day: string }) {
   const tabs: { key: string; label: string; accent: string }[] = (customDays ?? []).map((c) => ({
     key: c.id,
     label: c.name,
-    accent: c.accent ?? "primary",
+    accent: getSplitAccent(c.name, (c as { muscle_groups?: string[] | null }).muscle_groups, c.accent ?? "primary"),
   }));
+  const dayAccent = getSplitAccent(config.name, null, config.accent);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 pb-32">
