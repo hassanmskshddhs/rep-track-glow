@@ -36,17 +36,48 @@ function ProgressPage() {
 
   const stats = useMemo(() => {
     const rows = sets ?? [];
-    const sessions = new Set(rows.map((r) => r.session_id));
-    const totalVolume = rows.reduce(
+    const now = new Date();
+    const last30Cutoff = subDays(now, 29);
+    const recentRows = rows.filter((r) => new Date(r.created_at) >= last30Cutoff);
+
+    const sessions = new Set(recentRows.map((r) => r.session_id));
+    const totalVolume = recentRows.reduce(
       (a, r) => a + (r.weight ?? 0) * (r.reps ?? 0),
       0,
     );
-    const totalSets = rows.length;
-    const totalReps = rows.reduce((a, r) => a + (r.reps ?? 0), 0);
+    const totalSets = recentRows.length;
+    const totalReps = recentRows.reduce((a, r) => a + (r.reps ?? 0), 0);
+
+    // Week-over-week deltas (last 7 days vs prior 7 days)
+    const weekStart = subDays(now, 6);
+    const prevWeekStart = subDays(now, 13);
+    let thisWeekVolume = 0,
+      prevWeekVolume = 0,
+      thisWeekReps = 0,
+      prevWeekReps = 0,
+      thisWeekSets = 0,
+      prevWeekSets = 0;
+    for (const r of rows) {
+      const d = new Date(r.created_at);
+      const vol = (r.weight ?? 0) * (r.reps ?? 0);
+      if (d >= weekStart) {
+        thisWeekVolume += vol;
+        thisWeekReps += r.reps ?? 0;
+        thisWeekSets += 1;
+      } else if (d >= prevWeekStart) {
+        prevWeekVolume += vol;
+        prevWeekReps += r.reps ?? 0;
+        prevWeekSets += 1;
+      }
+    }
+    const pct = (cur: number, prev: number): number | null => {
+      if (prev === 0) return cur > 0 ? 100 : null;
+      return Math.round(((cur - prev) / prev) * 100);
+    };
 
     // PRs per exercise
     const prMap = new Map<string, number>();
-    for (const r of rows) {
+    for (const r of recentRows) {
       if (r.weight == null) continue;
       const cur = prMap.get(r.exercise_name) ?? 0;
       if (r.weight > cur) prMap.set(r.exercise_name, r.weight);
@@ -58,9 +89,9 @@ function ProgressPage() {
     // Daily volume for last 14 days
     const dailyMap = new Map<string, number>();
     for (let i = 13; i >= 0; i--) {
-      dailyMap.set(startOfDay(subDays(new Date(), i)).toISOString(), 0);
+      dailyMap.set(startOfDay(subDays(now, i)).toISOString(), 0);
     }
-    for (const r of rows) {
+    for (const r of recentRows) {
       const key = startOfDay(new Date(r.created_at)).toISOString();
       if (dailyMap.has(key)) {
         dailyMap.set(key, (dailyMap.get(key) ?? 0) + (r.weight ?? 0) * (r.reps ?? 0));
@@ -77,6 +108,18 @@ function ProgressPage() {
       prs,
       daily,
       maxVolume,
+      deltas: {
+        sessions: pct(
+          new Set(rows.filter((r) => new Date(r.created_at) >= weekStart).map((r) => r.session_id)).size,
+          new Set(rows.filter((r) => {
+            const d = new Date(r.created_at);
+            return d >= prevWeekStart && d < weekStart;
+          }).map((r) => r.session_id)).size,
+        ),
+        volume: pct(thisWeekVolume, prevWeekVolume),
+        sets: pct(thisWeekSets, prevWeekSets),
+        reps: pct(thisWeekReps, prevWeekReps),
+      },
     };
   }, [sets]);
 
