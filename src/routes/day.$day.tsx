@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
