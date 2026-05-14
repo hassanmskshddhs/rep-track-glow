@@ -526,7 +526,8 @@ function DayPage({ day }: { day: string }) {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
+                  );
+                })}
                 <Button variant="secondary" size="sm" className="w-full" onClick={() => addSet(ex)}>
                   <Plus className="mr-1 h-4 w-4" /> Add set
                 </Button>
