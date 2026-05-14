@@ -21,13 +21,14 @@ function ProgressPage() {
     queryKey: ["progress-sets", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const since = subDays(new Date(), 29).toISOString();
+      // Pull 60 days so we can compute week-over-week deltas
+      const since = subDays(new Date(), 59).toISOString();
       const { data, error } = await supabase
         .from("set_logs")
         .select("exercise_name, weight, reps, created_at, session_id")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
-        .limit(2000);
+        .limit(4000);
       if (error) throw error;
       return data ?? [];
     },
