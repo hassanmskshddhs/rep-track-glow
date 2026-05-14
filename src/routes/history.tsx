@@ -174,9 +174,18 @@ function HistoryPage() {
                 </header>
 
                 <div className="divide-y divide-border/50">
-                  {Array.from(grouped, ([ex, sets]) => (
+                  {Array.from(grouped, ([ex, sets]) => {
+                    const isPR = prSet.has(ex);
+                    return (
                     <div key={ex} className="p-4">
-                      <div className="mb-2 text-sm font-semibold">{ex}</div>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <div className="text-sm font-semibold">{ex}</div>
+                        {isPR && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                            <Trophy className="h-3 w-3" /> New PR
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-1.5">
                         {sets.map((x) => (
                           <span
@@ -189,11 +198,13 @@ function HistoryPage() {
                         ))}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             );
-          })}
+            });
+          })()}
         </div>
       )}
 
