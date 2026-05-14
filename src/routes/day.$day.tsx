@@ -438,10 +438,25 @@ function DayPage({ day }: { day: string }) {
           const ins = insights[ex];
           const t = buildTarget(ex, ins?.lastSets);
           const sets = state[ex] ?? [{ weight: "", reps: "" }];
+          const best = ins?.bestWeight ?? null;
+          const currentTopWeight = sets.reduce<number>((m, r) => {
+            const w = r.weight === "" ? NaN : Number(r.weight);
+            const reps = r.reps === "" ? NaN : Number(r.reps);
+            if (Number.isFinite(w) && Number.isFinite(reps) && reps > 0) return Math.max(m, w);
+            return m;
+          }, 0);
+          const isPR = currentTopWeight > 0 && (best == null || currentTopWeight > best);
           return (
             <div key={ex} className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-4 pt-4">
-                <div className="font-semibold">{ex}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-semibold">{ex}</div>
+                  {isPR && (
+                    <span className="animate-pr-pulse animate-check-pop inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                      <Trophy className="h-3 w-3" /> New PR!
+                    </span>
+                  )}
+                </div>
 
                 {/* Smart progression */}
                 <div
