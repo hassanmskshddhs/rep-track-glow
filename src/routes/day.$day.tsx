@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RestTimer } from "@/components/RestTimer";
 import { ExerciseChart } from "@/components/ExerciseChart";
 import { ShareWorkoutDialog, type WorkoutSummary } from "@/components/ShareWorkoutDialog";
+import { getSplitAccent } from "@/lib/split-accent";
 
 export const Route = createFileRoute("/day/$day")({
   component: DayRoute,
