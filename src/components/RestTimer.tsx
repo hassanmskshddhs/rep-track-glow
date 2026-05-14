@@ -8,6 +8,7 @@ export function RestTimer() {
   const [target, setTarget] = useState(90);
   const [remaining, setRemaining] = useState(90);
   const [running, setRunning] = useState(false);
+  const [flash, setFlash] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
