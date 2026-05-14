@@ -254,7 +254,7 @@ function Index() {
           >
             <div
               className="absolute inset-x-0 top-0 h-1.5"
-              style={{ backgroundColor: `var(--${upNext.accent ?? "primary"})` }}
+              style={{ backgroundColor: `var(--${getSplitAccent(upNext.name, upNext.muscle_groups, upNext.accent ?? "primary")})` }}
             />
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
               <Sparkles className="h-3.5 w-3.5" /> Up Next
