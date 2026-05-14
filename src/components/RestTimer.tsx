@@ -8,6 +8,7 @@ export function RestTimer() {
   const [target, setTarget] = useState(90);
   const [remaining, setRemaining] = useState(90);
   const [running, setRunning] = useState(false);
+  const [flash, setFlash] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -16,6 +17,7 @@ export function RestTimer() {
       setRemaining((r) => {
         if (r <= 1) {
           setRunning(false);
+          setFlash((f) => f + 1);
           if (typeof window !== "undefined" && "Audio" in window) {
             try {
               // Simple beep via WebAudio
@@ -47,7 +49,13 @@ export function RestTimer() {
   const pct = target ? (remaining / target) * 100 : 0;
 
   return (
-    <div className="rounded-2xl border border-border bg-[var(--gradient-card)] p-5 shadow-[var(--shadow-card)]">
+    <div
+      key={`flash-${flash}`}
+      className={
+        "rounded-2xl border border-border bg-[var(--gradient-card)] p-5 shadow-[var(--shadow-card)] " +
+        (flash > 0 ? "animate-timer-flash" : "")
+      }
+    >
       <div className="mb-3 flex items-center gap-2">
         <Timer className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-semibold uppercase tracking-wider">Rest Timer</h3>

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RestTimer } from "@/components/RestTimer";
 import { ExerciseChart } from "@/components/ExerciseChart";
 import { ShareWorkoutDialog, type WorkoutSummary } from "@/components/ShareWorkoutDialog";
+import { getSplitAccent } from "@/lib/split-accent";
 
 export const Route = createFileRoute("/day/$day")({
   component: DayRoute,
@@ -170,7 +171,7 @@ function DayPage({ day }: { day: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_workout_days")
-        .select("id, name, accent")
+        .select("id, name, accent, muscle_groups")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -392,8 +393,9 @@ function DayPage({ day }: { day: string }) {
   const tabs: { key: string; label: string; accent: string }[] = (customDays ?? []).map((c) => ({
     key: c.id,
     label: c.name,
-    accent: c.accent ?? "primary",
+    accent: getSplitAccent(c.name, (c as { muscle_groups?: string[] | null }).muscle_groups, c.accent ?? "primary"),
   }));
+  const dayAccent = getSplitAccent(config.name, null, config.accent);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 pb-32">
@@ -403,7 +405,7 @@ function DayPage({ day }: { day: string }) {
 
       <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: `var(--${config.accent})` }}>
+          <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: `var(--${dayAccent})` }}>
             Custom Workout
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{config.name}</h1>
@@ -436,10 +438,25 @@ function DayPage({ day }: { day: string }) {
           const ins = insights[ex];
           const t = buildTarget(ex, ins?.lastSets);
           const sets = state[ex] ?? [{ weight: "", reps: "" }];
+          const best = ins?.bestWeight ?? null;
+          const currentTopWeight = sets.reduce<number>((m, r) => {
+            const w = r.weight === "" ? NaN : Number(r.weight);
+            const reps = r.reps === "" ? NaN : Number(r.reps);
+            if (Number.isFinite(w) && Number.isFinite(reps) && reps > 0) return Math.max(m, w);
+            return m;
+          }, 0);
+          const isPR = currentTopWeight > 0 && (best == null || currentTopWeight > best);
           return (
             <div key={ex} className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-4 pt-4">
-                <div className="font-semibold">{ex}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-semibold">{ex}</div>
+                  {isPR && (
+                    <span className="animate-pr-pulse animate-check-pop inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                      <Trophy className="h-3 w-3" /> New PR!
+                    </span>
+                  )}
+                </div>
 
                 {/* Smart progression */}
                 <div
@@ -468,10 +485,20 @@ function DayPage({ day }: { day: string }) {
               </div>
 
               <div className="space-y-2 px-4 pb-4 pt-3">
-                {sets.map((row, idx) => (
+                {sets.map((row, idx) => {
+                  const filled = row.weight !== "" && row.reps !== "";
+                  return (
                   <div key={idx} className="flex items-center gap-2">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold tabular-nums text-muted-foreground">
-                      {idx + 1}
+                    <div
+                      key={`badge-${filled}`}
+                      className={
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums transition-colors " +
+                        (filled
+                          ? "animate-check-pop bg-primary/20 text-primary"
+                          : "bg-muted text-muted-foreground")
+                      }
+                    >
+                      {filled ? "✓" : idx + 1}
                     </div>
                     <Input
                       type="number"
@@ -499,7 +526,8 @@ function DayPage({ day }: { day: string }) {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
+                  );
+                })}
                 <Button variant="secondary" size="sm" className="w-full" onClick={() => addSet(ex)}>
                   <Plus className="mr-1 h-4 w-4" /> Add set
                 </Button>
@@ -558,7 +586,7 @@ function DayPage({ day }: { day: string }) {
             )}
             <Button
               size="lg"
-              className="font-bold shadow-[var(--shadow-glow)]"
+              className="press-on-tap font-bold shadow-[var(--shadow-glow)]"
               onClick={logWorkout}
               disabled={saving || totalSets === 0}
             >

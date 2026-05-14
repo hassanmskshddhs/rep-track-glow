@@ -18,6 +18,7 @@ import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getSplitAccent } from "@/lib/split-accent";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -67,18 +68,20 @@ function Index() {
   });
 
   const week = useMemo(() => {
-    const days: { date: Date; active: boolean; label: string }[] = [];
-    const performedSet = new Set(
-      (recent ?? []).map((s) =>
-        startOfDay(new Date(s.performed_at)).toISOString(),
-      ),
-    );
+    const days: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
+    const performedMap = new Map<string, string>();
+    for (const s of recent ?? []) {
+      const key = startOfDay(new Date(s.performed_at)).toISOString();
+      if (!performedMap.has(key)) performedMap.set(key, s.day);
+    }
     for (let i = 6; i >= 0; i--) {
       const d = startOfDay(subDays(new Date(), i));
+      const key = d.toISOString();
       days.push({
         date: d,
-        active: performedSet.has(d.toISOString()),
+        active: performedMap.has(key),
         label: format(d, "EEEEE"),
+        splitId: performedMap.get(key) ?? null,
       });
     }
     return days;
@@ -117,11 +120,12 @@ function Index() {
   }
   if (!user) return <AuthScreen />;
 
-  const firstName =
-    (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] ??
-    (user.user_metadata?.name as string | undefined)?.split(" ")[0] ??
-    user.email?.split("@")[0] ??
-    "Athlete";
+  const fullName =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    (user.user_metadata?.display_name as string | undefined) ??
+    null;
+  const firstName = fullName?.trim().split(/\s+/)[0] || "Athlete";
 
   const deleteSplit = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? Logged sessions stay in History.`)) return;
@@ -191,22 +195,51 @@ function Index() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-1.5">
-            {week.map((d) => (
-              <div key={d.date.toISOString()} className="flex flex-col items-center gap-1">
-                <div
-                  className={cn(
-                    "flex h-10 w-full items-center justify-center rounded-lg text-xs font-bold transition-all",
-                    d.active
-                      ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
-                      : "bg-muted/60 text-muted-foreground",
+          <div className="mt-4 grid grid-cols-7 gap-2">
+            {week.map((d, i) => {
+              const isToday = i === week.length - 1;
+              const split = d.splitId ? (splits ?? []).find((s) => s.id === d.splitId) : null;
+              const splitLabel = split?.name ?? "";
+              return (
+                <div key={d.date.toISOString()} className="flex flex-col items-center gap-1.5">
+                  <div
+                    className={cn(
+                      "relative flex h-14 w-full flex-col items-center justify-center rounded-xl text-xs font-bold transition-all",
+                      d.active
+                        ? "bg-primary/15 text-primary shadow-[var(--shadow-glow)]"
+                        : "bg-muted/40 text-muted-foreground/60",
+                      isToday &&
+                        "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                    )}
+                  >
+                    <span className="text-[11px] font-extrabold tabular-nums">
+                      {format(d.date, "d")}
+                    </span>
+                    {d.active ? (
+                      <Flame className="mt-0.5 h-4 w-4 text-primary" fill="currentColor" />
+                    ) : (
+                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[10px] font-semibold uppercase tracking-wider",
+                      isToday ? "text-primary" : "text-muted-foreground",
+                    )}
+                  >
+                    {d.label}
+                  </span>
+                  {splitLabel && (
+                    <span
+                      className="max-w-full truncate text-[9px] font-semibold text-foreground/70"
+                      title={splitLabel}
+                    >
+                      {splitLabel}
+                    </span>
                   )}
-                >
-                  {d.active ? <Flame className="h-4 w-4" /> : "·"}
                 </div>
-                <span className="text-[10px] font-semibold text-muted-foreground">{d.label}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -221,7 +254,7 @@ function Index() {
           >
             <div
               className="absolute inset-x-0 top-0 h-1.5"
-              style={{ backgroundColor: `var(--${upNext.accent ?? "primary"})` }}
+              style={{ backgroundColor: `var(--${getSplitAccent(upNext.name, upNext.muscle_groups, upNext.accent ?? "primary")})` }}
             />
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
               <Sparkles className="h-3.5 w-3.5" /> Up Next
@@ -264,12 +297,13 @@ function Index() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {(splits ?? []).map((s) => {
-            const accent = s.accent ?? "primary";
+            const accent = getSplitAccent(s.name, s.muscle_groups, s.accent ?? "primary");
             const exCount = Array.isArray(s.exercises) ? (s.exercises as unknown[]).length : 0;
             return (
               <div
                 key={s.id}
-                className="group glass relative overflow-hidden rounded-2xl transition-all hover:-translate-y-0.5 hover:border-primary/40"
+                className="group glass relative overflow-hidden rounded-2xl border-l-4 transition-all hover:-translate-y-0.5 hover:border-primary/40"
+                style={{ borderLeftColor: `var(--${accent})` }}
               >
                 <div
                   className="absolute inset-x-0 top-0 h-1"

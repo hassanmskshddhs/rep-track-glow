@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, Dumbbell, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, Dumbbell, Pencil, Plus, Trash2, Trophy } from "lucide-react";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -109,9 +109,36 @@ function HistoryPage() {
         </div>
       ) : (
         <div className="mt-6 space-y-4">
-          {data.map((s) => {
+          {(() => {
+            // Walk sessions oldest -> newest to compute the PR weight & date
+            // per exercise. Only sessions that beat the previous best earn the
+            // PR badge for that exercise.
+            const ordered = [...data].sort(
+              (a, b) => new Date(a.performed_at).getTime() - new Date(b.performed_at).getTime(),
+            );
+            const bestSoFar = new Map<string, number>();
+            const prSessions = new Map<string, Set<string>>(); // sessionId -> set of ex names that PR'd
+            for (const s of ordered) {
+              const topPerEx = new Map<string, number>();
+              for (const x of s.sets) {
+                if (x.weight == null || x.reps == null || x.reps <= 0) continue;
+                const cur = topPerEx.get(x.exercise_name) ?? -Infinity;
+                if (x.weight > cur) topPerEx.set(x.exercise_name, x.weight);
+              }
+              const sessionPRs = new Set<string>();
+              for (const [ex, w] of topPerEx) {
+                const prev = bestSoFar.get(ex);
+                if (prev == null || w > prev) {
+                  sessionPRs.add(ex);
+                  bestSoFar.set(ex, w);
+                }
+              }
+              if (sessionPRs.size > 0) prSessions.set(s.id, sessionPRs);
+            }
+            return data.map((s) => {
             const split = splitMap.get(s.day);
             const accent = split?.accent ?? "primary";
+            const prSet = prSessions.get(s.id) ?? new Set<string>();
             const grouped = new Map<string, SetRow[]>();
             for (const x of s.sets) {
               const arr = grouped.get(x.exercise_name) ?? [];
@@ -147,9 +174,18 @@ function HistoryPage() {
                 </header>
 
                 <div className="divide-y divide-border/50">
-                  {Array.from(grouped, ([ex, sets]) => (
+                  {Array.from(grouped, ([ex, sets]) => {
+                    const isPR = prSet.has(ex);
+                    return (
                     <div key={ex} className="p-4">
-                      <div className="mb-2 text-sm font-semibold">{ex}</div>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <div className="text-sm font-semibold">{ex}</div>
+                        {isPR && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                            <Trophy className="h-3 w-3" /> New PR
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-1.5">
                         {sets.map((x) => (
                           <span
@@ -162,11 +198,13 @@ function HistoryPage() {
                         ))}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             );
-          })}
+            });
+          })()}
         </div>
       )}
 

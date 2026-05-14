@@ -21,13 +21,14 @@ function ProgressPage() {
     queryKey: ["progress-sets", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const since = subDays(new Date(), 29).toISOString();
+      // Pull 60 days so we can compute week-over-week deltas
+      const since = subDays(new Date(), 59).toISOString();
       const { data, error } = await supabase
         .from("set_logs")
         .select("exercise_name, weight, reps, created_at, session_id")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
-        .limit(2000);
+        .limit(4000);
       if (error) throw error;
       return data ?? [];
     },
@@ -35,17 +36,48 @@ function ProgressPage() {
 
   const stats = useMemo(() => {
     const rows = sets ?? [];
-    const sessions = new Set(rows.map((r) => r.session_id));
-    const totalVolume = rows.reduce(
+    const now = new Date();
+    const last30Cutoff = subDays(now, 29);
+    const recentRows = rows.filter((r) => new Date(r.created_at) >= last30Cutoff);
+
+    const sessions = new Set(recentRows.map((r) => r.session_id));
+    const totalVolume = recentRows.reduce(
       (a, r) => a + (r.weight ?? 0) * (r.reps ?? 0),
       0,
     );
-    const totalSets = rows.length;
-    const totalReps = rows.reduce((a, r) => a + (r.reps ?? 0), 0);
+    const totalSets = recentRows.length;
+    const totalReps = recentRows.reduce((a, r) => a + (r.reps ?? 0), 0);
+
+    // Week-over-week deltas (last 7 days vs prior 7 days)
+    const weekStart = subDays(now, 6);
+    const prevWeekStart = subDays(now, 13);
+    let thisWeekVolume = 0,
+      prevWeekVolume = 0,
+      thisWeekReps = 0,
+      prevWeekReps = 0,
+      thisWeekSets = 0,
+      prevWeekSets = 0;
+    for (const r of rows) {
+      const d = new Date(r.created_at);
+      const vol = (r.weight ?? 0) * (r.reps ?? 0);
+      if (d >= weekStart) {
+        thisWeekVolume += vol;
+        thisWeekReps += r.reps ?? 0;
+        thisWeekSets += 1;
+      } else if (d >= prevWeekStart) {
+        prevWeekVolume += vol;
+        prevWeekReps += r.reps ?? 0;
+        prevWeekSets += 1;
+      }
+    }
+    const pct = (cur: number, prev: number): number | null => {
+      if (prev === 0) return cur > 0 ? 100 : null;
+      return Math.round(((cur - prev) / prev) * 100);
+    };
 
     // PRs per exercise
     const prMap = new Map<string, number>();
-    for (const r of rows) {
+    for (const r of recentRows) {
       if (r.weight == null) continue;
       const cur = prMap.get(r.exercise_name) ?? 0;
       if (r.weight > cur) prMap.set(r.exercise_name, r.weight);
@@ -57,9 +89,9 @@ function ProgressPage() {
     // Daily volume for last 14 days
     const dailyMap = new Map<string, number>();
     for (let i = 13; i >= 0; i--) {
-      dailyMap.set(startOfDay(subDays(new Date(), i)).toISOString(), 0);
+      dailyMap.set(startOfDay(subDays(now, i)).toISOString(), 0);
     }
-    for (const r of rows) {
+    for (const r of recentRows) {
       const key = startOfDay(new Date(r.created_at)).toISOString();
       if (dailyMap.has(key)) {
         dailyMap.set(key, (dailyMap.get(key) ?? 0) + (r.weight ?? 0) * (r.reps ?? 0));
@@ -76,6 +108,18 @@ function ProgressPage() {
       prs,
       daily,
       maxVolume,
+      deltas: {
+        sessions: pct(
+          new Set(rows.filter((r) => new Date(r.created_at) >= weekStart).map((r) => r.session_id)).size,
+          new Set(rows.filter((r) => {
+            const d = new Date(r.created_at);
+            return d >= prevWeekStart && d < weekStart;
+          }).map((r) => r.session_id)).size,
+        ),
+        volume: pct(thisWeekVolume, prevWeekVolume),
+        sets: pct(thisWeekSets, prevWeekSets),
+        reps: pct(thisWeekReps, prevWeekReps),
+      },
     };
   }, [sets]);
 
@@ -95,42 +139,47 @@ function ProgressPage() {
       <p className="text-sm text-muted-foreground">Last 30 days of your training.</p>
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Sessions" value={stats.sessions} icon={<Flame className="h-4 w-4" />} />
+        <Stat label="Sessions" value={stats.sessions} delta={stats.deltas.sessions} icon={<Flame className="h-4 w-4" />} />
         <Stat
           label="Volume (kg)"
           value={Math.round(stats.totalVolume).toLocaleString()}
+          delta={stats.deltas.volume}
           icon={<TrendingUp className="h-4 w-4" />}
         />
-        <Stat label="Sets" value={stats.totalSets} icon={<Dumbbell className="h-4 w-4" />} />
-        <Stat label="Reps" value={stats.totalReps} icon={<Dumbbell className="h-4 w-4" />} />
+        <Stat label="Sets" value={stats.totalSets} delta={stats.deltas.sets} icon={<Dumbbell className="h-4 w-4" />} />
+        <Stat label="Reps" value={stats.totalReps} delta={stats.deltas.reps} icon={<Dumbbell className="h-4 w-4" />} />
       </div>
 
       <section className="mt-6 glass rounded-2xl p-5 animate-fade-in-up stagger-1">
         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
           Daily volume · 14 days
         </h3>
-        <div className="mt-4 flex h-32 items-end gap-1.5">
-          {stats.daily.map((d) => (
-            <div
-              key={d.date.toISOString()}
-              className="flex flex-1 flex-col items-center gap-1"
-              title={`${format(d.date, "MMM d")} · ${Math.round(d.volume).toLocaleString()} kg`}
-            >
+        <div className="mt-4 flex h-36 items-end gap-2 rounded-xl bg-background/40 p-3">
+          {stats.daily.map((d) => {
+            const heightPct = d.volume > 0
+              ? Math.max(8, (d.volume / stats.maxVolume) * 100)
+              : 4;
+            return (
               <div
-                className={cn(
-                  "w-full rounded-t-md transition-all",
-                  d.volume > 0 ? "bg-primary" : "bg-muted/60",
-                )}
-                style={{
-                  height: `${Math.max(6, (d.volume / stats.maxVolume) * 100)}%`,
-                  minHeight: 6,
-                }}
-              />
-              <span className="text-[9px] text-muted-foreground">
-                {format(d.date, "EEEEE")}
-              </span>
-            </div>
-          ))}
+                key={d.date.toISOString()}
+                className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
+                title={`${format(d.date, "MMM d")} · ${Math.round(d.volume).toLocaleString()} kg`}
+              >
+                <div
+                  className={cn(
+                    "w-full rounded-t-md transition-all duration-300",
+                    d.volume > 0
+                      ? "bg-primary shadow-[0_0_12px_-2px_var(--primary)]"
+                      : "bg-muted-foreground/20",
+                  )}
+                  style={{ height: `${heightPct}%` }}
+                />
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {format(d.date, "EEEEE")}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -157,14 +206,44 @@ function ProgressPage() {
   );
 }
 
-function Stat({ label, value, icon }: { label: string; value: number | string; icon: React.ReactNode }) {
+function Stat({
+  label,
+  value,
+  icon,
+  delta,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  delta?: number | null;
+}) {
+  const hasDelta = delta != null;
+  const positive = (delta ?? 0) >= 0;
   return (
-    <div className="glass rounded-2xl p-4">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        {icon}
+    <div className="glass rounded-2xl border border-border/40 bg-card/60 p-4 shadow-[var(--shadow-card)]">
+      <div className="flex items-center justify-between">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          {icon}
+        </div>
+        {hasDelta && (
+          <span
+            className={cn(
+              "rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+              positive
+                ? "bg-emerald-500/15 text-emerald-400"
+                : "bg-destructive/15 text-destructive",
+            )}
+            title="vs last week"
+          >
+            {positive ? "+" : ""}
+            {delta}%
+          </span>
+        )}
+      </div>
+      <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-extrabold tabular-nums">{value}</div>
+      <div className="mt-0.5 text-2xl font-extrabold tabular-nums">{value}</div>
     </div>
   );
 }
