@@ -139,42 +139,47 @@ function ProgressPage() {
       <p className="text-sm text-muted-foreground">Last 30 days of your training.</p>
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Sessions" value={stats.sessions} icon={<Flame className="h-4 w-4" />} />
+        <Stat label="Sessions" value={stats.sessions} delta={stats.deltas.sessions} icon={<Flame className="h-4 w-4" />} />
         <Stat
           label="Volume (kg)"
           value={Math.round(stats.totalVolume).toLocaleString()}
+          delta={stats.deltas.volume}
           icon={<TrendingUp className="h-4 w-4" />}
         />
-        <Stat label="Sets" value={stats.totalSets} icon={<Dumbbell className="h-4 w-4" />} />
-        <Stat label="Reps" value={stats.totalReps} icon={<Dumbbell className="h-4 w-4" />} />
+        <Stat label="Sets" value={stats.totalSets} delta={stats.deltas.sets} icon={<Dumbbell className="h-4 w-4" />} />
+        <Stat label="Reps" value={stats.totalReps} delta={stats.deltas.reps} icon={<Dumbbell className="h-4 w-4" />} />
       </div>
 
       <section className="mt-6 glass rounded-2xl p-5 animate-fade-in-up stagger-1">
         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
           Daily volume · 14 days
         </h3>
-        <div className="mt-4 flex h-32 items-end gap-1.5">
-          {stats.daily.map((d) => (
-            <div
-              key={d.date.toISOString()}
-              className="flex flex-1 flex-col items-center gap-1"
-              title={`${format(d.date, "MMM d")} · ${Math.round(d.volume).toLocaleString()} kg`}
-            >
+        <div className="mt-4 flex h-36 items-end gap-2 rounded-xl bg-background/40 p-3">
+          {stats.daily.map((d) => {
+            const heightPct = d.volume > 0
+              ? Math.max(8, (d.volume / stats.maxVolume) * 100)
+              : 4;
+            return (
               <div
-                className={cn(
-                  "w-full rounded-t-md transition-all",
-                  d.volume > 0 ? "bg-primary" : "bg-muted/60",
-                )}
-                style={{
-                  height: `${Math.max(6, (d.volume / stats.maxVolume) * 100)}%`,
-                  minHeight: 6,
-                }}
-              />
-              <span className="text-[9px] text-muted-foreground">
-                {format(d.date, "EEEEE")}
-              </span>
-            </div>
-          ))}
+                key={d.date.toISOString()}
+                className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
+                title={`${format(d.date, "MMM d")} · ${Math.round(d.volume).toLocaleString()} kg`}
+              >
+                <div
+                  className={cn(
+                    "w-full rounded-t-md transition-all duration-300",
+                    d.volume > 0
+                      ? "bg-primary shadow-[0_0_12px_-2px_var(--primary)]"
+                      : "bg-muted-foreground/20",
+                  )}
+                  style={{ height: `${heightPct}%` }}
+                />
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {format(d.date, "EEEEE")}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -201,14 +206,44 @@ function ProgressPage() {
   );
 }
 
-function Stat({ label, value, icon }: { label: string; value: number | string; icon: React.ReactNode }) {
+function Stat({
+  label,
+  value,
+  icon,
+  delta,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  delta?: number | null;
+}) {
+  const hasDelta = delta != null;
+  const positive = (delta ?? 0) >= 0;
   return (
-    <div className="glass rounded-2xl p-4">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        {icon}
+    <div className="glass rounded-2xl border border-border/40 bg-card/60 p-4 shadow-[var(--shadow-card)]">
+      <div className="flex items-center justify-between">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          {icon}
+        </div>
+        {hasDelta && (
+          <span
+            className={cn(
+              "rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+              positive
+                ? "bg-emerald-500/15 text-emerald-400"
+                : "bg-destructive/15 text-destructive",
+            )}
+            title="vs last week"
+          >
+            {positive ? "+" : ""}
+            {delta}%
+          </span>
+        )}
+      </div>
+      <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-extrabold tabular-nums">{value}</div>
+      <div className="mt-0.5 text-2xl font-extrabold tabular-nums">{value}</div>
     </div>
   );
 }
