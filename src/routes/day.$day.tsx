@@ -485,10 +485,20 @@ function DayPage({ day }: { day: string }) {
               </div>
 
               <div className="space-y-2 px-4 pb-4 pt-3">
-                {sets.map((row, idx) => (
+                {sets.map((row, idx) => {
+                  const filled = row.weight !== "" && row.reps !== "";
+                  return (
                   <div key={idx} className="flex items-center gap-2">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold tabular-nums text-muted-foreground">
-                      {idx + 1}
+                    <div
+                      key={`badge-${filled}`}
+                      className={
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums transition-colors " +
+                        (filled
+                          ? "animate-check-pop bg-primary/20 text-primary"
+                          : "bg-muted text-muted-foreground")
+                      }
+                    >
+                      {filled ? "✓" : idx + 1}
                     </div>
                     <Input
                       type="number"
