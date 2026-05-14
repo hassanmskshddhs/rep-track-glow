@@ -297,12 +297,13 @@ function Index() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {(splits ?? []).map((s) => {
-            const accent = s.accent ?? "primary";
+            const accent = getSplitAccent(s.name, s.muscle_groups, s.accent ?? "primary");
             const exCount = Array.isArray(s.exercises) ? (s.exercises as unknown[]).length : 0;
             return (
               <div
                 key={s.id}
-                className="group glass relative overflow-hidden rounded-2xl transition-all hover:-translate-y-0.5 hover:border-primary/40"
+                className="group glass relative overflow-hidden rounded-2xl border-l-4 transition-all hover:-translate-y-0.5 hover:border-primary/40"
+                style={{ borderLeftColor: `var(--${accent})` }}
               >
                 <div
                   className="absolute inset-x-0 top-0 h-1"
