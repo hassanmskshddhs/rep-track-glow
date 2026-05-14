@@ -18,6 +18,7 @@ import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getSplitAccent } from "@/lib/split-accent";
 
 export const Route = createFileRoute("/")({
   component: Index,
