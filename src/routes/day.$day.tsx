@@ -171,7 +171,7 @@ function DayPage({ day }: { day: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_workout_days")
-        .select("id, name, accent")
+        .select("id, name, accent, muscle_groups")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data ?? [];
