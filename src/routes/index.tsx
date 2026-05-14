@@ -120,11 +120,12 @@ function Index() {
   }
   if (!user) return <AuthScreen />;
 
-  const firstName =
-    (user.user_metadata?.full_name as string | undefined)?.split(" ")[0] ??
-    (user.user_metadata?.name as string | undefined)?.split(" ")[0] ??
-    user.email?.split("@")[0] ??
-    "Athlete";
+  const fullName =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    (user.user_metadata?.display_name as string | undefined) ??
+    null;
+  const firstName = fullName?.trim().split(/\s+/)[0] || "Athlete";
 
   const deleteSplit = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? Logged sessions stay in History.`)) return;
