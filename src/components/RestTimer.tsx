@@ -17,6 +17,7 @@ export function RestTimer() {
       setRemaining((r) => {
         if (r <= 1) {
           setRunning(false);
+          setFlash((f) => f + 1);
           if (typeof window !== "undefined" && "Audio" in window) {
             try {
               // Simple beep via WebAudio
