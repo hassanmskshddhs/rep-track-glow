@@ -195,22 +195,51 @@ function Index() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-1.5">
-            {week.map((d) => (
-              <div key={d.date.toISOString()} className="flex flex-col items-center gap-1">
-                <div
-                  className={cn(
-                    "flex h-10 w-full items-center justify-center rounded-lg text-xs font-bold transition-all",
-                    d.active
-                      ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
-                      : "bg-muted/60 text-muted-foreground",
+          <div className="mt-4 grid grid-cols-7 gap-2">
+            {week.map((d, i) => {
+              const isToday = i === week.length - 1;
+              const split = d.splitId ? (splits ?? []).find((s) => s.id === d.splitId) : null;
+              const splitLabel = split?.name ?? "";
+              return (
+                <div key={d.date.toISOString()} className="flex flex-col items-center gap-1.5">
+                  <div
+                    className={cn(
+                      "relative flex h-14 w-full flex-col items-center justify-center rounded-xl text-xs font-bold transition-all",
+                      d.active
+                        ? "bg-primary/15 text-primary shadow-[var(--shadow-glow)]"
+                        : "bg-muted/40 text-muted-foreground/60",
+                      isToday &&
+                        "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                    )}
+                  >
+                    <span className="text-[11px] font-extrabold tabular-nums">
+                      {format(d.date, "d")}
+                    </span>
+                    {d.active ? (
+                      <Flame className="mt-0.5 h-4 w-4 text-primary" fill="currentColor" />
+                    ) : (
+                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[10px] font-semibold uppercase tracking-wider",
+                      isToday ? "text-primary" : "text-muted-foreground",
+                    )}
+                  >
+                    {d.label}
+                  </span>
+                  {splitLabel && (
+                    <span
+                      className="max-w-full truncate text-[9px] font-semibold text-foreground/70"
+                      title={splitLabel}
+                    >
+                      {splitLabel}
+                    </span>
                   )}
-                >
-                  {d.active ? <Flame className="h-4 w-4" /> : "·"}
                 </div>
-                <span className="text-[10px] font-semibold text-muted-foreground">{d.label}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
