@@ -68,18 +68,20 @@ function Index() {
   });
 
   const week = useMemo(() => {
-    const days: { date: Date; active: boolean; label: string }[] = [];
-    const performedSet = new Set(
-      (recent ?? []).map((s) =>
-        startOfDay(new Date(s.performed_at)).toISOString(),
-      ),
-    );
+    const days: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
+    const performedMap = new Map<string, string>();
+    for (const s of recent ?? []) {
+      const key = startOfDay(new Date(s.performed_at)).toISOString();
+      if (!performedMap.has(key)) performedMap.set(key, s.day);
+    }
     for (let i = 6; i >= 0; i--) {
       const d = startOfDay(subDays(new Date(), i));
+      const key = d.toISOString();
       days.push({
         date: d,
-        active: performedSet.has(d.toISOString()),
+        active: performedMap.has(key),
         label: format(d, "EEEEE"),
+        splitId: performedMap.get(key) ?? null,
       });
     }
     return days;
