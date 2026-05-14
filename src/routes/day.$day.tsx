@@ -575,7 +575,7 @@ function DayPage({ day }: { day: string }) {
             )}
             <Button
               size="lg"
-              className="font-bold shadow-[var(--shadow-glow)]"
+              className="press-on-tap font-bold shadow-[var(--shadow-glow)]"
               onClick={logWorkout}
               disabled={saving || totalSets === 0}
             >
