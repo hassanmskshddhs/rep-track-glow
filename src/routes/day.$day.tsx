@@ -405,7 +405,7 @@ function DayPage({ day }: { day: string }) {
 
       <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: `var(--${config.accent})` }}>
+          <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: `var(--${dayAccent})` }}>
             Custom Workout
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{config.name}</h1>
