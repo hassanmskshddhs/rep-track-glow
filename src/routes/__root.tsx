@@ -1,5 +1,7 @@
-import { useEffect } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import {
   Outlet,
   Link,
@@ -123,12 +125,37 @@ function AppShell() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => { registerServiceWorker(); }, []);
-  return (
-    <QueryClientProvider client={queryClient}>
+
+  // Persist the React Query cache to localStorage so the app loads with
+  // workouts, history, and progress immediately — even when offline.
+  const [persister] = useState(() => {
+    if (typeof window === "undefined") return null;
+    return createSyncStoragePersister({
+      storage: window.localStorage,
+      key: "ironlog.rq.v1",
+      throttleTime: 500,
+    });
+  });
+
+  if (!persister) {
+    // SSR fallback — no persistence on the server.
+    return (
       <AuthProvider>
         <AppShell />
         <Toaster richColors position="top-center" theme="dark" />
       </AuthProvider>
-    </QueryClientProvider>
+    );
+  }
+
+  return (
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 * 14 }}
+    >
+      <AuthProvider>
+        <AppShell />
+        <Toaster richColors position="top-center" theme="dark" />
+      </AuthProvider>
+    </PersistQueryClientProvider>
   );
 }

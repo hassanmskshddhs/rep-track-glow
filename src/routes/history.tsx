@@ -37,13 +37,45 @@ type SessionWithSets = {
   id: string;
   day: string;
   performed_at: string;
+  title: string | null;
   sets: SetRow[];
 };
+
 
 function HistoryPage() {
   const { user, loading } = useAuth();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<SessionWithSets | null>(null);
+  const [renaming, setRenaming] = useState<SessionWithSets | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
+
+  // sync rename input with the currently-renaming session
+  useEffect(() => {
+    if (renaming) {
+      setRenameValue(renaming.title?.trim() || "");
+    }
+  }, [renaming?.id]);
+
+  const submitRename = async () => {
+    if (!renaming) return;
+    const title = renameValue.trim();
+    setRenameSaving(true);
+    try {
+      const { error } = await supabase
+        .from("workout_sessions")
+        .update({ title: title || null })
+        .eq("id", renaming.id);
+      if (error) throw error;
+      toast.success("Renamed");
+      setRenaming(null);
+      qc.invalidateQueries({ queryKey: ["history", user?.id] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to rename");
+    } finally {
+      setRenameSaving(false);
+    }
+  };
 
   const { data: splits } = useQuery({
     queryKey: ["custom-days-list", user?.id],
@@ -64,7 +96,7 @@ function HistoryPage() {
     queryFn: async () => {
       const { data: sessions, error } = await supabase
         .from("workout_sessions")
-        .select("id, day, performed_at")
+        .select("id, day, performed_at, title")
         .order("performed_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -155,8 +187,20 @@ function HistoryPage() {
                     >
                       <Dumbbell className="h-5 w-5" style={{ color: `var(--${accent})` }} />
                     </div>
-                    <div>
-                      <div className="font-bold">{split?.name ?? "Workout"}</div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="truncate text-base font-extrabold tracking-tight">
+                          {s.title?.trim() || split?.name || "Workout"}
+                        </h3>
+                        <button
+                          type="button"
+                          aria-label="Rename session"
+                          onClick={() => setRenaming(s)}
+                          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <CalendarDays className="h-3 w-3" />
                         {format(new Date(s.performed_at), "EEE, MMM d · h:mm a")}
@@ -218,6 +262,34 @@ function HistoryPage() {
         }}
         userId={user.id}
       />
+
+      <Dialog open={!!renaming} onOpenChange={(o) => !o && setRenaming(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename session</DialogTitle>
+            <DialogDescription>
+              Give this workout a custom name. Leave blank to use the split name.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            placeholder="e.g. Push Day · Heavy"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitRename();
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenaming(null)} disabled={renameSaving}>
+              Cancel
+            </Button>
+            <Button onClick={submitRename} disabled={renameSaving}>
+              {renameSaving ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
