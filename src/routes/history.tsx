@@ -157,8 +157,20 @@ function HistoryPage() {
                     >
                       <Dumbbell className="h-5 w-5" style={{ color: `var(--${accent})` }} />
                     </div>
-                    <div>
-                      <div className="font-bold">{split?.name ?? "Workout"}</div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="truncate text-base font-extrabold tracking-tight">
+                          {s.title?.trim() || split?.name || "Workout"}
+                        </h3>
+                        <button
+                          type="button"
+                          aria-label="Rename session"
+                          onClick={() => setRenaming(s)}
+                          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <CalendarDays className="h-3 w-3" />
                         {format(new Date(s.performed_at), "EEE, MMM d · h:mm a")}
