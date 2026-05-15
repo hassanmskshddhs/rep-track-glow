@@ -66,7 +66,7 @@ function HistoryPage() {
     queryFn: async () => {
       const { data: sessions, error } = await supabase
         .from("workout_sessions")
-        .select("id, day, performed_at")
+        .select("id, day, performed_at, title")
         .order("performed_at", { ascending: false })
         .limit(100);
       if (error) throw error;
