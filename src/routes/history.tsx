@@ -41,12 +41,6 @@ type SessionWithSets = {
   sets: SetRow[];
 };
 
-type SessionWithSets = {
-  id: string;
-  day: string;
-  performed_at: string;
-  sets: SetRow[];
-};
 
 function HistoryPage() {
   const { user, loading } = useAuth();
