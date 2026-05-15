@@ -37,6 +37,14 @@ type SessionWithSets = {
   id: string;
   day: string;
   performed_at: string;
+  title: string | null;
+  sets: SetRow[];
+};
+
+type SessionWithSets = {
+  id: string;
+  day: string;
+  performed_at: string;
   sets: SetRow[];
 };
 
