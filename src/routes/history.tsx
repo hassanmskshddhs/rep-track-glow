@@ -46,6 +46,36 @@ function HistoryPage() {
   const { user, loading } = useAuth();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<SessionWithSets | null>(null);
+  const [renaming, setRenaming] = useState<SessionWithSets | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
+
+  // sync rename input with the currently-renaming session
+  useEffect(() => {
+    if (renaming) {
+      setRenameValue(renaming.title?.trim() || "");
+    }
+  }, [renaming?.id]);
+
+  const submitRename = async () => {
+    if (!renaming) return;
+    const title = renameValue.trim();
+    setRenameSaving(true);
+    try {
+      const { error } = await supabase
+        .from("workout_sessions")
+        .update({ title: title || null })
+        .eq("id", renaming.id);
+      if (error) throw error;
+      toast.success("Renamed");
+      setRenaming(null);
+      qc.invalidateQueries({ queryKey: ["history", user?.id] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to rename");
+    } finally {
+      setRenameSaving(false);
+    }
+  };
 
   const { data: splits } = useQuery({
     queryKey: ["custom-days-list", user?.id],
@@ -232,6 +262,34 @@ function HistoryPage() {
         }}
         userId={user.id}
       />
+
+      <Dialog open={!!renaming} onOpenChange={(o) => !o && setRenaming(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename session</DialogTitle>
+            <DialogDescription>
+              Give this workout a custom name. Leave blank to use the split name.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            placeholder="e.g. Push Day · Heavy"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitRename();
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenaming(null)} disabled={renameSaving}>
+              Cancel
+            </Button>
+            <Button onClick={submitRename} disabled={renameSaving}>
+              {renameSaving ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
