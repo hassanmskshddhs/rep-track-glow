@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
+import { resolveDisplayName, useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -36,6 +37,7 @@ type CustomDay = {
 
 function Index() {
   const { user, loading } = useAuth();
+  const profile = useProfile();
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -125,7 +127,7 @@ function Index() {
     (user.user_metadata?.name as string | undefined) ??
     (user.user_metadata?.display_name as string | undefined) ??
     null;
-  const firstName = fullName?.trim().split(/\s+/)[0] || "Athlete";
+  const firstName = resolveDisplayName(profile, { fullName, email: user.email });
 
   const deleteSplit = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? Logged sessions stay in History.`)) return;
