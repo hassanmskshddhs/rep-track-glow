@@ -332,7 +332,7 @@ function DayPage({ day }: { day: string }) {
     try {
       const { data: session, error: sErr } = await supabase
         .from("workout_sessions")
-        .insert({ user_id: user.id, day })
+        .insert({ user_id: user.id, day, title: config.name })
         .select("id")
         .single();
       if (sErr) throw sErr;
