@@ -549,3 +549,172 @@ function DayPage({ day }: { day: string }) {
     </main>
   );
 }
+
+type ExerciseCardProps = {
+  ex: string;
+  state: State;
+  insights: Record<string, { lastSets: LastSetEntry[]; bestWeight: number | null }>;
+  notes: Record<string, string>;
+  setNotes: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  saveNote: (ex: string, value: string) => void | Promise<void>;
+  update: (ex: string, idx: number, field: keyof SetRow, value: string) => void;
+  addSet: (ex: string) => void;
+  removeSet: (ex: string, idx: number) => void;
+  userId: string;
+};
+
+function ExerciseCard({
+  ex,
+  state,
+  insights,
+  notes,
+  setNotes,
+  saveNote,
+  update,
+  addSet,
+  removeSet,
+  userId,
+}: ExerciseCardProps) {
+  const dragControls = useDragControls();
+  const ins = insights[ex];
+  const t = buildTarget(ex, ins?.lastSets);
+  const sets = state[ex] ?? [{ weight: "", reps: "" }];
+  const best = ins?.bestWeight ?? null;
+  const currentTopWeight = sets.reduce<number>((m, r) => {
+    const w = r.weight === "" ? NaN : Number(r.weight);
+    const reps = r.reps === "" ? NaN : Number(r.reps);
+    if (Number.isFinite(w) && Number.isFinite(reps) && reps > 0) return Math.max(m, w);
+    return m;
+  }, 0);
+  const isPR = currentTopWeight > 0 && (best == null || currentTopWeight > best);
+
+  return (
+    <Reorder.Item
+      value={ex}
+      dragListener={false}
+      dragControls={dragControls}
+      className="rounded-2xl border border-border bg-card overflow-hidden touch-pan-y"
+      layout
+      transition={{ type: "spring", stiffness: 500, damping: 40 }}
+      whileDrag={{ scale: 1.02, boxShadow: "0 20px 50px -10px rgba(0,0,0,0.6)", zIndex: 20 }}
+    >
+      <div className="px-4 pt-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="font-semibold truncate">{ex}</div>
+            {isPR && (
+              <span className="animate-pr-pulse animate-check-pop inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                <Trophy className="h-3 w-3" /> New PR!
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-label={`Drag to reorder ${ex}`}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              dragControls.start(e);
+            }}
+            className="shrink-0 -mr-1 -mt-1 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+            style={{ touchAction: "none" }}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Smart progression */}
+        <div
+          className="mt-2 rounded-lg border px-3 py-2"
+          style={{
+            borderColor: t.hitCeiling
+              ? "color-mix(in oklab, var(--progress) 45%, transparent)"
+              : "color-mix(in oklab, var(--border) 100%, transparent)",
+            backgroundColor: t.hitCeiling
+              ? "color-mix(in oklab, var(--progress) 10%, transparent)"
+              : "color-mix(in oklab, var(--muted) 60%, transparent)",
+          }}
+        >
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Last session
+          </div>
+          <div className="mt-0.5 text-xs text-foreground/90">{t.last}</div>
+          <div
+            className="mt-2 flex items-start gap-1.5 text-xs font-semibold"
+            style={{ color: "var(--progress)" }}
+          >
+            <Target className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{t.target}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2 px-4 pb-4 pt-3">
+        {sets.map((row, idx) => {
+          const filled = row.weight !== "" && row.reps !== "";
+          return (
+            <div key={idx} className="flex items-center gap-2">
+              <div
+                key={`badge-${filled}`}
+                className={
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums transition-colors " +
+                  (filled
+                    ? "animate-check-pop bg-primary/20 text-primary"
+                    : "bg-muted text-muted-foreground")
+                }
+              >
+                {filled ? "✓" : idx + 1}
+              </div>
+              <Input
+                type="number"
+                inputMode="decimal"
+                placeholder="kg"
+                value={row.weight}
+                onChange={(e) => update(ex, idx, "weight", e.target.value)}
+                className="h-10"
+              />
+              <Input
+                type="number"
+                inputMode="numeric"
+                placeholder="reps"
+                value={row.reps}
+                onChange={(e) => update(ex, idx, "reps", e.target.value)}
+                className="h-10"
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeSet(ex, idx)}
+                disabled={sets.length === 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        })}
+        <Button variant="secondary" size="sm" className="w-full" onClick={() => addSet(ex)}>
+          <Plus className="mr-1 h-4 w-4" /> Add set
+        </Button>
+
+        {/* Training note */}
+        <div className="pt-1">
+          <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <StickyNote className="h-3 w-3" /> Training note
+          </label>
+          <Textarea
+            value={notes[ex] ?? ""}
+            onChange={(e) => setNotes((n) => ({ ...n, [ex]: e.target.value }))}
+            onBlur={(e) => saveNote(ex, e.target.value)}
+            placeholder="e.g. Seat height 3 · slow eccentric"
+            className="mt-1 min-h-[44px] text-sm"
+          />
+        </div>
+
+        <div className="pt-2">
+          <ExerciseChart userId={userId} exercise={ex} />
+        </div>
+      </div>
+    </Reorder.Item>
+  );
+}
+
