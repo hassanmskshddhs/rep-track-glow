@@ -178,6 +178,25 @@ function DayPage({ day }: { day: string }) {
     } catch { /* noop */ }
   }, [state, hydrated, draftKey]);
 
+  // Hydrate / sync local exercise order (user can drag to reorder).
+  useEffect(() => {
+    if (!config || !orderKey || typeof window === "undefined") return;
+    let saved: string[] = [];
+    try {
+      const raw = localStorage.getItem(orderKey);
+      if (raw) saved = JSON.parse(raw) as string[];
+    } catch { /* noop */ }
+    const valid = saved.filter((e) => config.exercises.includes(e));
+    const missing = config.exercises.filter((e) => !valid.includes(e));
+    setOrder([...valid, ...missing]);
+  }, [config, orderKey]);
+
+  useEffect(() => {
+    if (!orderKey || order.length === 0 || typeof window === "undefined") return;
+    try { localStorage.setItem(orderKey, JSON.stringify(order)); } catch { /* noop */ }
+  }, [order, orderKey]);
+
+
   const { data: customDays } = useQuery({
     queryKey: ["custom-days-list", user?.id],
     enabled: !!user,
