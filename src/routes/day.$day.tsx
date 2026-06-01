@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Reorder, useDragControls } from "framer-motion";
 
 import type { DayConfig } from "@/lib/exercises";
 import { useAuth } from "@/lib/auth-context";
@@ -16,6 +17,7 @@ import { RestTimer } from "@/components/RestTimer";
 import { ExerciseChart } from "@/components/ExerciseChart";
 import { ShareWorkoutDialog, type WorkoutSummary } from "@/components/ShareWorkoutDialog";
 import { getSplitAccent } from "@/lib/split-accent";
+import { useSessionTimer } from "@/lib/session-timer";
 
 export const Route = createFileRoute("/day/$day")({
   component: DayRoute,
