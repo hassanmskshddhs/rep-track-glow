@@ -413,6 +413,7 @@ function DayPage({ day }: { day: string }) {
       setShareOpen(true);
 
       if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
+      sessionTimer.stop();
       toast.success(`Logged ${rows.length} sets · ${config.name}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to log workout";
