@@ -162,7 +162,9 @@ function RootComponent() {
     // SSR fallback — no persistence on the server.
     return (
       <AuthProvider>
-        <AppShell />
+        <SessionTimerProvider>
+          <AppShell />
+        </SessionTimerProvider>
         <Toaster richColors position="top-center" theme="dark" />
       </AuthProvider>
     );
@@ -174,7 +176,9 @@ function RootComponent() {
       persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 * 14 }}
     >
       <AuthProvider>
-        <AppShell />
+        <SessionTimerProvider>
+          <AppShell />
+        </SessionTimerProvider>
         <Toaster richColors position="top-center" theme="dark" />
       </AuthProvider>
     </PersistQueryClientProvider>
