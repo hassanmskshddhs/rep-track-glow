@@ -92,6 +92,25 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SessionTimerBadge() {
+  const { startedAt, elapsedMs } = useSessionTimer();
+  if (startedAt == null) return null;
+  return (
+    <div
+      className="ml-3 flex items-center gap-1.5 rounded-md border border-border/60 bg-card/60 px-2 py-1"
+      title="Active workout session"
+    >
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+      <span
+        className="font-mono text-xs tabular-nums text-foreground/80"
+        style={{ fontVariantNumeric: "tabular-nums" }}
+      >
+        {formatElapsed(elapsedMs)}
+      </span>
+    </div>
+  );
+}
+
 function Header() {
   const { user } = useAuth();
   if (!user) return null;
@@ -107,6 +126,7 @@ function Header() {
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Track. Lift. Repeat.</div>
           </div>
         </Link>
+        <SessionTimerBadge />
       </div>
     </header>
   );
