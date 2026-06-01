@@ -125,16 +125,27 @@ function DayPage({ day }: { day: string }) {
   const config: DayConfig | null = customDay ?? null;
 
   const draftKey = user ? `ironlog:draft:${user.id}:${day}` : null;
+  const orderKey = user ? `ironlog:order:${user.id}:${day}` : null;
 
   const [state, setState] = useState<State>({});
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [summary, setSummary] = useState<WorkoutSummary | null>(null);
+  const [order, setOrder] = useState<string[]>([]);
 
   // Notes — keyed by exercise. Local edits, persisted to DB on blur.
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [notesHydrated, setNotesHydrated] = useState(false);
+
+  const sessionTimer = useSessionTimer();
+  // Start the workout stopwatch as soon as the session screen mounts.
+  useEffect(() => {
+    sessionTimer.start();
+    // We intentionally do NOT stop on unmount — the timer should keep running
+    // even if the user navigates away. It only stops when Log Workout succeeds
+    // or the user explicitly resets.
+  }, [sessionTimer]);
 
   // Hydrate input drafts
   useEffect(() => {
