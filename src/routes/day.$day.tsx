@@ -466,143 +466,48 @@ function DayPage({ day }: { day: string }) {
         <RestTimer />
       </div>
 
-      <div className="mt-6 space-y-3">
-        {config.exercises.map((ex) => {
-          const ins = insights[ex];
-          const t = buildTarget(ex, ins?.lastSets);
-          const sets = state[ex] ?? [{ weight: "", reps: "" }];
-          const best = ins?.bestWeight ?? null;
-          const currentTopWeight = sets.reduce<number>((m, r) => {
-            const w = r.weight === "" ? NaN : Number(r.weight);
-            const reps = r.reps === "" ? NaN : Number(r.reps);
-            if (Number.isFinite(w) && Number.isFinite(reps) && reps > 0) return Math.max(m, w);
-            return m;
-          }, 0);
-          const isPR = currentTopWeight > 0 && (best == null || currentTopWeight > best);
-          return (
-            <div key={ex} className="rounded-2xl border border-border bg-card overflow-hidden">
-              <div className="px-4 pt-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold">{ex}</div>
-                  {isPR && (
-                    <span className="animate-pr-pulse animate-check-pop inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary">
-                      <Trophy className="h-3 w-3" /> New PR!
-                    </span>
-                  )}
-                </div>
+      <Reorder.Group
+        axis="y"
+        values={order}
+        onReorder={setOrder}
+        className="mt-6 space-y-3"
+      >
+        {order.map((ex) => (
+          <ExerciseCard
+            key={ex}
+            ex={ex}
+            state={state}
+            insights={insights}
+            notes={notes}
+            setNotes={setNotes}
+            saveNote={saveNote}
+            update={update}
+            addSet={addSet}
+            removeSet={removeSet}
+            userId={user.id}
+          />
+        ))}
+      </Reorder.Group>
 
-                {/* Smart progression */}
-                <div
-                  className="mt-2 rounded-lg border px-3 py-2"
-                  style={{
-                    borderColor: t.hitCeiling
-                      ? "color-mix(in oklab, var(--progress) 45%, transparent)"
-                      : "color-mix(in oklab, var(--border) 100%, transparent)",
-                    backgroundColor: t.hitCeiling
-                      ? "color-mix(in oklab, var(--progress) 10%, transparent)"
-                      : "color-mix(in oklab, var(--muted) 60%, transparent)",
-                  }}
-                >
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Last session
-                  </div>
-                  <div className="mt-0.5 text-xs text-foreground/90">{t.last}</div>
-                  <div
-                    className="mt-2 flex items-start gap-1.5 text-xs font-semibold"
-                    style={{ color: "var(--progress)" }}
-                  >
-                    <Target className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span>{t.target}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2 px-4 pb-4 pt-3">
-                {sets.map((row, idx) => {
-                  const filled = row.weight !== "" && row.reps !== "";
-                  return (
-                  <div key={idx} className="flex items-center gap-2">
-                    <div
-                      key={`badge-${filled}`}
-                      className={
-                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums transition-colors " +
-                        (filled
-                          ? "animate-check-pop bg-primary/20 text-primary"
-                          : "bg-muted text-muted-foreground")
-                      }
-                    >
-                      {filled ? "✓" : idx + 1}
-                    </div>
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      placeholder="kg"
-                      value={row.weight}
-                      onChange={(e) => update(ex, idx, "weight", e.target.value)}
-                      className="h-10"
-                    />
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      placeholder="reps"
-                      value={row.reps}
-                      onChange={(e) => update(ex, idx, "reps", e.target.value)}
-                      className="h-10"
-                    />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeSet(ex, idx)}
-                      disabled={sets.length === 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  );
-                })}
-                <Button variant="secondary" size="sm" className="w-full" onClick={() => addSet(ex)}>
-                  <Plus className="mr-1 h-4 w-4" /> Add set
-                </Button>
-
-                {/* Training note */}
-                <div className="pt-1">
-                  <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    <StickyNote className="h-3 w-3" /> Training note
-                  </label>
-                  <Textarea
-                    value={notes[ex] ?? ""}
-                    onChange={(e) => setNotes((n) => ({ ...n, [ex]: e.target.value }))}
-                    onBlur={(e) => saveNote(ex, e.target.value)}
-                    placeholder="e.g. Seat height 3 · slow eccentric"
-                    className="mt-1 min-h-[44px] text-sm"
-                  />
-                </div>
-
-                <div className="pt-2">
-                  <ExerciseChart userId={user.id} exercise={ex} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+      {/* Bottom session controls — sits above the bottom nav (64px). */}
       <div
         className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
         style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
       >
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          <div className="text-sm">
-            <div className="font-semibold">{totalSets} {totalSets === 1 ? "set" : "sets"} ready</div>
-            <div className="text-xs text-muted-foreground">{config.name} session</div>
+        <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 text-sm">
+            <span className="font-semibold tabular-nums">
+              {totalSets} {totalSets === 1 ? "set" : "sets"} ready
+            </span>
+            <span className="text-muted-foreground"> • {config.name}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Button
               size="lg"
               variant="outline"
               onClick={resetInputs}
               disabled={saving || totalSets === 0}
+              className="border-destructive/60 text-foreground hover:bg-destructive/10 hover:text-foreground"
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset
@@ -619,7 +524,8 @@ function DayPage({ day }: { day: string }) {
             )}
             <Button
               size="lg"
-              className="press-on-tap font-bold shadow-[var(--shadow-glow)]"
+              variant="destructive"
+              className="press-on-tap font-bold"
               onClick={logWorkout}
               disabled={saving || totalSets === 0}
             >
@@ -629,6 +535,7 @@ function DayPage({ day }: { day: string }) {
           </div>
         </div>
       </div>
+
 
       <ShareWorkoutDialog
         open={shareOpen}
