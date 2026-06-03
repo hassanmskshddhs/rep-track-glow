@@ -297,11 +297,13 @@ function DayPage({ day }: { day: string }) {
   }
 
   const resetInputs = () => {
-    if (!confirm("Clear all current inputs? This won't affect saved history.")) return;
+    if (!confirm("Clear all current inputs and stop the timer? This won't affect saved history.")) return;
     setState(Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
     if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
-    toast.success("Inputs cleared");
+    sessionTimer.stop();
+    toast.success("Session reset");
   };
+
 
   const update = (ex: string, idx: number, field: keyof SetRow, value: string) =>
     setState((s) => ({
