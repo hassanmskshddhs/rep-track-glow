@@ -223,22 +223,30 @@ function Index() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-2">
-            {week.map((d, i) => {
-              const isToday = i === week.length - 1;
+          <div
+            ref={scrollerRef}
+            onScroll={onScrollerScroll}
+            className="no-scrollbar -mx-1 mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
+            style={{ scrollPaddingInline: 8 }}
+          >
+            {days.map((d, i) => {
+              const isToday = i === days.length - 1;
               const split = d.splitId ? (splits ?? []).find((s) => s.id === d.splitId) : null;
               const splitLabel = split?.name ?? "";
               return (
-                <div key={d.date.toISOString()} className="flex flex-col items-center gap-1.5">
+                <div
+                  key={d.date.toISOString()}
+                  className="flex w-12 shrink-0 snap-end flex-col items-center gap-1.5"
+                >
                   <div
                     className={cn(
                       "relative flex h-14 w-full flex-col items-center justify-center rounded-xl text-xs font-bold transition-all",
                       d.active
                         ? "bg-primary/15 text-primary shadow-[var(--shadow-glow)]"
-                        : "bg-muted/40 text-muted-foreground/60",
-                      isToday &&
-                        "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                        : "bg-card/60 text-muted-foreground/70 border border-border/60",
+                      isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                     )}
+                    title={format(d.date, "EEE, MMM d, yyyy")}
                   >
                     <span className="text-[11px] font-extrabold tabular-nums">
                       {format(d.date, "d")}
@@ -269,6 +277,7 @@ function Index() {
               );
             })}
           </div>
+
         </div>
       </section>
 
