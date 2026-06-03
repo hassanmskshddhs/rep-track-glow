@@ -501,39 +501,54 @@ function DayPage({ day }: { day: string }) {
             <span className="text-muted-foreground"> • {config.name}</span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={resetInputs}
-              disabled={saving || totalSets === 0}
-              className="border-destructive/60 text-foreground hover:bg-destructive/10 hover:text-foreground"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-            {summary && !shareOpen && (
+            {sessionTimer.startedAt == null ? (
               <Button
                 size="lg"
-                variant="secondary"
-                onClick={() => setShareOpen(true)}
+                className="press-on-tap bg-primary font-bold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90"
+                onClick={() => sessionTimer.start()}
+                disabled={saving}
               >
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
+                <Play className="mr-2 h-4 w-4" />
+                Start Workout
               </Button>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={resetInputs}
+                  disabled={saving}
+                  className="border-destructive/60 text-foreground hover:bg-destructive/10 hover:text-foreground"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset
+                </Button>
+                {summary && !shareOpen && (
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    onClick={() => setShareOpen(true)}
+                  >
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </Button>
+                )}
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  className="press-on-tap font-bold"
+                  onClick={logWorkout}
+                  disabled={saving || totalSets === 0}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving…" : "Log Workout"}
+                </Button>
+              </>
             )}
-            <Button
-              size="lg"
-              variant="destructive"
-              className="press-on-tap font-bold"
-              onClick={logWorkout}
-              disabled={saving || totalSets === 0}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {saving ? "Saving…" : "Log Workout"}
-            </Button>
           </div>
         </div>
       </div>
+
 
 
       <ShareWorkoutDialog
