@@ -54,11 +54,14 @@ function Index() {
     },
   });
 
+  // Pull a long window of sessions to power the infinite horizontal week
+  // scroller. 26 weeks (~6 months) is plenty for a streak view; we extend
+  // it client-side if the user scrolls further left.
   const { data: recent } = useQuery({
     queryKey: ["recent-sessions", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const since = subDays(new Date(), 13).toISOString();
+      const since = subDays(new Date(), 26 * 7).toISOString();
       const { data, error } = await supabase
         .from("workout_sessions")
         .select("id, day, performed_at")
@@ -69,25 +72,48 @@ function Index() {
     },
   });
 
-  const week = useMemo(() => {
-    const days: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
-    const performedMap = new Map<string, string>();
+  const performedMap = useMemo(() => {
+    const m = new Map<string, string>();
     for (const s of recent ?? []) {
       const key = startOfDay(new Date(s.performed_at)).toISOString();
-      if (!performedMap.has(key)) performedMap.set(key, s.day);
+      if (!m.has(key)) m.set(key, s.day);
     }
-    for (let i = 6; i >= 0; i--) {
+    return m;
+  }, [recent]);
+
+  // Render N weeks ending today. Grows when user scrolls near the left edge.
+  const [weeksToShow, setWeeksToShow] = useState(8);
+  const days = useMemo(() => {
+    const out: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
+    const total = weeksToShow * 7;
+    for (let i = total - 1; i >= 0; i--) {
       const d = startOfDay(subDays(new Date(), i));
       const key = d.toISOString();
-      days.push({
+      out.push({
         date: d,
         active: performedMap.has(key),
         label: format(d, "EEEEE"),
         splitId: performedMap.get(key) ?? null,
       });
     }
-    return days;
-  }, [recent]);
+    return out;
+  }, [performedMap, weeksToShow]);
+
+  // Scroll to the today edge on first paint, and grow the window when the
+  // user scrolls near the start (infinite past-weeks scroll).
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollLeft = el.scrollWidth;
+  }, [weeksToShow]);
+  const onScrollerScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollLeft < 64) {
+      setWeeksToShow((w) => Math.min(w + 8, 52));
+    }
+  };
+
 
   const streak = useMemo(() => {
     const set = new Set(
