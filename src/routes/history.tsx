@@ -214,7 +214,46 @@ function HistoryPage() {
                     <Button size="sm" variant="outline" onClick={() => setEditing(s)}>
                       <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
                     </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Delete session"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        toast(`Delete this ${s.title?.trim() || split?.name || "workout"} log?`, {
+                          description: "This permanently removes the session and its sets.",
+                          duration: 8000,
+                          action: {
+                            label: "Delete",
+                            onClick: async () => {
+                              try {
+                                const { error: e1 } = await supabase
+                                  .from("set_logs")
+                                  .delete()
+                                  .eq("session_id", s.id);
+                                if (e1) throw e1;
+                                const { error: e2 } = await supabase
+                                  .from("workout_sessions")
+                                  .delete()
+                                  .eq("id", s.id);
+                                if (e2) throw e2;
+                                toast.success("Workout log deleted");
+                                qc.invalidateQueries({ queryKey: ["history", user.id] });
+                                qc.invalidateQueries({ queryKey: ["recent-sessions", user.id] });
+                                qc.invalidateQueries({ queryKey: ["progress-sets", user.id] });
+                              } catch (err) {
+                                const msg = err instanceof Error ? err.message : "Failed to delete";
+                                toast.error(msg);
+                              }
+                            },
+                          },
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
+
                 </header>
 
                 <div className="divide-y divide-border/50">
