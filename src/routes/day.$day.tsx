@@ -139,13 +139,10 @@ function DayPage({ day }: { day: string }) {
   const [notesHydrated, setNotesHydrated] = useState(false);
 
   const sessionTimer = useSessionTimer();
-  // Start the workout stopwatch as soon as the session screen mounts.
-  useEffect(() => {
-    sessionTimer.start();
-    // We intentionally do NOT stop on unmount — the timer should keep running
-    // even if the user navigates away. It only stops when Log Workout succeeds
-    // or the user explicitly resets.
-  }, [sessionTimer]);
+  // IMPORTANT: do NOT auto-start the workout stopwatch on mount. The timer
+  // only starts when the user explicitly taps "Start Workout" and stops on
+  // "Log Workout" or "Reset".
+
 
   // Hydrate input drafts
   useEffect(() => {
