@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dumbbell,
@@ -54,11 +54,14 @@ function Index() {
     },
   });
 
+  // Pull a long window of sessions to power the infinite horizontal week
+  // scroller. 26 weeks (~6 months) is plenty for a streak view; we extend
+  // it client-side if the user scrolls further left.
   const { data: recent } = useQuery({
     queryKey: ["recent-sessions", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const since = subDays(new Date(), 13).toISOString();
+      const since = subDays(new Date(), 26 * 7).toISOString();
       const { data, error } = await supabase
         .from("workout_sessions")
         .select("id, day, performed_at")
@@ -69,25 +72,48 @@ function Index() {
     },
   });
 
-  const week = useMemo(() => {
-    const days: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
-    const performedMap = new Map<string, string>();
+  const performedMap = useMemo(() => {
+    const m = new Map<string, string>();
     for (const s of recent ?? []) {
       const key = startOfDay(new Date(s.performed_at)).toISOString();
-      if (!performedMap.has(key)) performedMap.set(key, s.day);
+      if (!m.has(key)) m.set(key, s.day);
     }
-    for (let i = 6; i >= 0; i--) {
+    return m;
+  }, [recent]);
+
+  // Render N weeks ending today. Grows when user scrolls near the left edge.
+  const [weeksToShow, setWeeksToShow] = useState(8);
+  const days = useMemo(() => {
+    const out: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
+    const total = weeksToShow * 7;
+    for (let i = total - 1; i >= 0; i--) {
       const d = startOfDay(subDays(new Date(), i));
       const key = d.toISOString();
-      days.push({
+      out.push({
         date: d,
         active: performedMap.has(key),
         label: format(d, "EEEEE"),
         splitId: performedMap.get(key) ?? null,
       });
     }
-    return days;
-  }, [recent]);
+    return out;
+  }, [performedMap, weeksToShow]);
+
+  // Scroll to the today edge on first paint, and grow the window when the
+  // user scrolls near the start (infinite past-weeks scroll).
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollLeft = el.scrollWidth;
+  }, [weeksToShow]);
+  const onScrollerScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollLeft < 64) {
+      setWeeksToShow((w) => Math.min(w + 8, 52));
+    }
+  };
+
 
   const streak = useMemo(() => {
     const set = new Set(
@@ -197,22 +223,30 @@ function Index() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-2">
-            {week.map((d, i) => {
-              const isToday = i === week.length - 1;
+          <div
+            ref={scrollerRef}
+            onScroll={onScrollerScroll}
+            className="no-scrollbar -mx-1 mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
+            style={{ scrollPaddingInline: 8 }}
+          >
+            {days.map((d, i) => {
+              const isToday = i === days.length - 1;
               const split = d.splitId ? (splits ?? []).find((s) => s.id === d.splitId) : null;
               const splitLabel = split?.name ?? "";
               return (
-                <div key={d.date.toISOString()} className="flex flex-col items-center gap-1.5">
+                <div
+                  key={d.date.toISOString()}
+                  className="flex w-12 shrink-0 snap-end flex-col items-center gap-1.5"
+                >
                   <div
                     className={cn(
                       "relative flex h-14 w-full flex-col items-center justify-center rounded-xl text-xs font-bold transition-all",
                       d.active
                         ? "bg-primary/15 text-primary shadow-[var(--shadow-glow)]"
-                        : "bg-muted/40 text-muted-foreground/60",
-                      isToday &&
-                        "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                        : "bg-card/60 text-muted-foreground/70 border border-border/60",
+                      isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                     )}
+                    title={format(d.date, "EEE, MMM d, yyyy")}
                   >
                     <span className="text-[11px] font-extrabold tabular-nums">
                       {format(d.date, "d")}
@@ -243,6 +277,7 @@ function Index() {
               );
             })}
           </div>
+
         </div>
       </section>
 

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Reorder, useDragControls } from "framer-motion";
@@ -139,13 +139,10 @@ function DayPage({ day }: { day: string }) {
   const [notesHydrated, setNotesHydrated] = useState(false);
 
   const sessionTimer = useSessionTimer();
-  // Start the workout stopwatch as soon as the session screen mounts.
-  useEffect(() => {
-    sessionTimer.start();
-    // We intentionally do NOT stop on unmount — the timer should keep running
-    // even if the user navigates away. It only stops when Log Workout succeeds
-    // or the user explicitly resets.
-  }, [sessionTimer]);
+  // IMPORTANT: do NOT auto-start the workout stopwatch on mount. The timer
+  // only starts when the user explicitly taps "Start Workout" and stops on
+  // "Log Workout" or "Reset".
+
 
   // Hydrate input drafts
   useEffect(() => {
@@ -300,11 +297,13 @@ function DayPage({ day }: { day: string }) {
   }
 
   const resetInputs = () => {
-    if (!confirm("Clear all current inputs? This won't affect saved history.")) return;
+    if (!confirm("Clear all current inputs and stop the timer? This won't affect saved history.")) return;
     setState(Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
     if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
-    toast.success("Inputs cleared");
+    sessionTimer.stop();
+    toast.success("Session reset");
   };
+
 
   const update = (ex: string, idx: number, field: keyof SetRow, value: string) =>
     setState((s) => ({
@@ -413,8 +412,15 @@ function DayPage({ day }: { day: string }) {
       setShareOpen(true);
 
       if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
+      // Capture elapsed time, then freeze + reset the stopwatch to 00:00:00.
+      const elapsedMs = sessionTimer.elapsedMs;
       sessionTimer.stop();
-      toast.success(`Logged ${rows.length} sets · ${config.name}`);
+      const mins = Math.floor(elapsedMs / 60000);
+      const secs = Math.floor((elapsedMs % 60000) / 1000);
+      const durationLabel = elapsedMs > 0
+        ? ` · ${mins}m ${String(secs).padStart(2, "0")}s`
+        : "";
+      toast.success(`Logged ${rows.length} sets · ${config.name}${durationLabel}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to log workout";
       toast.error(msg);
@@ -502,39 +508,54 @@ function DayPage({ day }: { day: string }) {
             <span className="text-muted-foreground"> • {config.name}</span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={resetInputs}
-              disabled={saving || totalSets === 0}
-              className="border-destructive/60 text-foreground hover:bg-destructive/10 hover:text-foreground"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-            {summary && !shareOpen && (
+            {sessionTimer.startedAt == null ? (
               <Button
                 size="lg"
-                variant="secondary"
-                onClick={() => setShareOpen(true)}
+                className="press-on-tap bg-primary font-bold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90"
+                onClick={() => sessionTimer.start()}
+                disabled={saving}
               >
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
+                <Play className="mr-2 h-4 w-4" />
+                Start Workout
               </Button>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={resetInputs}
+                  disabled={saving}
+                  className="border-destructive/60 text-foreground hover:bg-destructive/10 hover:text-foreground"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset
+                </Button>
+                {summary && !shareOpen && (
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    onClick={() => setShareOpen(true)}
+                  >
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </Button>
+                )}
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  className="press-on-tap font-bold"
+                  onClick={logWorkout}
+                  disabled={saving || totalSets === 0}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving…" : "Log Workout"}
+                </Button>
+              </>
             )}
-            <Button
-              size="lg"
-              variant="destructive"
-              className="press-on-tap font-bold"
-              onClick={logWorkout}
-              disabled={saving || totalSets === 0}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {saving ? "Saving…" : "Log Workout"}
-            </Button>
           </div>
         </div>
       </div>
+
 
 
       <ShareWorkoutDialog

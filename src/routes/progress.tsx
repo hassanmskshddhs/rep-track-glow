@@ -1,13 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, TrendingUp, Dumbbell, Flame } from "lucide-react";
+import { ArrowLeft, TrendingUp, Dumbbell, Flame, Trophy } from "lucide-react";
 import { format, startOfDay, subDays } from "date-fns";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 export const Route = createFileRoute("/progress")({
   component: ProgressPage,
@@ -202,9 +220,192 @@ function ProgressPage() {
           </ul>
         )}
       </section>
+
+      <OneRepMaxTracker userId={user.id} />
     </main>
   );
 }
+
+/* -------------------------- 1RM per-exercise tracker -------------------------- */
+function OneRepMaxTracker({ userId }: { userId: string }) {
+  // List of exercises the user has logged sets for (most recent first).
+  const { data: exercises } = useQuery({
+    queryKey: ["progress-exercises", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("set_logs")
+        .select("exercise_name, created_at")
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (error) throw error;
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const r of data ?? []) {
+        if (!seen.has(r.exercise_name)) {
+          seen.add(r.exercise_name);
+          out.push(r.exercise_name);
+        }
+      }
+      return out;
+    },
+  });
+
+  const [selected, setSelected] = useState<string | null>(null);
+  useEffect(() => {
+    if (selected == null && exercises && exercises.length > 0) {
+      setSelected(exercises[0]);
+    }
+  }, [exercises, selected]);
+
+  const { data: sets } = useQuery({
+    queryKey: ["progress-1rm", userId, selected],
+    enabled: !!selected,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("set_logs")
+        .select("created_at, weight, reps")
+        .eq("exercise_name", selected!)
+        .not("weight", "is", null)
+        .not("reps", "is", null)
+        .order("created_at", { ascending: true })
+        .limit(1000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Epley 1RM: weight × (1 + reps / 30). Aggregate per day = best 1RM of the
+  // day, with per-day total volume on the secondary axis.
+  const chartData = useMemo(() => {
+    const map = new Map<string, { oneRm: number; volume: number }>();
+    for (const r of sets ?? []) {
+      const w = Number(r.weight);
+      const reps = Number(r.reps);
+      if (!Number.isFinite(w) || !Number.isFinite(reps) || w <= 0 || reps <= 0) continue;
+      const e1rm = w * (1 + reps / 30);
+      const day = new Date(r.created_at).toISOString().slice(0, 10);
+      const cur = map.get(day) ?? { oneRm: 0, volume: 0 };
+      cur.oneRm = Math.max(cur.oneRm, e1rm);
+      cur.volume += w * reps;
+      map.set(day, cur);
+    }
+    return Array.from(map, ([date, v]) => ({
+      date,
+      oneRm: Math.round(v.oneRm * 10) / 10,
+      volume: Math.round(v.volume),
+    }));
+  }, [sets]);
+
+  const bestOneRm = chartData.reduce((m, p) => (p.oneRm > m ? p.oneRm : m), 0);
+
+  return (
+    <section className="mt-6 glass rounded-2xl p-5 animate-fade-in-up stagger-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Estimated 1-Rep Max
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Epley formula: weight × (1 + reps / 30). True progressive overload.
+          </p>
+        </div>
+        {bestOneRm > 0 && (
+          <span className="inline-flex items-center gap-1.5 self-start rounded-md bg-primary/15 px-2.5 py-1 text-xs font-extrabold tabular-nums text-primary sm:self-auto">
+            <Trophy className="h-3.5 w-3.5" /> Best e1RM {bestOneRm.toFixed(1)}kg
+          </span>
+        )}
+      </div>
+
+      <div className="mt-4">
+        {(exercises?.length ?? 0) === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Log a few sets to start tracking your 1RM progression.
+          </p>
+        ) : (
+          <>
+            <Select value={selected ?? ""} onValueChange={(v) => setSelected(v)}>
+              <SelectTrigger className="w-full sm:max-w-sm">
+                <SelectValue placeholder="Select an exercise" />
+              </SelectTrigger>
+              <SelectContent>
+                {(exercises ?? []).map((ex) => (
+                  <SelectItem key={ex} value={ex}>
+                    {ex}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="mt-4 h-56 w-full">
+              {chartData.length < 2 ? (
+                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border/60 text-xs text-muted-foreground">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Log at least 2 sessions of this exercise to see your 1RM curve.
+                </div>
+              ) : (
+                <ResponsiveContainer>
+                  <LineChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                      tickFormatter={(v) => v.slice(5)}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: 10, fill: "var(--primary)" }}
+                      domain={["auto", "auto"]}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 10, fill: "var(--progress)" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      labelStyle={{ color: "var(--foreground)" }}
+                      formatter={(value: number, name: string) =>
+                        name === "volume"
+                          ? [`${value.toLocaleString()} kg·reps`, "Volume"]
+                          : [`${value} kg`, "Est. 1RM"]
+                      }
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} iconType="line" />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="oneRm"
+                      name="Est. 1RM"
+                      stroke="var(--primary)"
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: "var(--primary)" }}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="volume"
+                      name="Volume"
+                      stroke="var(--progress)"
+                      strokeWidth={2}
+                      strokeDasharray="4 3"
+                      dot={{ r: 2.5, fill: "var(--progress)" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 
 function Stat({
   label,
