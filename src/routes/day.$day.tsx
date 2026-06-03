@@ -412,8 +412,15 @@ function DayPage({ day }: { day: string }) {
       setShareOpen(true);
 
       if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
+      // Capture elapsed time, then freeze + reset the stopwatch to 00:00:00.
+      const elapsedMs = sessionTimer.elapsedMs;
       sessionTimer.stop();
-      toast.success(`Logged ${rows.length} sets · ${config.name}`);
+      const mins = Math.floor(elapsedMs / 60000);
+      const secs = Math.floor((elapsedMs % 60000) / 1000);
+      const durationLabel = elapsedMs > 0
+        ? ` · ${mins}m ${String(secs).padStart(2, "0")}s`
+        : "";
+      toast.success(`Logged ${rows.length} sets · ${config.name}${durationLabel}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to log workout";
       toast.error(msg);
