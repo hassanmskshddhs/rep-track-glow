@@ -39,49 +39,52 @@
   --color-upper: var(--upper);
 }
 
-/* Stealth matte palette — single dark theme */
+/* Luxury obsidian palette — single dark theme */
 :root {
   --radius: 0.875rem;
-  /* Matte black background #121212 */
-  --background: oklch(0.18 0 0);
-  /* Pure white foreground #FFFFFF */
+  /* Obsidian charcoal #0F0F10 */
+  --background: oklch(0.155 0 0);
+  /* Sharp pure white #FFFFFF */
   --foreground: oklch(1 0 0);
-  /* Card surface #1C1C1E */
-  --card: oklch(0.22 0 0);
+  /* Smooth slate dark card #18181A */
+  --card: oklch(0.20 0 0);
   --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.22 0 0);
+  --popover: oklch(0.20 0 0);
   --popover-foreground: oklch(1 0 0);
-  /* Accent: solid crimson red #D32F2F */
-  --primary: oklch(0.55 0.21 27);
+  /* Accent: muted crimson — used sparingly */
+  --primary: oklch(0.55 0.18 27);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.25 0 0);
+  --secondary: oklch(0.23 0 0);
   --secondary-foreground: oklch(1 0 0);
-  --muted: oklch(0.22 0 0);
-  /* Muted gym gray #8E8E93 */
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.28 0 0);
+  --muted: oklch(0.20 0 0);
+  /* Soft silver gray #A0A0A5 */
+  --muted-foreground: oklch(0.70 0.003 285);
+  --accent: oklch(0.24 0 0);
   --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.55 0.21 27);
+  --destructive: oklch(0.55 0.18 27);
   --destructive-foreground: oklch(1 0 0);
-  /* Soft 1px border #2C2C2E */
-  --border: oklch(0.28 0 0);
-  --input: oklch(0.25 0 0);
-  --ring: oklch(0.55 0.21 27);
+  /* Thin high-end 1px border #262629 */
+  --border: oklch(0.27 0.003 285);
+  --input: oklch(0.23 0 0);
+  --ring: oklch(0.70 0.003 285);
 
-  --chart-1: oklch(0.55 0.21 27);
-  --chart-2: oklch(0.76 0.13 85);
-  --chart-3: oklch(0.62 0.11 230);
-  --chart-4: oklch(0.66 0.12 145);
-  --chart-5: oklch(0.66 0.13 300);
+  --chart-1: oklch(1 0 0);
+  --chart-2: oklch(0.50 0 0);
+  --chart-3: oklch(0.70 0.003 285);
+  --chart-4: oklch(0.72 0.18 145);
+  --chart-5: oklch(0.55 0.18 27);
 
-  /* Split accents — muted, non-neon */
-  --push: oklch(0.55 0.21 27);
+  /* Split accents — muted */
+  --push: oklch(0.62 0.16 27);
   --pull: oklch(0.62 0.11 230);
-  --legs: oklch(0.66 0.12 145);
+  --legs: oklch(0.72 0.18 145);
   --upper: oklch(0.6 0.13 300);
-  /* Brushed gold for progress/PR accents */
-  --progress: oklch(0.76 0.13 85);
+  /* Progress/PR accent — clean emerald #34C759 */
+  --progress: oklch(0.72 0.18 145);
   --color-progress: var(--progress);
+  /* Success text only */
+  --success: oklch(0.72 0.18 145);
+  --color-success: var(--success);
 
   --gradient-primary: linear-gradient(135deg, oklch(0.55 0.21 27), oklch(0.42 0.18 27));
   --gradient-card: linear-gradient(160deg, oklch(0.24 0 0), oklch(0.18 0 0));
