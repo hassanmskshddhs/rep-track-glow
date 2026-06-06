@@ -18,20 +18,22 @@ export function ExerciseChart({ userId, exercise }: { userId: string; exercise: 
       if (error) throw error;
       // Group by day. For each day track:
       //  - topWeight: heaviest load lifted (kg)
+      //  - reps: total reps across all sets
       //  - volume: sum of weight × reps across all sets (progression score)
-      const map = new Map<string, { topWeight: number; volume: number }>();
+      const map = new Map<string, { topWeight: number; reps: number; volume: number }>();
       for (const r of data ?? []) {
         const d = new Date(r.created_at).toISOString().slice(0, 10);
         const w = Number(r.weight) || 0;
         const reps = Number(r.reps) || 0;
-        const cur = map.get(d) ?? { topWeight: 0, volume: 0 };
+        const cur = map.get(d) ?? { topWeight: 0, reps: 0, volume: 0 };
         cur.topWeight = Math.max(cur.topWeight, w);
+        cur.reps += reps;
         cur.volume += w * reps;
         map.set(d, cur);
       }
       return Array.from(map, ([date, v]) => ({
         date,
-        weight: v.topWeight,
+        reps: v.reps,
         volume: Math.round(v.volume),
       }));
     },
@@ -50,15 +52,15 @@ export function ExerciseChart({ userId, exercise }: { userId: string; exercise: 
     <div className="h-48 w-full">
       <ResponsiveContainer>
         <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-          <CartesianGrid stroke="oklch(0.3 0.015 250)" strokeDasharray="3 3" />
-          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "oklch(0.68 0.02 250)" }} tickFormatter={(v) => v.slice(5)} />
-          <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "oklch(0.78 0.19 80)" }} />
-          <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "oklch(0.68 0.16 230)" }} />
+          <CartesianGrid stroke="#262629" strokeDasharray="3 3" />
+          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#A0A0A5" }} tickFormatter={(v) => v.slice(5)} />
+          <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#FFFFFF" }} />
+          <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#636366" }} />
           <Tooltip
-            contentStyle={{ background: "oklch(0.21 0.014 250)", border: "1px solid oklch(0.3 0.015 250)", borderRadius: 8, fontSize: 12 }}
-            labelStyle={{ color: "oklch(0.97 0.005 250)" }}
+            contentStyle={{ background: "#18181A", border: "1px solid #262629", borderRadius: 8, fontSize: 12 }}
+            labelStyle={{ color: "#FFFFFF" }}
             formatter={(value: number, name: string) =>
-              name === "volume" ? [`${value.toLocaleString()} kg·reps`, "Volume"] : [`${value} kg`, "Top weight"]
+              name === "volume" ? [`${value.toLocaleString()} kg·reps`, "Volume"] : [`${value} reps`, "Reps"]
             }
           />
           <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} iconType="line" />
@@ -66,20 +68,21 @@ export function ExerciseChart({ userId, exercise }: { userId: string; exercise: 
             yAxisId="left"
             type="monotone"
             dataKey="volume"
-            name="Volume (score)"
-            stroke="oklch(0.78 0.19 80)"
-            strokeWidth={2.5}
-            dot={{ r: 3, fill: "oklch(0.78 0.19 80)" }}
+            name="Volume"
+            stroke="#FFFFFF"
+            strokeWidth={2}
+            dot={{ r: 2, fill: "#FFFFFF", strokeWidth: 0 }}
+            activeDot={{ r: 3, fill: "#FFFFFF", strokeWidth: 0 }}
           />
           <Line
             yAxisId="right"
             type="monotone"
-            dataKey="weight"
-            name="Top weight"
-            stroke="oklch(0.68 0.16 230)"
-            strokeWidth={2}
-            strokeDasharray="4 3"
-            dot={{ r: 2.5, fill: "oklch(0.68 0.16 230)" }}
+            dataKey="reps"
+            name="Reps"
+            stroke="#636366"
+            strokeWidth={1.5}
+            dot={{ r: 2, fill: "#636366", strokeWidth: 0 }}
+            activeDot={{ r: 3, fill: "#636366", strokeWidth: 0 }}
           />
         </LineChart>
       </ResponsiveContainer>
