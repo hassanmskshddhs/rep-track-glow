@@ -644,15 +644,7 @@ function ExerciseCard({
 
         {/* Smart progression */}
         <div
-          className="mt-2 rounded-lg border px-3 py-2"
-          style={{
-            borderColor: t.hitCeiling
-              ? "color-mix(in oklab, var(--progress) 45%, transparent)"
-              : "color-mix(in oklab, var(--border) 100%, transparent)",
-            backgroundColor: t.hitCeiling
-              ? "color-mix(in oklab, var(--progress) 10%, transparent)"
-              : "color-mix(in oklab, var(--muted) 60%, transparent)",
-          }}
+          className="mt-2 rounded-lg border border-border bg-transparent px-3 py-2"
         >
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             Last session
@@ -660,7 +652,7 @@ function ExerciseCard({
           <div className="mt-0.5 text-xs text-foreground/90">{t.last}</div>
           <div
             className="mt-2 flex items-start gap-1.5 text-xs font-semibold"
-            style={{ color: "var(--progress)" }}
+            style={{ color: "var(--success)" }}
           >
             <Target className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>{t.target}</span>
