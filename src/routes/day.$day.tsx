@@ -525,7 +525,7 @@ function DayPage({ day }: { day: string }) {
                   variant="outline"
                   onClick={resetInputs}
                   disabled={saving}
-                  className="border-destructive/60 text-foreground hover:bg-destructive/10 hover:text-foreground"
+                  className="border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Reset
@@ -542,8 +542,7 @@ function DayPage({ day }: { day: string }) {
                 )}
                 <Button
                   size="lg"
-                  variant="destructive"
-                  className="press-on-tap font-bold"
+                  className="press-on-tap bg-white font-bold text-black hover:bg-white/90"
                   onClick={logWorkout}
                   disabled={saving || totalSets === 0}
                 >
