@@ -144,6 +144,43 @@ function SettingsPage() {
       </section>
 
       <section className="mt-4 glass rounded-2xl p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold">Appearance</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Switch between Obsidian dark mode and Studio light mode.
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setTheme("dark")}
+            className={
+              "flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors " +
+              (theme === "dark"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-transparent text-muted-foreground hover:text-foreground")
+            }
+          >
+            <Moon className="h-4 w-4" /> Dark
+          </button>
+          <button
+            type="button"
+            onClick={() => setTheme("light")}
+            className={
+              "flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors " +
+              (theme === "light"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-transparent text-muted-foreground hover:text-foreground")
+            }
+          >
+            <Sun className="h-4 w-4" /> Light
+          </button>
+        </div>
+      </section>
+
+      <section className="mt-4 glass rounded-2xl p-5">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
           <Shield className="h-3.5 w-3.5" /> Privacy
         </div>
