@@ -39,58 +39,86 @@
   --color-upper: var(--upper);
 }
 
-/* Luxury obsidian palette — single dark theme */
-:root {
+/* ============================================================
+   Luxury "Obsidian & Ice Blue" theme
+   - Dark (default): deep matte obsidian + ice-cyan accents
+   - Light: studio white with soft shadows
+   ============================================================ */
+:root, .dark {
   --radius: 0.875rem;
-  /* Obsidian charcoal #0F0F10 */
-  --background: oklch(0.155 0 0);
-  /* Sharp pure white #FFFFFF */
+  /* Deep matte obsidian #0B0B0C */
+  --background: oklch(0.135 0 0);
   --foreground: oklch(1 0 0);
-  /* Smooth slate dark card #18181A */
-  --card: oklch(0.20 0 0);
+  /* Charcoal slate #161618 */
+  --card: oklch(0.185 0 0);
   --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.20 0 0);
+  --popover: oklch(0.185 0 0);
   --popover-foreground: oklch(1 0 0);
-  /* Accent: muted crimson — used sparingly */
-  --primary: oklch(0.55 0.18 27);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.23 0 0);
+  /* Ice blue / premium cyan #0EA5E9 — the only pop of color */
+  --primary: oklch(0.70 0.14 230);
+  --primary-foreground: oklch(0.135 0 0);
+  --secondary: oklch(0.22 0 0);
   --secondary-foreground: oklch(1 0 0);
-  --muted: oklch(0.20 0 0);
-  /* Soft silver gray #A0A0A5 */
-  --muted-foreground: oklch(0.70 0.003 285);
-  --accent: oklch(0.24 0 0);
+  --muted: oklch(0.185 0 0);
+  /* Muted slate gray #94A3B8 */
+  --muted-foreground: oklch(0.72 0.02 250);
+  --accent: oklch(0.22 0 0);
   --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.55 0.18 27);
+  --destructive: oklch(0.62 0.18 27);
   --destructive-foreground: oklch(1 0 0);
-  /* Thin high-end 1px border #262629 */
-  --border: oklch(0.27 0.003 285);
-  --input: oklch(0.23 0 0);
-  --ring: oklch(0.70 0.003 285);
+  /* Ultra-thin 1px border #242427 */
+  --border: oklch(0.25 0.003 270);
+  --input: oklch(0.22 0 0);
+  --ring: oklch(0.70 0.14 230);
 
   --chart-1: oklch(1 0 0);
-  --chart-2: oklch(0.50 0 0);
-  --chart-3: oklch(0.70 0.003 285);
-  --chart-4: oklch(0.72 0.18 145);
-  --chart-5: oklch(0.55 0.18 27);
+  --chart-2: oklch(0.55 0 0);
+  --chart-3: oklch(0.72 0.02 250);
+  --chart-4: oklch(0.70 0.14 230);
+  --chart-5: oklch(0.72 0.18 145);
 
-  /* Split accents — muted */
   --push: oklch(0.62 0.16 27);
-  --pull: oklch(0.62 0.11 230);
+  --pull: oklch(0.70 0.14 230);
   --legs: oklch(0.72 0.18 145);
   --upper: oklch(0.6 0.13 300);
-  /* Progress/PR accent — clean emerald #34C759 */
-  --progress: oklch(0.72 0.18 145);
+  --progress: oklch(0.70 0.14 230);
   --color-progress: var(--progress);
-  /* Success text only */
   --success: oklch(0.72 0.18 145);
   --color-success: var(--success);
 
-  --gradient-primary: linear-gradient(135deg, oklch(0.55 0.21 27), oklch(0.42 0.18 27));
-  --gradient-card: linear-gradient(160deg, oklch(0.24 0 0), oklch(0.18 0 0));
-  --gradient-hero: linear-gradient(135deg, oklch(0.55 0.21 27 / 0.14), oklch(0.55 0.21 27 / 0.04) 60%, transparent);
-  --shadow-glow: 0 10px 36px -14px oklch(0.55 0.21 27 / 0.55);
+  --gradient-primary: linear-gradient(135deg, oklch(0.74 0.16 230), oklch(0.58 0.16 230));
+  --gradient-card: linear-gradient(160deg, oklch(0.22 0 0), oklch(0.17 0 0));
+  --gradient-hero: linear-gradient(135deg, oklch(0.70 0.14 230 / 0.14), oklch(0.70 0.14 230 / 0.04) 60%, transparent);
+  --shadow-glow: 0 8px 30px -14px oklch(0.70 0.14 230 / 0.45);
   --shadow-card: 0 8px 24px -14px oklch(0 0 0 / 0.7);
+}
+
+/* Light mode — Clean studio white */
+.light {
+  --background: oklch(0.985 0.002 250);
+  --foreground: oklch(0.18 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0 0);
+  --primary: oklch(0.66 0.14 230);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.005 250);
+  --secondary-foreground: oklch(0.18 0 0);
+  --muted: oklch(0.96 0.003 250);
+  --muted-foreground: oklch(0.55 0.03 250);
+  --accent: oklch(0.95 0.005 250);
+  --accent-foreground: oklch(0.18 0 0);
+  --destructive: oklch(0.60 0.20 27);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.91 0.005 250);
+  --input: oklch(0.94 0.005 250);
+  --ring: oklch(0.66 0.14 230);
+
+  --shadow-glow: 0 6px 20px -10px oklch(0.66 0.14 230 / 0.35);
+  --shadow-card: 0 4px 12px -6px oklch(0 0 0 / 0.06);
+  --gradient-card: linear-gradient(160deg, oklch(1 0 0), oklch(0.98 0.003 250));
+  --gradient-hero: linear-gradient(135deg, oklch(0.66 0.14 230 / 0.10), oklch(0.66 0.14 230 / 0.02) 60%, transparent);
 }
 
 /* Hide scrollbars on horizontal scrollers (week streak) */

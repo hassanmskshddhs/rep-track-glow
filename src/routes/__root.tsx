@@ -19,6 +19,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { registerServiceWorker } from "@/lib/pwa";
 import { SessionTimerProvider, useSessionTimer, formatElapsed } from "@/lib/session-timer";
+import { ThemeProvider } from "@/lib/theme";
 
 function NotFoundComponent() {
   return (
@@ -159,14 +160,15 @@ function RootComponent() {
   });
 
   if (!persister) {
-    // SSR fallback — no persistence on the server.
     return (
-      <AuthProvider>
-        <SessionTimerProvider>
-          <AppShell />
-        </SessionTimerProvider>
-        <Toaster richColors position="top-center" theme="dark" />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <SessionTimerProvider>
+            <AppShell />
+          </SessionTimerProvider>
+          <Toaster richColors position="top-center" theme="dark" />
+        </AuthProvider>
+      </ThemeProvider>
     );
   }
 
@@ -175,12 +177,14 @@ function RootComponent() {
       client={queryClient}
       persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 * 14 }}
     >
-      <AuthProvider>
-        <SessionTimerProvider>
-          <AppShell />
-        </SessionTimerProvider>
-        <Toaster richColors position="top-center" theme="dark" />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <SessionTimerProvider>
+            <AppShell />
+          </SessionTimerProvider>
+          <Toaster richColors position="top-center" theme="dark" />
+        </AuthProvider>
+      </ThemeProvider>
     </PersistQueryClientProvider>
   );
 }

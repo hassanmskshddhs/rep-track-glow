@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Reorder, useDragControls } from "framer-motion";
@@ -101,6 +101,7 @@ function buildTarget(
 function DayPage({ day }: { day: string }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: customDay, isLoading: customLoading, isError: customError } = useQuery({
     queryKey: ["custom-day", day],
@@ -305,20 +306,63 @@ function DayPage({ day }: { day: string }) {
   };
 
 
-  const update = (ex: string, idx: number, field: keyof SetRow, value: string) =>
+  const update = useCallback((ex: string, idx: number, field: keyof SetRow, value: string) =>
     setState((s) => ({
       ...s,
       [ex]: (s[ex] ?? [{ weight: "", reps: "" }]).map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
-    }));
+    })), []);
 
-  const addSet = (ex: string) =>
-    setState((s) => ({ ...s, [ex]: [...(s[ex] ?? []), { weight: "", reps: "" }] }));
+  const addSet = useCallback((ex: string) =>
+    setState((s) => ({ ...s, [ex]: [...(s[ex] ?? []), { weight: "", reps: "" }] })), []);
 
-  const removeSet = (ex: string, idx: number) =>
+  const removeSet = useCallback((ex: string, idx: number) =>
     setState((s) => ({
       ...s,
       [ex]: (s[ex] ?? []).length > 1 ? s[ex].filter((_, i) => i !== idx) : s[ex] ?? [{ weight: "", reps: "" }],
-    }));
+    })), []);
+
+  const setNote = useCallback((ex: string, value: string) => {
+    setNotes((n) => ({ ...n, [ex]: value }));
+  }, []);
+
+  const renameExercise = useCallback(async (oldName: string, rawNew: string) => {
+    const newName = rawNew.trim();
+    if (!newName || newName === oldName) return;
+    if (!config) return;
+    if (config.exercises.includes(newName)) {
+      toast.error("That name is already in this workout.");
+      return;
+    }
+    // Persist to DB — update the custom routine so it sticks across sessions.
+    try {
+      const updated = config.exercises.map((e) => (e === oldName ? newName : e));
+      const { error } = await supabase
+        .from("custom_workout_days")
+        .update({ exercises: updated, updated_at: new Date().toISOString() })
+        .eq("id", day);
+      if (error) throw error;
+    } catch (e) {
+      console.warn("rename persist failed", e);
+      toast.error("Couldn't save the new name");
+      return;
+    }
+    // Update in-session caches keyed by exercise name
+    setState((s) => {
+      if (!(oldName in s)) return s;
+      const { [oldName]: v, ...rest } = s;
+      return { ...rest, [newName]: v };
+    });
+    setOrder((o) => o.map((e) => (e === oldName ? newName : e)));
+    setNotes((n) => {
+      if (!(oldName in n)) return n;
+      const { [oldName]: v, ...rest } = n;
+      return { ...rest, [newName]: v };
+    });
+    // Refresh caches that hold the old name
+    queryClient.invalidateQueries({ queryKey: ["custom-day", day] });
+    queryClient.invalidateQueries({ queryKey: ["history-window"] });
+    toast.success("Exercise renamed");
+  }, [config, day, queryClient]);
 
   const totalSets = Object.values(state).reduce(
     (a, sets) => a + (sets ?? []).filter((s) => s.weight || s.reps).length,
@@ -482,14 +526,15 @@ function DayPage({ day }: { day: string }) {
           <ExerciseCard
             key={ex}
             ex={ex}
-            state={state}
-            insights={insights}
-            notes={notes}
-            setNotes={setNotes}
+            sets={state[ex] ?? EMPTY_SETS}
+            insight={insights[ex]}
+            note={notes[ex] ?? ""}
+            setNote={setNote}
             saveNote={saveNote}
             update={update}
             addSet={addSet}
             removeSet={removeSet}
+            onRename={renameExercise}
             userId={user.id}
           />
         ))}
@@ -570,36 +615,48 @@ function DayPage({ day }: { day: string }) {
   );
 }
 
+const EMPTY_SETS: SetRow[] = [{ weight: "", reps: "" }];
+
 type ExerciseCardProps = {
   ex: string;
-  state: State;
-  insights: Record<string, { lastSets: LastSetEntry[]; bestWeight: number | null }>;
-  notes: Record<string, string>;
-  setNotes: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  sets: SetRow[];
+  insight: { lastSets: LastSetEntry[]; bestWeight: number | null } | undefined;
+  note: string;
+  setNote: (ex: string, value: string) => void;
   saveNote: (ex: string, value: string) => void | Promise<void>;
   update: (ex: string, idx: number, field: keyof SetRow, value: string) => void;
   addSet: (ex: string) => void;
   removeSet: (ex: string, idx: number) => void;
+  onRename: (oldName: string, newName: string) => void | Promise<void>;
   userId: string;
 };
 
-function ExerciseCard({
+const ExerciseCard = memo(function ExerciseCard({
   ex,
-  state,
-  insights,
-  notes,
-  setNotes,
+  sets,
+  insight,
+  note,
+  setNote,
   saveNote,
   update,
   addSet,
   removeSet,
+  onRename,
   userId,
 }: ExerciseCardProps) {
   const dragControls = useDragControls();
-  const ins = insights[ex];
-  const t = buildTarget(ex, ins?.lastSets);
-  const sets = state[ex] ?? [{ weight: "", reps: "" }];
-  const best = ins?.bestWeight ?? null;
+  const t = buildTarget(ex, insight?.lastSets);
+  const best = insight?.bestWeight ?? null;
+
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(ex);
+  useEffect(() => { setDraftName(ex); }, [ex]);
+
+  const commitRename = () => {
+    setEditing(false);
+    onRename(ex, draftName);
+  };
+
   const currentTopWeight = sets.reduce<number>((m, r) => {
     const w = r.weight === "" ? NaN : Number(r.weight);
     const reps = r.reps === "" ? NaN : Number(r.reps);
@@ -620,32 +677,74 @@ function ExerciseCard({
     >
       <div className="px-4 pt-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="font-semibold truncate">{ex}</div>
-            {isPR && (
-              <span className="animate-pr-pulse animate-check-pop inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary">
-                <Trophy className="h-3 w-3" /> New PR!
-              </span>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {editing ? (
+              <div className="flex w-full items-center gap-1.5">
+                <Input
+                  autoFocus
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") { setEditing(false); setDraftName(ex); }
+                  }}
+                  className="h-8 text-sm font-semibold"
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-primary" onClick={commitRename}>
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-muted-foreground"
+                  onClick={() => { setEditing(false); setDraftName(ex); }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="font-semibold truncate text-left hover:text-primary transition-colors"
+                  title="Tap to rename"
+                >
+                  {ex}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  aria-label="Rename exercise"
+                  className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                {isPR && (
+                  <span className="animate-pr-pulse animate-check-pop inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                    <Trophy className="h-3 w-3" /> New PR!
+                  </span>
+                )}
+              </>
             )}
           </div>
-          <button
-            type="button"
-            aria-label={`Drag to reorder ${ex}`}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              dragControls.start(e);
-            }}
-            className="shrink-0 -mr-1 -mt-1 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
-            style={{ touchAction: "none" }}
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
+          {!editing && (
+            <button
+              type="button"
+              aria-label={`Drag to reorder ${ex}`}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                dragControls.start(e);
+              }}
+              className="shrink-0 -mr-1 -mt-1 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+              style={{ touchAction: "none" }}
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
-        {/* Smart progression */}
-        <div
-          className="mt-2 rounded-lg border border-border bg-transparent px-3 py-2"
-        >
+        <div className="mt-2 rounded-lg border border-border bg-transparent px-3 py-2">
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             Last session
           </div>
@@ -708,14 +807,13 @@ function ExerciseCard({
           <Plus className="mr-1 h-4 w-4" /> Add set
         </Button>
 
-        {/* Training note */}
         <div className="pt-1">
           <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             <StickyNote className="h-3 w-3" /> Training note
           </label>
           <Textarea
-            value={notes[ex] ?? ""}
-            onChange={(e) => setNotes((n) => ({ ...n, [ex]: e.target.value }))}
+            value={note}
+            onChange={(e) => setNote(ex, e.target.value)}
             onBlur={(e) => saveNote(ex, e.target.value)}
             placeholder="e.g. Seat height 3 · slow eccentric"
             className="mt-1 min-h-[44px] text-sm"
@@ -728,5 +826,5 @@ function ExerciseCard({
       </div>
     </Reorder.Item>
   );
-}
+});
 
