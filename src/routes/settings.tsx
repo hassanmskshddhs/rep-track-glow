@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, LogOut, User as UserIcon, Mail, Shield, Save } from "lucide-react";
+import { ArrowLeft, LogOut, User as UserIcon, Mail, Shield, Save, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useProfile, writeProfile, resolveDisplayName } from "@/lib/profile";
+import { useTheme } from "@/lib/theme";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
