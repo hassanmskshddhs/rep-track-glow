@@ -19,6 +19,7 @@ export const Route = createFileRoute("/settings")({
 function SettingsPage() {
   const { user, loading, signOut } = useAuth();
   const profile = useProfile();
+  const { theme, setTheme } = useTheme();
   const [draft, setDraft] = useState(profile);
   const [saving, setSaving] = useState(false);
 
