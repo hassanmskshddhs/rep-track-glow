@@ -101,6 +101,7 @@ function buildTarget(
 function DayPage({ day }: { day: string }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: customDay, isLoading: customLoading, isError: customError } = useQuery({
     queryKey: ["custom-day", day],
