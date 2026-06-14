@@ -306,20 +306,63 @@ function DayPage({ day }: { day: string }) {
   };
 
 
-  const update = (ex: string, idx: number, field: keyof SetRow, value: string) =>
+  const update = useCallback((ex: string, idx: number, field: keyof SetRow, value: string) =>
     setState((s) => ({
       ...s,
       [ex]: (s[ex] ?? [{ weight: "", reps: "" }]).map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
-    }));
+    })), []);
 
-  const addSet = (ex: string) =>
-    setState((s) => ({ ...s, [ex]: [...(s[ex] ?? []), { weight: "", reps: "" }] }));
+  const addSet = useCallback((ex: string) =>
+    setState((s) => ({ ...s, [ex]: [...(s[ex] ?? []), { weight: "", reps: "" }] })), []);
 
-  const removeSet = (ex: string, idx: number) =>
+  const removeSet = useCallback((ex: string, idx: number) =>
     setState((s) => ({
       ...s,
       [ex]: (s[ex] ?? []).length > 1 ? s[ex].filter((_, i) => i !== idx) : s[ex] ?? [{ weight: "", reps: "" }],
-    }));
+    })), []);
+
+  const setNote = useCallback((ex: string, value: string) => {
+    setNotes((n) => ({ ...n, [ex]: value }));
+  }, []);
+
+  const renameExercise = useCallback(async (oldName: string, rawNew: string) => {
+    const newName = rawNew.trim();
+    if (!newName || newName === oldName) return;
+    if (!config) return;
+    if (config.exercises.includes(newName)) {
+      toast.error("That name is already in this workout.");
+      return;
+    }
+    // Persist to DB — update the custom routine so it sticks across sessions.
+    try {
+      const updated = config.exercises.map((e) => (e === oldName ? newName : e));
+      const { error } = await supabase
+        .from("custom_workout_days")
+        .update({ exercises: updated, updated_at: new Date().toISOString() })
+        .eq("id", day);
+      if (error) throw error;
+    } catch (e) {
+      console.warn("rename persist failed", e);
+      toast.error("Couldn't save the new name");
+      return;
+    }
+    // Update in-session caches keyed by exercise name
+    setState((s) => {
+      if (!(oldName in s)) return s;
+      const { [oldName]: v, ...rest } = s;
+      return { ...rest, [newName]: v };
+    });
+    setOrder((o) => o.map((e) => (e === oldName ? newName : e)));
+    setNotes((n) => {
+      if (!(oldName in n)) return n;
+      const { [oldName]: v, ...rest } = n;
+      return { ...rest, [newName]: v };
+    });
+    // Refresh caches that hold the old name
+    queryClient.invalidateQueries({ queryKey: ["custom-day", day] });
+    queryClient.invalidateQueries({ queryKey: ["history-window"] });
+    toast.success("Exercise renamed");
+  }, [config, day, queryClient]);
 
   const totalSets = Object.values(state).reduce(
     (a, sets) => a + (sets ?? []).filter((s) => s.weight || s.reps).length,
