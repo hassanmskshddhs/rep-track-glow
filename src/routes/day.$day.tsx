@@ -526,14 +526,15 @@ function DayPage({ day }: { day: string }) {
           <ExerciseCard
             key={ex}
             ex={ex}
-            state={state}
-            insights={insights}
-            notes={notes}
-            setNotes={setNotes}
+            sets={state[ex] ?? EMPTY_SETS}
+            insight={insights[ex]}
+            note={notes[ex] ?? ""}
+            setNote={setNote}
             saveNote={saveNote}
             update={update}
             addSet={addSet}
             removeSet={removeSet}
+            onRename={renameExercise}
             userId={user.id}
           />
         ))}
