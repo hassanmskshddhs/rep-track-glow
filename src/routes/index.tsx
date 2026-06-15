@@ -9,9 +9,11 @@ import {
   Pencil,
   Flame,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
+import { sharePlan } from "@/lib/share-plan";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
@@ -380,6 +382,28 @@ function Index() {
                 </Link>
 
                 <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const exList = Array.isArray(s.exercises)
+                        ? (s.exercises as string[]).map((name) => ({ name, sets: 3 }))
+                        : [];
+                      sharePlan(
+                        { routineName: s.name, exercises: exList },
+                        {
+                          onCopied: () => toast.success("Workout Plan copied! Share it with your friends. 🚀"),
+                          onShared: () => toast.success("Workout Plan shared! 🚀"),
+                          onError: () => toast.error("Couldn't share workout plan"),
+                        },
+                      );
+                    }}
+                    aria-label="Share plan"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
                   <Button
                     asChild
                     size="icon"
