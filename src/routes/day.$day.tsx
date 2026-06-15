@@ -457,7 +457,7 @@ function DayPage({ day }: { day: string }) {
 
       if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
       // Capture elapsed time, then freeze + reset the stopwatch to 00:00:00.
-      const elapsedMs = sessionTimer.elapsedMs;
+      const elapsedMs = sessionTimer.getElapsedMs();
       sessionTimer.stop();
       const mins = Math.floor(elapsedMs / 60000);
       const secs = Math.floor((elapsedMs % 60000) / 1000);
