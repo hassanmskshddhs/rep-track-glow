@@ -488,11 +488,38 @@ function DayPage({ day }: { day: string }) {
       </Link>
 
       <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: `var(--${dayAccent})` }}>
             Custom Workout
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{config.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{config.name}</h1>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Share workout plan"
+              title="Share workout plan"
+              className="h-9 w-9 text-muted-foreground hover:text-primary spring-transition"
+              onClick={() =>
+                sharePlan(
+                  {
+                    routineName: config.name,
+                    exercises: order.map((ex) => ({
+                      name: ex,
+                      sets: (state[ex]?.length ?? 3),
+                    })),
+                  },
+                  {
+                    onCopied: () => toast.success("Workout Plan copied! Share it with your friends. 🚀"),
+                    onShared: () => toast.success("Workout Plan shared! 🚀"),
+                    onError: () => toast.error("Couldn't share workout plan"),
+                  },
+                )
+              }
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground">{config.subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-1">
@@ -501,7 +528,7 @@ function DayPage({ day }: { day: string }) {
               key={t.key}
               to="/day/$day"
               params={{ day: t.key }}
-              className="rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wider"
+              className="rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wider spring-transition"
               style={{
                 backgroundColor: t.key === day ? `color-mix(in oklab, var(--${t.accent}) 25%, transparent)` : "transparent",
                 color: t.key === day ? `var(--${t.accent})` : "var(--muted-foreground)",
