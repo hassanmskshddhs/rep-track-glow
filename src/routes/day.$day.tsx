@@ -18,6 +18,7 @@ import { ExerciseChart } from "@/components/ExerciseChart";
 import { ShareWorkoutDialog, type WorkoutSummary } from "@/components/ShareWorkoutDialog";
 import { getSplitAccent } from "@/lib/split-accent";
 import { useSessionTimer } from "@/lib/session-timer";
+import { sharePlan } from "@/lib/share-plan";
 
 export const Route = createFileRoute("/day/$day")({
   component: DayRoute,
