@@ -9,9 +9,11 @@ import {
   Pencil,
   Flame,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
+import { sharePlan } from "@/lib/share-plan";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
