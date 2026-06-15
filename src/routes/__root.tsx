@@ -18,7 +18,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { registerServiceWorker } from "@/lib/pwa";
-import { SessionTimerProvider, useSessionTimer, formatElapsed } from "@/lib/session-timer";
+import { SessionTimerProvider, useSessionTimer, useElapsedMs, formatElapsed } from "@/lib/session-timer";
 import { ThemeProvider } from "@/lib/theme";
 
 function NotFoundComponent() {
