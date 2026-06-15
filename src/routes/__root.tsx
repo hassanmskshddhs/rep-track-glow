@@ -93,8 +93,20 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ElapsedText() {
+  const ms = useElapsedMs();
+  return (
+    <span
+      className="font-mono text-xs tabular-nums text-foreground/80"
+      style={{ fontVariantNumeric: "tabular-nums" }}
+    >
+      {formatElapsed(ms)}
+    </span>
+  );
+}
+
 function SessionTimerBadge() {
-  const { startedAt, elapsedMs } = useSessionTimer();
+  const { startedAt } = useSessionTimer();
   if (startedAt == null) return null;
   return (
     <div
@@ -102,12 +114,7 @@ function SessionTimerBadge() {
       title="Active workout session"
     >
       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-      <span
-        className="font-mono text-xs tabular-nums text-foreground/80"
-        style={{ fontVariantNumeric: "tabular-nums" }}
-      >
-        {formatElapsed(elapsedMs)}
-      </span>
+      <ElapsedText />
     </div>
   );
 }
