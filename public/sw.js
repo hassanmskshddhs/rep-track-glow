@@ -7,7 +7,7 @@
 //     background revalidate. Once seen online, they work offline forever.
 //   - Supabase / API / cross-origin: pass-through (never cached).
 
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL_CACHE = `ironlog-shell-${VERSION}`;
 const RUNTIME_CACHE = `ironlog-runtime-${VERSION}`;
 
@@ -18,9 +18,12 @@ const PRECACHE_URLS = [
   APP_SHELL_URL,
   OFFLINE_URL,
   "/manifest.webmanifest",
+  "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
   "/apple-touch-icon.png",
+  "/screenshot-mobile.jpg",
+  "/screenshot-desktop.jpg",
 ];
 
 self.addEventListener("install", (event) => {
