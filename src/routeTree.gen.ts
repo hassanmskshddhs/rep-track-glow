@@ -9,14 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WorkoutRouteImport } from './routes/workout'
+import { Route as ShareReceiverRouteImport } from './routes/share-receiver'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProgressRouteImport } from './routes/progress'
+import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DayDayRouteImport } from './routes/day.$day'
 import { Route as CustomNewRouteImport } from './routes/custom.new'
 import { Route as CustomIdEditRouteImport } from './routes/custom.$id.edit'
 
+const WorkoutRoute = WorkoutRouteImport.update({
+  id: '/workout',
+  path: '/workout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareReceiverRoute = ShareReceiverRouteImport.update({
+  id: '/share-receiver',
+  path: '/share-receiver',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -25,6 +38,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ProgressRoute = ProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NutritionRoute = NutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -56,8 +74,11 @@ const CustomIdEditRoute = CustomIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
+  '/share-receiver': typeof ShareReceiverRoute
+  '/workout': typeof WorkoutRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
@@ -65,8 +86,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
+  '/share-receiver': typeof ShareReceiverRoute
+  '/workout': typeof WorkoutRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
@@ -75,8 +99,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
+  '/share-receiver': typeof ShareReceiverRoute
+  '/workout': typeof WorkoutRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
@@ -86,8 +113,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/history'
+    | '/nutrition'
     | '/progress'
     | '/settings'
+    | '/share-receiver'
+    | '/workout'
     | '/custom/new'
     | '/day/$day'
     | '/custom/$id/edit'
@@ -95,8 +125,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/history'
+    | '/nutrition'
     | '/progress'
     | '/settings'
+    | '/share-receiver'
+    | '/workout'
     | '/custom/new'
     | '/day/$day'
     | '/custom/$id/edit'
@@ -104,8 +137,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/history'
+    | '/nutrition'
     | '/progress'
     | '/settings'
+    | '/share-receiver'
+    | '/workout'
     | '/custom/new'
     | '/day/$day'
     | '/custom/$id/edit'
@@ -114,8 +150,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryRoute: typeof HistoryRoute
+  NutritionRoute: typeof NutritionRoute
   ProgressRoute: typeof ProgressRoute
   SettingsRoute: typeof SettingsRoute
+  ShareReceiverRoute: typeof ShareReceiverRoute
+  WorkoutRoute: typeof WorkoutRoute
   CustomNewRoute: typeof CustomNewRoute
   DayDayRoute: typeof DayDayRoute
   CustomIdEditRoute: typeof CustomIdEditRoute
@@ -123,6 +162,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/workout': {
+      id: '/workout'
+      path: '/workout'
+      fullPath: '/workout'
+      preLoaderRoute: typeof WorkoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share-receiver': {
+      id: '/share-receiver'
+      path: '/share-receiver'
+      fullPath: '/share-receiver'
+      preLoaderRoute: typeof ShareReceiverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -135,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/progress'
       fullPath: '/progress'
       preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nutrition': {
+      id: '/nutrition'
+      path: '/nutrition'
+      fullPath: '/nutrition'
+      preLoaderRoute: typeof NutritionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -178,8 +238,11 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryRoute: HistoryRoute,
+  NutritionRoute: NutritionRoute,
   ProgressRoute: ProgressRoute,
   SettingsRoute: SettingsRoute,
+  ShareReceiverRoute: ShareReceiverRoute,
+  WorkoutRoute: WorkoutRoute,
   CustomNewRoute: CustomNewRoute,
   DayDayRoute: DayDayRoute,
   CustomIdEditRoute: CustomIdEditRoute,
