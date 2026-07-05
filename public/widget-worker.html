@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>IronLog Widget Worker</title>
+    <meta name="theme-color" content="#000000" />
+    <style>html,body{margin:0;background:#000;color:#fff;font-family:system-ui,sans-serif}</style>
+  </head>
+  <body>
+    <script>
+      // Background handler stub for PWA widget updates.
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistration().catch(() => {});
+      }
+    </script>
+  </body>
+</html>

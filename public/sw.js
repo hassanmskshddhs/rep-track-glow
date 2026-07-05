@@ -7,7 +7,7 @@
 //     background revalidate. Once seen online, they work offline forever.
 //   - Supabase / API / cross-origin: pass-through (never cached).
 
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL_CACHE = `ironlog-shell-${VERSION}`;
 const RUNTIME_CACHE = `ironlog-runtime-${VERSION}`;
 
@@ -21,6 +21,8 @@ const PRECACHE_URLS = [
   "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
+  "/icon-maskable-192.png",
+  "/icon-maskable-512.png",
   "/apple-touch-icon.png",
   "/screenshot-mobile.jpg",
   "/screenshot-desktop.jpg",
