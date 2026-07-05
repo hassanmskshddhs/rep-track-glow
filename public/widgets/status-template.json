@@ -1,0 +1,8 @@
+{
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    { "type": "TextBlock", "text": "IronLog", "weight": "Bolder", "size": "Medium", "color": "Light" },
+    { "type": "TextBlock", "text": "${status}", "wrap": true, "spacing": "Small" }
+  ]
+}
