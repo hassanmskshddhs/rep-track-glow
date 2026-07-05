@@ -6,12 +6,12 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": ["window-controls-overlay", "tabbed", "standalone", "fullscreen", "minimal-ui"],
   "orientation": "portrait",
   "lang": "en",
   "dir": "ltr",
-  "background_color": "#0B0B0C",
-  "theme_color": "#0B0B0C",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "categories": ["health", "fitness", "lifestyle"],
   "iarc_rating_id": "",
   "launch_handler": {
@@ -23,8 +23,8 @@
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
     {
@@ -55,6 +55,35 @@
       "text": "text",
       "url": "url"
     }
+  },
+  "widgets": [
+    {
+      "name": "IronLog Status",
+      "short_name": "Status",
+      "description": "Track your daily gym progress and sets",
+      "tag": "ironlog-status",
+      "ms_ac_template": "/widgets/status-template.json",
+      "data": "/widgets/status-data.json",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/screenshot-mobile.jpg",
+          "sizes": "512x1024",
+          "label": "IronLog daily status widget"
+        }
+      ],
+      "icons": [
+        { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }
+      ],
+      "backgrounds": [
+        { "src": "/widget-worker", "type": "text/html" }
+      ],
+      "auth": false,
+      "update": 900
+    }
+  ],
+  "note_taking": {
+    "new_note_url": "/nutrition"
   },
   "screenshots": [
     {
