@@ -1,19 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Dumbbell,
-  ChevronRight,
-  Plus,
-  Trash2,
-  Pencil,
-  Flame,
-  Sparkles,
-  Share2,
-} from "lucide-react";
+import { Dumbbell, ChevronRight, Plus, Flame, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
-import { sharePlan } from "@/lib/share-plan";
+import { SplitCard } from "@/components/SplitCard";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
@@ -335,102 +326,9 @@ function Index() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {(splits ?? []).map((s) => {
-            const accent = getSplitAccent(s.name, s.muscle_groups, s.accent ?? "primary");
-            const exCount = Array.isArray(s.exercises) ? (s.exercises as unknown[]).length : 0;
-            return (
-              <div
-                key={s.id}
-                className="group glass relative overflow-hidden rounded-2xl border-l-4 transition-all hover:-translate-y-0.5 hover:border-primary/40"
-                style={{ borderLeftColor: `var(--${accent})` }}
-              >
-                <div
-                  className="absolute inset-x-0 top-0 h-1"
-                  style={{ backgroundColor: `var(--${accent})` }}
-                />
-                <Link to="/day/$day" params={{ day: s.id }} className="block p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        Split
-                      </div>
-                      <h4 className="mt-0.5 truncate text-xl font-extrabold tracking-tight">
-                        {s.name}
-                      </h4>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">
-                        {s.subtitle ||
-                          (Array.isArray(s.muscle_groups) && s.muscle_groups.length > 0
-                            ? s.muscle_groups.join(" · ")
-                            : `${exCount} exercises`)}
-                      </p>
-                    </div>
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                      style={{
-                        backgroundColor: `color-mix(in oklab, var(--${accent}) 18%, transparent)`,
-                      }}
-                    >
-                      <Dumbbell className="h-4 w-4" style={{ color: `var(--${accent})` }} />
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{exCount} exercises</span>
-                    <span className="flex items-center gap-1 font-medium text-primary">
-                      Start <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                    </span>
-                  </div>
-                </Link>
-
-                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const exList = Array.isArray(s.exercises)
-                        ? (s.exercises as string[]).map((name) => ({ name, sets: 3 }))
-                        : [];
-                      sharePlan(
-                        { routineName: s.name, exercises: exList },
-                        {
-                          onCopied: () => toast.success("Workout Plan copied! Share it with your friends. 🚀"),
-                          onShared: () => toast.success("Workout Plan shared! 🚀"),
-                          onError: () => toast.error("Couldn't share workout plan"),
-                        },
-                      );
-                    }}
-                    aria-label="Share plan"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    asChild
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary"
-                    aria-label="Edit"
-                  >
-                    <Link to="/custom/$id/edit" params={{ id: s.id }}>
-                      <Pencil className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      deleteSplit(s.id, s.name);
-                    }}
-                    aria-label="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+          {(splits ?? []).map((s) => (
+            <SplitCard key={s.id} split={s} onDelete={deleteSplit} />
+          ))}
 
           <Link
             to="/custom/new"
