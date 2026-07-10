@@ -1,19 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Dumbbell,
-  ChevronRight,
-  Plus,
-  Trash2,
-  Pencil,
-  Flame,
-  Sparkles,
-  Share2,
-} from "lucide-react";
+import { Dumbbell, ChevronRight, Plus, Flame, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
-import { sharePlan } from "@/lib/share-plan";
+import { SplitCard } from "@/components/SplitCard";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
