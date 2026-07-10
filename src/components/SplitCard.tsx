@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ChevronRight, Dumbbell, ImagePlus, Pencil, Share2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,10 +9,13 @@ import { getSplitAccent } from "@/lib/split-accent";
 import { sharePlan } from "@/lib/share-plan";
 import {
   deleteCardImage,
-  fileToCardDataUrl,
   getCardImage,
   setCardImage,
 } from "@/lib/card-images";
+
+const ImageCropperDialog = lazy(() =>
+  import("@/components/ImageCropperDialog").then((m) => ({ default: m.ImageCropperDialog })),
+);
 
 type SplitLike = {
   id: string;
@@ -35,6 +38,7 @@ export function SplitCard({
   const muscles = Array.isArray(split.muscle_groups) ? split.muscle_groups : [];
 
   const [image, setImage] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -47,12 +51,23 @@ export function SplitCard({
     };
   }, [split.id]);
 
-  const onPick = async (file: File | undefined) => {
+  const onPick = (file: File | undefined) => {
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = typeof reader.result === "string" ? reader.result : null;
+      if (src) setPending(src);
+      else toast.error("Couldn't read image");
+    };
+    reader.onerror = () => toast.error("Couldn't read image");
+    reader.readAsDataURL(file);
+  };
+
+  const onCropConfirm = async (dataUrl: string) => {
     try {
-      const url = await fileToCardDataUrl(file);
-      await setCardImage(split.id, url);
-      setImage(url);
+      await setCardImage(split.id, dataUrl);
+      setImage(dataUrl);
+      setPending(null);
       toast.success("Cover updated");
     } catch {
       toast.error("Couldn't set cover image");
@@ -77,6 +92,10 @@ export function SplitCard({
           : "linear-gradient(135deg, #161618 0%, #0B0B0C 100%)",
         backgroundSize: "cover",
         backgroundPosition: "center",
+        contentVisibility: "auto",
+        containIntrinsicSize: "172px 320px",
+        transform: "translateZ(0)",
+        willChange: "transform",
         transition:
           "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.35s cubic-bezier(0.25, 1, 0.5, 1)",
       }}
@@ -242,6 +261,17 @@ export function SplitCard({
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
+
+      {pending !== null && (
+        <Suspense fallback={null}>
+          <ImageCropperDialog
+            open
+            imageSrc={pending}
+            onCancel={() => setPending(null)}
+            onConfirm={onCropConfirm}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

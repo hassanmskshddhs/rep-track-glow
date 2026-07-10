@@ -219,7 +219,7 @@ function Index() {
           <div
             ref={scrollerRef}
             onScroll={onScrollerScroll}
-            className="no-scrollbar -mx-1 mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
+            className="no-scrollbar scroll-gpu -mx-1 mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
             style={{ scrollPaddingInline: 8 }}
           >
             {days.map((d, i) => {
