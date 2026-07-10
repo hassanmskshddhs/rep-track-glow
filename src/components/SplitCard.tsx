@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ChevronRight, Dumbbell, ImagePlus, Pencil, Share2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { sharePlan } from "@/lib/share-plan";
-import { ImageCropperDialog } from "@/components/ImageCropperDialog";
 import {
   deleteCardImage,
   getCardImage,
   setCardImage,
 } from "@/lib/card-images";
+
+const ImageCropperDialog = lazy(() =>
+  import("@/components/ImageCropperDialog").then((m) => ({ default: m.ImageCropperDialog })),
+);
 
 type SplitLike = {
   id: string;
