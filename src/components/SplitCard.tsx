@@ -262,12 +262,16 @@ export function SplitCard({
         </Button>
       </div>
 
-      <ImageCropperDialog
-        open={pending !== null}
-        imageSrc={pending}
-        onCancel={() => setPending(null)}
-        onConfirm={onCropConfirm}
-      />
+      {pending !== null && (
+        <Suspense fallback={null}>
+          <ImageCropperDialog
+            open
+            imageSrc={pending}
+            onCancel={() => setPending(null)}
+            onConfirm={onCropConfirm}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
