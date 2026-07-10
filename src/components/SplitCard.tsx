@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { sharePlan } from "@/lib/share-plan";
+import { ImageCropperDialog } from "@/components/ImageCropperDialog";
 import {
   deleteCardImage,
-  fileToCardDataUrl,
   getCardImage,
   setCardImage,
 } from "@/lib/card-images";
