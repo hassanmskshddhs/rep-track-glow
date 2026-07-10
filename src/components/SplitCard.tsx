@@ -35,6 +35,7 @@ export function SplitCard({
   const muscles = Array.isArray(split.muscle_groups) ? split.muscle_groups : [];
 
   const [image, setImage] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -47,12 +48,23 @@ export function SplitCard({
     };
   }, [split.id]);
 
-  const onPick = async (file: File | undefined) => {
+  const onPick = (file: File | undefined) => {
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = typeof reader.result === "string" ? reader.result : null;
+      if (src) setPending(src);
+      else toast.error("Couldn't read image");
+    };
+    reader.onerror = () => toast.error("Couldn't read image");
+    reader.readAsDataURL(file);
+  };
+
+  const onCropConfirm = async (dataUrl: string) => {
     try {
-      const url = await fileToCardDataUrl(file);
-      await setCardImage(split.id, url);
-      setImage(url);
+      await setCardImage(split.id, dataUrl);
+      setImage(dataUrl);
+      setPending(null);
       toast.success("Cover updated");
     } catch {
       toast.error("Couldn't set cover image");
