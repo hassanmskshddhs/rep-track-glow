@@ -159,67 +159,67 @@ export function SplitCard({
       <Link
         to="/day/$day"
         params={{ day: split.id }}
-        className="block p-5 pr-14 min-h-[172px]"
+        className="block p-6 pr-14 min-h-[172px]"
       >
         <div className="flex items-start gap-3">
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl backdrop-blur-sm"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
             style={{
-              backgroundColor: `color-mix(in oklab, var(--${accent}) 22%, rgba(255,255,255,0.06))`,
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <Dumbbell className="h-4 w-4" style={{ color: `var(--${accent})` }} />
+            <Dumbbell
+              className="h-4 w-4"
+              style={{ color: `color-mix(in oklab, var(--${accent}) 80%, #ffffff)` }}
+            />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/50">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#94A3B8]">
               Split
             </div>
-            <h4 className="mt-0.5 truncate text-xl font-extrabold tracking-tight text-white">
+            <h4 className="mt-1 truncate text-xl font-semibold tracking-tight text-white">
               {split.name}
             </h4>
           </div>
         </div>
 
-        {/* Muscle pills */}
+        {/* Muscle pills — flat glass, desaturated, editorial */}
         {muscles.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-4 flex flex-wrap gap-1.5">
             {muscles.slice(0, 4).map((m) => (
               <span
                 key={m}
-                className="rounded-full border border-white/10 bg-white/8 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/75 backdrop-blur-sm"
-                style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
+                className="flat-glass px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white/80"
               >
                 {m}
               </span>
             ))}
             {muscles.length > 4 && (
-              <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/60">
+              <span className="flat-glass px-2 py-0.5 text-[10px] font-medium text-white/60">
                 +{muscles.length - 4}
               </span>
             )}
           </div>
         ) : split.subtitle ? (
-          <p className="mt-3 truncate text-xs text-white/60">{split.subtitle}</p>
+          <p className="mt-3 truncate text-xs text-[#94A3B8]">{split.subtitle}</p>
         ) : null}
 
-        <div className="mt-6 flex items-end justify-between">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-white/55">
+        <div className="mt-8 flex items-end justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#94A3B8]">
             {exCount} exercises
           </span>
           <span
             className={cn(
-              "inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white",
-              "backdrop-blur-sm transition-all active:scale-95 group-hover:bg-white/15 group-hover:translate-x-0.5",
+              "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold text-white",
+              "flat-glass transition-transform active:scale-95 group-hover:translate-x-0.5",
             )}
-            style={{
-              transition:
-                "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.35s cubic-bezier(0.25, 1, 0.5, 1)",
-            }}
           >
             Start <ChevronRight className="h-3.5 w-3.5" />
           </span>
         </div>
       </Link>
+
 
       {/* Hover-only management actions */}
       <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
