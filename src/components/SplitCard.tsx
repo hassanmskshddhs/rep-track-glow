@@ -38,13 +38,17 @@ export function SplitCard({
   const muscles = Array.isArray(split.muscle_groups) ? split.muscle_groups : [];
 
   const [image, setImage] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(true);
   const [pending, setPending] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setImageLoading(true);
     getCardImage(split.id).then((v) => {
-      if (!cancelled) setImage(v);
+      if (cancelled) return;
+      setImage(v);
+      setImageLoading(false);
     });
     return () => {
       cancelled = true;
