@@ -87,13 +87,17 @@ export function SplitCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border/60 transition-all",
-        "hover:-translate-y-0.5 hover:border-primary/40 will-change-transform",
+        "group relative overflow-hidden rounded-2xl transition-all",
+        "hover:-translate-y-0.5 will-change-transform",
+        imageLoading && !image && "skeleton-shimmer",
       )}
       style={{
+        border: "1px solid rgba(255,255,255,0.06)",
         backgroundImage: image
-          ? `linear-gradient(180deg, rgba(11,11,12,0.4) 0%, rgba(11,11,12,0.85) 100%), url("${image}")`
-          : "linear-gradient(135deg, #161618 0%, #0B0B0C 100%)",
+          ? `linear-gradient(180deg, rgba(11,11,12,0.35) 0%, rgba(11,11,12,0.88) 100%), url("${image}")`
+          : imageLoading
+            ? undefined
+            : "linear-gradient(135deg, #161618 0%, #0B0B0C 100%)",
         backgroundSize: "cover",
         backgroundPosition: "center",
         contentVisibility: "auto",
@@ -104,11 +108,12 @@ export function SplitCard({
           "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.35s cubic-bezier(0.25, 1, 0.5, 1)",
       }}
     >
-      {/* Accent stripe */}
+      {/* Accent hairline — a thin editorial rule, not a glow */}
       <div
-        className="absolute inset-y-0 left-0 w-1"
-        style={{ backgroundColor: `var(--${accent})` }}
+        className="absolute inset-y-0 left-0 w-px"
+        style={{ backgroundColor: `color-mix(in oklab, var(--${accent}) 60%, transparent)` }}
       />
+
 
       {/* Top-right actions */}
       <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
