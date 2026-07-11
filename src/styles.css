@@ -248,3 +248,28 @@ body {
   will-change: transform, opacity;
   transform: translateZ(0);
 }
+
+/* ---------- Editorial "Stealth Luxury" primitives ---------- */
+@utility flat-glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+
+@utility hairline {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Shimmer skeleton — bone-grey backdrop with subtle light reflection. */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@utility skeleton-shimmer {
+  background: linear-gradient(90deg, #0B0B0C 25%, #161618 50%, #0B0B0C 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
