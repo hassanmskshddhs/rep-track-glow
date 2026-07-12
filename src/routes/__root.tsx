@@ -154,33 +154,8 @@ function AppShell() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => { registerServiceWorker(); }, []);
-  useEffect(() => {
-    // Toggle a global "is-scrolling" class so CSS can freeze expensive
-    // effects (shadows, filters, backdrop-filters, animations) while the
-    // user is actively scrolling. Uses passive listeners + rAF, so it
-    // never blocks the compositor thread.
-    if (typeof window === "undefined") return;
-    const root = document.documentElement;
-    let rafId = 0;
-    let timeoutId = 0;
-    const onScroll = () => {
-      if (!rafId) {
-        rafId = window.requestAnimationFrame(() => {
-          rafId = 0;
-          if (!root.classList.contains("is-scrolling")) root.classList.add("is-scrolling");
-        });
-      }
-      window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(() => root.classList.remove("is-scrolling"), 140);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll, { capture: true } as EventListenerOptions);
-      if (rafId) window.cancelAnimationFrame(rafId);
-      window.clearTimeout(timeoutId);
-      root.classList.remove("is-scrolling");
-    };
-  }, []);
+
+
 
   // Persist the React Query cache to localStorage so the app loads with
   // workouts, history, and progress immediately — even when offline.

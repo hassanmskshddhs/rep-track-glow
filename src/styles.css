@@ -147,9 +147,12 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Let the document scroll naturally; only opt-in scrollers get GPU offload. */
+/* Hard-force document scrolling — no nested scroll containers, no touch lock. */
 html, body {
-  overflow-x: hidden;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  height: auto !important;
+  touch-action: pan-y !important;
 }
 body {
   min-height: 100dvh;
@@ -160,16 +163,8 @@ body {
 }
 .scroll-gpu {
   -webkit-overflow-scrolling: touch;
-  will-change: scroll-position;
 }
 
-/* While actively scrolling, pause animations only — avoid the universal
-   !important reset that caused layout thrash and touch lock. */
-html.is-scrolling *,
-html.is-scrolling *::before,
-html.is-scrolling *::after {
-  animation-play-state: paused !important;
-}
 
 
 @layer base {
@@ -264,14 +259,9 @@ html.is-scrolling *::after {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Shimmer skeleton — bone-grey backdrop with subtle light reflection. */
-@keyframes shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+/* Plain solid dark backdrop for loading states — no stripes, no shimmer. */
 @utility skeleton-shimmer {
-  background: linear-gradient(90deg, #0B0B0C 25%, #161618 50%, #0B0B0C 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite linear;
+  background: #0B0B0C;
 }
+
 
