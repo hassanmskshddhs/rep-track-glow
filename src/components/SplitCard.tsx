@@ -100,10 +100,6 @@ export function SplitCard({
             : "linear-gradient(135deg, #161618 0%, #0B0B0C 100%)",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        contentVisibility: "auto",
-        containIntrinsicSize: "172px 320px",
-        transform: "translateZ(0)",
-        willChange: "transform",
         transition:
           "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.35s cubic-bezier(0.25, 1, 0.5, 1)",
       }}

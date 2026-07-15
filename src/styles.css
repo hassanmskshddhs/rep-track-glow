@@ -133,7 +133,8 @@
 html, body {
   background-color: var(--color-background);
   color: var(--color-foreground);
-  overscroll-behavior: none;
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   text-size-adjust: 100%;
@@ -147,12 +148,13 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Hard-force document scrolling — no nested scroll containers, no touch lock. */
+/* Keep document scrolling native; the app shell below is also scrollable for Android WebView/PWA reliability. */
 html, body {
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  height: auto !important;
-  touch-action: pan-y !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 100%;
+  height: auto;
+  touch-action: pan-y pinch-zoom;
 }
 body {
   min-height: 100dvh;
@@ -163,6 +165,16 @@ body {
 }
 .scroll-gpu {
   -webkit-overflow-scrolling: touch;
+}
+
+.app-scroll-root {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior-y: contain;
 }
 
 
@@ -242,8 +254,6 @@ body {
               opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1),
               background-color 0.2s ease-out,
               color 0.2s ease-out;
-  will-change: transform, opacity;
-  transform: translateZ(0);
 }
 
 /* ---------- Editorial "Stealth Luxury" primitives ---------- */

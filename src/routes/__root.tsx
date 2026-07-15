@@ -143,7 +143,7 @@ function Header() {
 function AppShell() {
   const { user } = useAuth();
   return (
-    <div className={`min-h-screen bg-background text-foreground animate-fade-in ${user ? "has-bottom-nav" : ""}`}>
+    <div className={`app-scroll-root bg-background text-foreground animate-fade-in ${user ? "has-bottom-nav" : ""}`}>
       <Header />
       <Outlet />
       {user && <BottomNav />}
