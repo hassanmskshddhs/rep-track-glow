@@ -167,14 +167,10 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Use native document scroll — a single scroll container performs
+   dramatically better on Android WebView than a nested one. */
 .app-scroll-root {
-  height: 100dvh;
   min-height: 100dvh;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y pinch-zoom;
-  overscroll-behavior-y: contain;
 }
 
 
@@ -191,18 +187,17 @@ body {
   input, textarea { -webkit-user-select: text; user-select: text; }
 }
 
-/* ---------- Glassmorphism utilities ---------- */
+/* ---------- Surface utilities (solid, no backdrop-filter) ----------
+   Android WebView's compositor produces horizontal stripe / tearing
+   artifacts on translucent elements with backdrop-filter over dark
+   backgrounds. Use solid semi-opaque surfaces instead. */
 @utility glass {
-  background: color-mix(in oklab, var(--card) 55%, transparent);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  background-color: color-mix(in oklab, var(--card) 94%, transparent);
   border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
 }
 @utility glass-strong {
-  background: color-mix(in oklab, var(--card) 75%, transparent);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  background-color: var(--card);
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
 }
 
 /* ---------- Animations ---------- */
@@ -256,11 +251,9 @@ body {
               color 0.2s ease-out;
 }
 
-/* ---------- Editorial "Stealth Luxury" primitives ---------- */
+/* ---------- Editorial primitives (no backdrop-filter) ---------- */
 @utility flat-glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
 }
