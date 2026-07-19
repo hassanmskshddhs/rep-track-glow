@@ -167,14 +167,10 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Use native document scroll — a single scroll container performs
+   dramatically better on Android WebView than a nested one. */
 .app-scroll-root {
-  height: 100dvh;
   min-height: 100dvh;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y pinch-zoom;
-  overscroll-behavior-y: contain;
 }
 
 
