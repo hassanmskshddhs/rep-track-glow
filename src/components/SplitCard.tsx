@@ -266,19 +266,8 @@ export function SplitCard({
             <Pencil className="h-3.5 w-3.5" />
           </Link>
         </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7 text-white/70 hover:text-destructive"
-          onClick={(e) => {
-            e.preventDefault();
-            onDelete(split.id, split.name);
-          }}
-          aria-label="Delete"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
       </div>
+
 
       {pending !== null && (
         <Suspense fallback={null}>
