@@ -1,10 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, ChevronRight, Plus, Flame, Sparkles } from "lucide-react";
+import { Dumbbell, ChevronRight, Plus, Flame, Sparkles, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
+import { QuickImportDialog, type ImportedDraft } from "@/components/QuickImportDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
@@ -13,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { resolveDisplayName, useProfile } from "@/lib/profile";
+
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -76,6 +88,10 @@ function Index() {
 
   // Render N weeks ending today. Grows when user scrolls near the left edge.
   const [weeksToShow, setWeeksToShow] = useState(8);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+
   const days = useMemo(() => {
     const out: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
     const total = weeksToShow * 7;
@@ -148,12 +164,13 @@ function Index() {
     null;
   const firstName = resolveDisplayName(profile, { fullName, email: user.email });
 
-  const deleteSplit = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? Logged sessions stay in History.`)) return;
-    const { error } = await supabase
-      .from("custom_workout_days")
-      .delete()
-      .eq("id", id);
+  const deleteSplit = (id: string, name: string) => setPendingDelete({ id, name });
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const { id } = pendingDelete;
+    setPendingDelete(null);
+    const { error } = await supabase.from("custom_workout_days").delete().eq("id", id);
     if (error) toast.error(error.message);
     else {
       toast.success("Split deleted");
@@ -161,8 +178,69 @@ function Index() {
     }
   };
 
+  const handleImport = async (draft: ImportedDraft) => {
+    setImporting(true);
+    try {
+      const { data, error } = await supabase
+        .from("custom_workout_days")
+        .insert({
+          user_id: user.id,
+          name: draft.name,
+          subtitle: draft.subtitle || null,
+          accent: "primary",
+          muscle_groups: draft.muscleGroups,
+          exercises: draft.exercises,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      setImportOpen(false);
+      toast.success("Routine imported");
+      qc.invalidateQueries({ queryKey: ["custom-days-list", user.id] });
+      navigate({ to: "/day/$day", params: { day: data!.id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save routine");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const dialogs = (
+    <>
+      <QuickImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onApply={handleImport}
+        applying={importing}
+      />
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(v) => !v && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Split?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {pendingDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+
   // Empty state
   if (!splitsLoading && (splits?.length ?? 0) === 0) {
+
     return (
       <main className="mx-auto max-w-3xl px-4 py-12 animate-fade-in-up">
         <div className="glass relative overflow-hidden rounded-3xl p-10 text-center">
@@ -180,16 +258,23 @@ function Index() {
           <p className="mt-2 text-muted-foreground">
             Create your first custom workout split to start tracking sets, weights and progress.
           </p>
-          <Button
-            size="lg"
-            className="mt-8 font-bold shadow-[var(--shadow-glow)]"
-            onClick={() => navigate({ to: "/custom/new" })}
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Create New Split
-          </Button>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+            <Button
+              size="lg"
+              className="font-bold shadow-[var(--shadow-glow)]"
+              onClick={() => navigate({ to: "/custom/new" })}
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Create New Split
+            </Button>
+            <Button size="lg" variant="outline" className="font-bold" onClick={() => setImportOpen(true)}>
+              <Zap className="mr-2 h-4 w-4" /> Quick Import Routine
+            </Button>
+          </div>
         </div>
+        {dialogs}
       </main>
+
     );
   }
 
@@ -274,13 +359,33 @@ function Index() {
         </div>
       </section>
 
+      {/* Quick actions */}
+      <section className="mt-4 animate-fade-in-up">
+        <Button
+          size="lg"
+          variant="outline"
+          className="w-full font-bold"
+          onClick={() => setImportOpen(true)}
+        >
+          <Zap className="mr-2 h-4 w-4 text-primary" /> Quick Import Routine
+        </Button>
+      </section>
+
       {/* Up Next */}
       {upNext && (
-        <section className="mt-5 animate-fade-in-up stagger-1">
+        <section className="relative mt-5 animate-fade-in-up stagger-1">
+          <button
+            type="button"
+            onClick={() => deleteSplit(upNext.id, upNext.name)}
+            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground transition-colors hover:text-destructive"
+            aria-label={`Delete ${upNext.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
           <Link
             to="/day/$day"
             params={{ day: upNext.id }}
-            className="group glass-strong relative block overflow-hidden rounded-3xl p-6 transition-all hover:-translate-y-0.5"
+            className="group glass-strong relative block overflow-hidden rounded-3xl p-6 pr-14 transition-all hover:-translate-y-0.5"
           >
             <div
               className="absolute inset-x-0 top-0 h-1.5"
@@ -344,6 +449,8 @@ function Index() {
           </Link>
         </div>
       </section>
+      {dialogs}
     </main>
+
   );
 }

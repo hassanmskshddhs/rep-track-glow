@@ -150,7 +150,20 @@ export function SplitCard({
             <X className="h-4 w-4" />
           </button>
         )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            onDelete(split.id, split.name);
+          }}
+          className="flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-colors hover:bg-destructive/80"
+          style={{ backgroundColor: "rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.9)" }}
+          aria-label={`Delete ${split.name}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
+
 
       <Link
         to="/day/$day"
@@ -253,19 +266,8 @@ export function SplitCard({
             <Pencil className="h-3.5 w-3.5" />
           </Link>
         </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7 text-white/70 hover:text-destructive"
-          onClick={(e) => {
-            e.preventDefault();
-            onDelete(split.id, split.name);
-          }}
-          aria-label="Delete"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
       </div>
+
 
       {pending !== null && (
         <Suspense fallback={null}>
