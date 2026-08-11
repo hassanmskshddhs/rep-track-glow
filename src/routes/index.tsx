@@ -1,10 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, ChevronRight, Plus, Flame, Sparkles } from "lucide-react";
+import { Dumbbell, ChevronRight, Plus, Flame, Sparkles, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
+import { QuickImportDialog, type ImportedDraft } from "@/components/QuickImportDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
@@ -13,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { resolveDisplayName, useProfile } from "@/lib/profile";
+
 
 export const Route = createFileRoute("/")({
   component: Index,
