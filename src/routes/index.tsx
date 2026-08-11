@@ -88,6 +88,10 @@ function Index() {
 
   // Render N weeks ending today. Grows when user scrolls near the left edge.
   const [weeksToShow, setWeeksToShow] = useState(8);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+
   const days = useMemo(() => {
     const out: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
     const total = weeksToShow * 7;
