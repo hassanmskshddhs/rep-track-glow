@@ -359,13 +359,33 @@ function Index() {
         </div>
       </section>
 
+      {/* Quick actions */}
+      <section className="mt-4 animate-fade-in-up">
+        <Button
+          size="lg"
+          variant="outline"
+          className="w-full font-bold"
+          onClick={() => setImportOpen(true)}
+        >
+          <Zap className="mr-2 h-4 w-4 text-primary" /> Quick Import Routine
+        </Button>
+      </section>
+
       {/* Up Next */}
       {upNext && (
-        <section className="mt-5 animate-fade-in-up stagger-1">
+        <section className="relative mt-5 animate-fade-in-up stagger-1">
+          <button
+            type="button"
+            onClick={() => deleteSplit(upNext.id, upNext.name)}
+            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground transition-colors hover:text-destructive"
+            aria-label={`Delete ${upNext.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
           <Link
             to="/day/$day"
             params={{ day: upNext.id }}
-            className="group glass-strong relative block overflow-hidden rounded-3xl p-6 transition-all hover:-translate-y-0.5"
+            className="group glass-strong relative block overflow-hidden rounded-3xl p-6 pr-14 transition-all hover:-translate-y-0.5"
           >
             <div
               className="absolute inset-x-0 top-0 h-1.5"
@@ -429,6 +449,8 @@ function Index() {
           </Link>
         </div>
       </section>
+      {dialogs}
     </main>
+
   );
 }
