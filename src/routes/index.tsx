@@ -164,12 +164,13 @@ function Index() {
     null;
   const firstName = resolveDisplayName(profile, { fullName, email: user.email });
 
-  const deleteSplit = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? Logged sessions stay in History.`)) return;
-    const { error } = await supabase
-      .from("custom_workout_days")
-      .delete()
-      .eq("id", id);
+  const deleteSplit = (id: string, name: string) => setPendingDelete({ id, name });
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const { id } = pendingDelete;
+    setPendingDelete(null);
+    const { error } = await supabase.from("custom_workout_days").delete().eq("id", id);
     if (error) toast.error(error.message);
     else {
       toast.success("Split deleted");
@@ -177,8 +178,69 @@ function Index() {
     }
   };
 
+  const handleImport = async (draft: ImportedDraft) => {
+    setImporting(true);
+    try {
+      const { data, error } = await supabase
+        .from("custom_workout_days")
+        .insert({
+          user_id: user.id,
+          name: draft.name,
+          subtitle: draft.subtitle || null,
+          accent: "primary",
+          muscle_groups: draft.muscleGroups,
+          exercises: draft.exercises,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      setImportOpen(false);
+      toast.success("Routine imported");
+      qc.invalidateQueries({ queryKey: ["custom-days-list", user.id] });
+      navigate({ to: "/day/$day", params: { day: data!.id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save routine");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const dialogs = (
+    <>
+      <QuickImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onApply={handleImport}
+        applying={importing}
+      />
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(v) => !v && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Split?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {pendingDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+
   // Empty state
   if (!splitsLoading && (splits?.length ?? 0) === 0) {
+
     return (
       <main className="mx-auto max-w-3xl px-4 py-12 animate-fade-in-up">
         <div className="glass relative overflow-hidden rounded-3xl p-10 text-center">
