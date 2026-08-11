@@ -258,16 +258,23 @@ function Index() {
           <p className="mt-2 text-muted-foreground">
             Create your first custom workout split to start tracking sets, weights and progress.
           </p>
-          <Button
-            size="lg"
-            className="mt-8 font-bold shadow-[var(--shadow-glow)]"
-            onClick={() => navigate({ to: "/custom/new" })}
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Create New Split
-          </Button>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+            <Button
+              size="lg"
+              className="font-bold shadow-[var(--shadow-glow)]"
+              onClick={() => navigate({ to: "/custom/new" })}
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Create New Split
+            </Button>
+            <Button size="lg" variant="outline" className="font-bold" onClick={() => setImportOpen(true)}>
+              <Zap className="mr-2 h-4 w-4" /> Quick Import Routine
+            </Button>
+          </div>
         </div>
+        {dialogs}
       </main>
+
     );
   }
 
