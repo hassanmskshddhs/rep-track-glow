@@ -170,16 +170,19 @@ function RootComponent() {
 
   if (!persister) {
     return (
-      <ThemeProvider>
-        <AuthProvider>
-          <SessionTimerProvider>
-            <AppShell />
-          </SessionTimerProvider>
-          <Toaster richColors position="top-center" theme="dark" />
-        </AuthProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <SessionTimerProvider>
+              <AppShell />
+            </SessionTimerProvider>
+            <Toaster richColors position="top-center" theme="dark" />
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     );
   }
+
 
   return (
     <PersistQueryClientProvider
