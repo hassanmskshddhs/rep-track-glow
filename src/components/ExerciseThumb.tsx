@@ -1,23 +1,12 @@
 import { useState, useMemo } from "react";
 import { Dumbbell } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[()'".]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
+import { exerciseImageUrls } from "@/lib/exercise-images";
 
 function candidates(name: string): string[] {
-  const slug = slugify(name);
-  // Open-source exercise image dataset (free-exercise-db). Many entries may
-  // not match; fallback SVG handles misses cleanly.
-  return [
-    `https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${slug}/images/0.jpg`,
-  ];
+  return exerciseImageUrls(name);
 }
+
 
 type Props = {
   name: string;
