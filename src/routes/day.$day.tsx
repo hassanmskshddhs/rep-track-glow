@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Reorder, useDragControls } from "framer-motion";
 
 import type { DayConfig } from "@/lib/exercises";
+import { ExerciseThumb } from "@/components/ExerciseThumb";
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";

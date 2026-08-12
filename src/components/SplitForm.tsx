@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ACCENT_OPTIONS, MUSCLE_GROUPS, type MuscleGroup } from "@/lib/exercises";
 import { ExercisePicker } from "./ExercisePicker";
+import { ExerciseThumb } from "./ExerciseThumb";
 import { cn } from "@/lib/utils";
 
 export type SplitDraft = {
