@@ -706,6 +706,8 @@ const ExerciseCard = memo(function ExerciseCard({
       <div className="px-4 pt-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
+            {!editing && <ExerciseThumb name={ex} size={48} />}
+
             {editing ? (
               <div className="flex w-full items-center gap-1.5">
                 <Input

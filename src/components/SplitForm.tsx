@@ -156,6 +156,7 @@ export function SplitForm({ initial, saving, submitLabel = "Create split", onSub
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold tabular-nums text-muted-foreground">
                   {i + 1}
                 </div>
+                <ExerciseThumb name={ex} size={48} />
                 <div className="min-w-0 flex-1 truncate text-sm font-semibold">{ex}</div>
                 <Button
                   type="button"
