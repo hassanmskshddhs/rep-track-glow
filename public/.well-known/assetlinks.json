@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "app.lovable.rep_track_glow",
+      "package_name": "app.lovable.rep_track_glow.twa",
       "sha256_cert_fingerprints": [
-        "FD:37:1B:9C:CA:13:E1:15:4A:0E:8E:C8:39:5C:35:C6:6E:25:63:22:9C:12:4F:AF:4E:0E:CE:5A:ED:30:6B:75"
+        "4E:60:F4:DC:0A:25:CC:80:F2:FD:47:25:FB:C0:54:E1:45:8D:C4:B0:4D:BD:79:A1:52:77:BE:F9:D5:92:AC:D1"
       ]
     }
   }
