@@ -1,13 +1,27 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Reorder, useDragControls } from "framer-motion";
 
 import type { DayConfig } from "@/lib/exercises";
 import { ExerciseThumb } from "@/components/ExerciseThumb";
+import { ExercisePicker } from "@/components/ExercisePicker";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
@@ -136,6 +150,8 @@ function DayPage({ day }: { day: string }) {
   const [shareOpen, setShareOpen] = useState(false);
   const [summary, setSummary] = useState<WorkoutSummary | null>(null);
   const [order, setOrder] = useState<string[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addSelection, setAddSelection] = useState<string[]>([]);
 
   // Notes — keyed by exercise. Local edits, persisted to DB on blur.
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -366,6 +382,61 @@ function DayPage({ day }: { day: string }) {
     toast.success("Exercise renamed");
   }, [config, day, queryClient]);
 
+  const persistExercises = useCallback(async (updated: string[]) => {
+    const { error } = await supabase
+      .from("custom_workout_days")
+      .update({ exercises: updated, updated_at: new Date().toISOString() })
+      .eq("id", day);
+    if (error) throw error;
+    queryClient.invalidateQueries({ queryKey: ["custom-day", day] });
+    queryClient.invalidateQueries({ queryKey: ["history-window"] });
+  }, [day, queryClient]);
+
+  const removeExercise = useCallback(async (name: string) => {
+    if (!config) return;
+    const updated = config.exercises.filter((e) => e !== name);
+    try {
+      await persistExercises(updated);
+    } catch {
+      toast.error("Couldn't remove that exercise");
+      return;
+    }
+    setOrder((o) => o.filter((e) => e !== name));
+    setState((s) => {
+      const { [name]: _drop, ...rest } = s;
+      return rest;
+    });
+    setNotes((n) => {
+      const { [name]: _dropNote, ...rest } = n;
+      return rest;
+    });
+    toast.success(`Removed ${name}`);
+  }, [config, persistExercises]);
+
+  const addExercises = useCallback(async (names: string[]) => {
+    if (!config) return;
+    const fresh = names.filter((n) => !config.exercises.includes(n));
+    if (fresh.length === 0) {
+      setAddOpen(false);
+      return;
+    }
+    const updated = [...config.exercises, ...fresh];
+    try {
+      await persistExercises(updated);
+    } catch {
+      toast.error("Couldn't add those exercises");
+      return;
+    }
+    setOrder((o) => [...o, ...fresh]);
+    setState((s) => ({
+      ...s,
+      ...Object.fromEntries(fresh.map((n) => [n, [{ weight: "", reps: "" }]])),
+    }));
+    setAddSelection([]);
+    setAddOpen(false);
+    toast.success(fresh.length === 1 ? `Added ${fresh[0]}` : `Added ${fresh.length} exercises`);
+  }, [config, persistExercises]);
+
   const totalSets = Object.values(state).reduce(
     (a, sets) => a + (sets ?? []).filter((s) => s.weight || s.reps).length,
     0
@@ -564,10 +635,39 @@ function DayPage({ day }: { day: string }) {
             addSet={addSet}
             removeSet={removeSet}
             onRename={renameExercise}
+            onRemove={removeExercise}
             userId={user.id}
           />
         ))}
       </Reorder.Group>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-4 w-full border-dashed"
+        onClick={() => { setAddSelection([]); setAddOpen(true); }}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Add Exercise
+      </Button>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add exercises</DialogTitle>
+          </DialogHeader>
+          <ExercisePicker selected={addSelection} onChange={setAddSelection} />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => void addExercises(addSelection)}
+              disabled={addSelection.length === 0}
+            >
+              Add {addSelection.length > 0 ? `(${addSelection.length})` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Bottom session controls — sits above the bottom nav (64px). */}
       <div
@@ -657,6 +757,7 @@ type ExerciseCardProps = {
   addSet: (ex: string) => void;
   removeSet: (ex: string, idx: number) => void;
   onRename: (oldName: string, newName: string) => void | Promise<void>;
+  onRemove: (name: string) => void | Promise<void>;
   userId: string;
 };
 
@@ -671,6 +772,7 @@ const ExerciseCard = memo(function ExerciseCard({
   addSet,
   removeSet,
   onRename,
+  onRemove,
   userId,
 }: ExerciseCardProps) {
   const dragControls = useDragControls();
@@ -772,6 +874,32 @@ const ExerciseCard = memo(function ExerciseCard({
             >
               <GripVertical className="h-4 w-4" />
             </button>
+          )}
+          {!editing && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`More options for ${ex}`}
+                  className="shrink-0 -mr-1 -mt-1 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setEditing(true)}>
+                  <Pencil className="mr-2 h-4 w-4" /> Rename exercise
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => {
+                    if (confirm(`Remove ${ex} from this workout?`)) void onRemove(ex);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Remove exercise
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
 

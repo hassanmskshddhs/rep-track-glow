@@ -15,9 +15,11 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as CoachRouteImport } from './routes/coach'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DayDayRouteImport } from './routes/day.$day'
 import { Route as CustomNewRouteImport } from './routes/custom.new'
+import { Route as ApiCoachRouteImport } from './routes/api/coach'
 import { Route as CustomIdEditRouteImport } from './routes/custom.$id.edit'
 
 const WorkoutRoute = WorkoutRouteImport.update({
@@ -50,6 +52,11 @@ const HistoryRoute = HistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachRoute = CoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -65,6 +72,11 @@ const CustomNewRoute = CustomNewRouteImport.update({
   path: '/custom/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCoachRoute = ApiCoachRouteImport.update({
+  id: '/api/coach',
+  path: '/api/coach',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CustomIdEditRoute = CustomIdEditRouteImport.update({
   id: '/custom/$id/edit',
   path: '/custom/$id/edit',
@@ -73,24 +85,28 @@ const CustomIdEditRoute = CustomIdEditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/coach': typeof CoachRoute
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
   '/workout': typeof WorkoutRoute
+  '/api/coach': typeof ApiCoachRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/coach': typeof CoachRoute
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
   '/workout': typeof WorkoutRoute
+  '/api/coach': typeof ApiCoachRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
@@ -98,12 +114,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/coach': typeof CoachRoute
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
   '/workout': typeof WorkoutRoute
+  '/api/coach': typeof ApiCoachRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
@@ -112,36 +130,42 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/coach'
     | '/history'
     | '/nutrition'
     | '/progress'
     | '/settings'
     | '/share-receiver'
     | '/workout'
+    | '/api/coach'
     | '/custom/new'
     | '/day/$day'
     | '/custom/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/coach'
     | '/history'
     | '/nutrition'
     | '/progress'
     | '/settings'
     | '/share-receiver'
     | '/workout'
+    | '/api/coach'
     | '/custom/new'
     | '/day/$day'
     | '/custom/$id/edit'
   id:
     | '__root__'
     | '/'
+    | '/coach'
     | '/history'
     | '/nutrition'
     | '/progress'
     | '/settings'
     | '/share-receiver'
     | '/workout'
+    | '/api/coach'
     | '/custom/new'
     | '/day/$day'
     | '/custom/$id/edit'
@@ -149,12 +173,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CoachRoute: typeof CoachRoute
   HistoryRoute: typeof HistoryRoute
   NutritionRoute: typeof NutritionRoute
   ProgressRoute: typeof ProgressRoute
   SettingsRoute: typeof SettingsRoute
   ShareReceiverRoute: typeof ShareReceiverRoute
   WorkoutRoute: typeof WorkoutRoute
+  ApiCoachRoute: typeof ApiCoachRoute
   CustomNewRoute: typeof CustomNewRoute
   DayDayRoute: typeof DayDayRoute
   CustomIdEditRoute: typeof CustomIdEditRoute
@@ -204,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach': {
+      id: '/coach'
+      path: '/coach'
+      fullPath: '/coach'
+      preLoaderRoute: typeof CoachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -225,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/coach': {
+      id: '/api/coach'
+      path: '/api/coach'
+      fullPath: '/api/coach'
+      preLoaderRoute: typeof ApiCoachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/custom/$id/edit': {
       id: '/custom/$id/edit'
       path: '/custom/$id/edit'
@@ -237,12 +277,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CoachRoute: CoachRoute,
   HistoryRoute: HistoryRoute,
   NutritionRoute: NutritionRoute,
   ProgressRoute: ProgressRoute,
   SettingsRoute: SettingsRoute,
   ShareReceiverRoute: ShareReceiverRoute,
   WorkoutRoute: WorkoutRoute,
+  ApiCoachRoute: ApiCoachRoute,
   CustomNewRoute: CustomNewRoute,
   DayDayRoute: DayDayRoute,
   CustomIdEditRoute: CustomIdEditRoute,
