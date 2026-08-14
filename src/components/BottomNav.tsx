@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, History, LineChart, Settings } from "lucide-react";
+import { Home, History, LineChart, Settings, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -14,7 +14,7 @@ function NavLink({
   active,
   children,
 }: {
-  to: "/" | "/history" | "/progress" | "/settings";
+  to: "/" | "/history" | "/progress" | "/coach" | "/settings";
   active: boolean;
   children: React.ReactNode;
 }) {
@@ -54,6 +54,12 @@ export function BottomNav() {
       match: (p) => p.startsWith("/progress"),
     },
     {
+      label: "Coach",
+      icon: Bot,
+      link: null,
+      match: (p) => p.startsWith("/coach"),
+    },
+    {
       label: "Settings",
       icon: Settings,
       link: null,
@@ -61,10 +67,11 @@ export function BottomNav() {
     },
   ];
 
-  const tos: Array<"/" | "/history" | "/progress" | "/settings"> = [
+  const tos: Array<"/" | "/history" | "/progress" | "/coach" | "/settings"> = [
     "/",
     "/history",
     "/progress",
+    "/coach",
     "/settings",
   ];
 
