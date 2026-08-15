@@ -17,6 +17,7 @@ import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as DayDayRouteImport } from './routes/day.$day'
 import { Route as CustomNewRouteImport } from './routes/custom.new'
 import { Route as ApiCoachRouteImport } from './routes/api/coach'
@@ -62,6 +63,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachIndexRoute = CoachIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachRoute,
+} as any)
 const DayDayRoute = DayDayRouteImport.update({
   id: '/day/$day',
   path: '/day/$day',
@@ -85,7 +91,7 @@ const CustomIdEditRoute = CustomIdEditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/coach': typeof CoachRoute
+  '/coach': typeof CoachRouteWithChildren
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
@@ -95,11 +101,11 @@ export interface FileRoutesByFullPath {
   '/api/coach': typeof ApiCoachRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
+  '/coach/': typeof CoachIndexRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/coach': typeof CoachRoute
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
@@ -109,12 +115,13 @@ export interface FileRoutesByTo {
   '/api/coach': typeof ApiCoachRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
+  '/coach': typeof CoachIndexRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/coach': typeof CoachRoute
+  '/coach': typeof CoachRouteWithChildren
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
@@ -124,6 +131,7 @@ export interface FileRoutesById {
   '/api/coach': typeof ApiCoachRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
+  '/coach/': typeof CoachIndexRoute
   '/custom/$id/edit': typeof CustomIdEditRoute
 }
 export interface FileRouteTypes {
@@ -140,11 +148,11 @@ export interface FileRouteTypes {
     | '/api/coach'
     | '/custom/new'
     | '/day/$day'
+    | '/coach/'
     | '/custom/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/coach'
     | '/history'
     | '/nutrition'
     | '/progress'
@@ -154,6 +162,7 @@ export interface FileRouteTypes {
     | '/api/coach'
     | '/custom/new'
     | '/day/$day'
+    | '/coach'
     | '/custom/$id/edit'
   id:
     | '__root__'
@@ -168,12 +177,13 @@ export interface FileRouteTypes {
     | '/api/coach'
     | '/custom/new'
     | '/day/$day'
+    | '/coach/'
     | '/custom/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CoachRoute: typeof CoachRoute
+  CoachRoute: typeof CoachRouteWithChildren
   HistoryRoute: typeof HistoryRoute
   NutritionRoute: typeof NutritionRoute
   ProgressRoute: typeof ProgressRoute
@@ -244,6 +254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/': {
+      id: '/coach/'
+      path: '/'
+      fullPath: '/coach/'
+      preLoaderRoute: typeof CoachIndexRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/day/$day': {
       id: '/day/$day'
       path: '/day/$day'
@@ -275,9 +292,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface CoachRouteChildren {
+  CoachIndexRoute: typeof CoachIndexRoute
+}
+
+const CoachRouteChildren: CoachRouteChildren = {
+  CoachIndexRoute: CoachIndexRoute,
+}
+
+const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CoachRoute: CoachRoute,
+  CoachRoute: CoachRouteWithChildren,
   HistoryRoute: HistoryRoute,
   NutritionRoute: NutritionRoute,
   ProgressRoute: ProgressRoute,
