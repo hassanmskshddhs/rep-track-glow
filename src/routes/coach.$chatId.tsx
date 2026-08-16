@@ -174,7 +174,8 @@ function CoachChat({ chatId }: { chatId: string }) {
     }
     try {
       const url = await fileToDataUrl(f);
-      setAttachments((cur) => [...cur, { kind: "video", url, name: f.name }].slice(0, 4));
+      const att: CoachAttachment = { kind: "video", url, name: f.name };
+      setAttachments((cur) => [...cur, att].slice(0, 4));
     } catch {
       toast.error("Couldn't read that video");
     }
