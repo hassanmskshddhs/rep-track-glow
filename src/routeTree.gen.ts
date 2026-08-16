@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as DayDayRouteImport } from './routes/day.$day'
 import { Route as CustomNewRouteImport } from './routes/custom.new'
+import { Route as CoachChatIdRouteImport } from './routes/coach.$chatId'
 import { Route as ApiCoachRouteImport } from './routes/api/coach'
 import { Route as CustomIdEditRouteImport } from './routes/custom.$id.edit'
 
@@ -78,6 +79,11 @@ const CustomNewRoute = CustomNewRouteImport.update({
   path: '/custom/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachChatIdRoute = CoachChatIdRouteImport.update({
+  id: '/$chatId',
+  path: '/$chatId',
+  getParentRoute: () => CoachRoute,
+} as any)
 const ApiCoachRoute = ApiCoachRouteImport.update({
   id: '/api/coach',
   path: '/api/coach',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/share-receiver': typeof ShareReceiverRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
+  '/coach/$chatId': typeof CoachChatIdRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/coach/': typeof CoachIndexRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/share-receiver': typeof ShareReceiverRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
+  '/coach/$chatId': typeof CoachChatIdRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/coach': typeof CoachIndexRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/share-receiver': typeof ShareReceiverRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
+  '/coach/$chatId': typeof CoachChatIdRoute
   '/custom/new': typeof CustomNewRoute
   '/day/$day': typeof DayDayRoute
   '/coach/': typeof CoachIndexRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/share-receiver'
     | '/workout'
     | '/api/coach'
+    | '/coach/$chatId'
     | '/custom/new'
     | '/day/$day'
     | '/coach/'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/share-receiver'
     | '/workout'
     | '/api/coach'
+    | '/coach/$chatId'
     | '/custom/new'
     | '/day/$day'
     | '/coach'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/share-receiver'
     | '/workout'
     | '/api/coach'
+    | '/coach/$chatId'
     | '/custom/new'
     | '/day/$day'
     | '/coach/'
@@ -275,6 +287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/$chatId': {
+      id: '/coach/$chatId'
+      path: '/$chatId'
+      fullPath: '/coach/$chatId'
+      preLoaderRoute: typeof CoachChatIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/api/coach': {
       id: '/api/coach'
       path: '/api/coach'
@@ -293,10 +312,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface CoachRouteChildren {
+  CoachChatIdRoute: typeof CoachChatIdRoute
   CoachIndexRoute: typeof CoachIndexRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
+  CoachChatIdRoute: CoachChatIdRoute,
   CoachIndexRoute: CoachIndexRoute,
 }
 
