@@ -12,4 +12,14 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  vite: {
+    esbuild: {
+      // Strip debug logging from production bundles (console.error/warn kept).
+      pure:
+        process.env.NODE_ENV === "production"
+          ? ["console.log", "console.debug", "console.info", "console.trace"]
+          : [],
+      drop: process.env.NODE_ENV === "production" ? ["debugger"] : [],
+    },
+  },
 });

@@ -1,15 +1,39 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, LogOut, User as UserIcon, Mail, Shield, Save, Moon, Sun } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  ArrowLeft,
+  LogOut,
+  User as UserIcon,
+  Mail,
+  Shield,
+  Save,
+  Moon,
+  Sun,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useProfile, writeProfile, resolveDisplayName } from "@/lib/profile";
 import { useTheme } from "@/lib/theme";
+import { deleteMyAccount } from "@/lib/account.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -22,6 +46,28 @@ function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [draft, setDraft] = useState(profile);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
+  const purgeAccount = useServerFn(deleteMyAccount);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await purgeAccount({ data: undefined });
+      try {
+        localStorage.clear();
+      } catch {
+        /* ignore */
+      }
+      await supabase.auth.signOut();
+      toast.success("Account deleted");
+      navigate({ to: "/" });
+    } catch {
+      toast.error("Could not delete your account. Try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
   if (!user) return <AuthScreen />;
@@ -196,6 +242,41 @@ function SettingsPage() {
           <LogOut className="mr-2 h-4 w-4" /> Sign out
         </Button>
       </div>
+
+      <section className="mt-4 rounded-2xl border border-destructive/40 p-5">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-destructive">
+          <Trash2 className="h-3.5 w-3.5" /> Danger zone
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Permanently delete your account, every workout session, set log, note and
+          custom split. This cannot be undone.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" className="mt-4 w-full font-bold" disabled={deleting}>
+              <Trash2 className="mr-2 h-4 w-4" /> {deleting ? "Deleting…" : "Delete account"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently erases your account and all training data. There is no
+                way to recover it.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete forever
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </section>
     </main>
   );
 }
