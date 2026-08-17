@@ -137,6 +137,7 @@ function CoachChat({ chatId }: { chatId: string }) {
   const [attachments, setAttachments] = useState<CoachAttachment[]>([]);
   const [streaming, setStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const sendTimesRef = useRef<number[]>([]);
   const endRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const imageRef = useRef<HTMLInputElement | null>(null);
