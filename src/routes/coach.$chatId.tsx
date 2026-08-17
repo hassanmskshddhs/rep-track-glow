@@ -182,8 +182,24 @@ function CoachChat({ chatId }: { chatId: string }) {
   };
 
   const send = async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim();
+    const text = sanitizeText(overrideText ?? input);
     if ((!text && attachments.length === 0) || streaming) return;
+
+    // Client-side rate limiting: min 3s between messages, 8 per rolling minute.
+    const now = Date.now();
+    const recent = sendTimesRef.current.filter((t) => now - t < 60_000);
+    if (recent.length >= 8 || (recent.length > 0 && now - recent[recent.length - 1]! < 3000)) {
+      toast.error("Easy champ — give the coach a couple seconds.");
+      return;
+    }
+    sendTimesRef.current = [...recent, now];
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      toast.error("Sign in to chat with IronCoach.");
+      return;
+    }
 
     const userMsg: CoachMessage = { role: "user", text, attachments };
     const history = [...messages, userMsg];
@@ -200,7 +216,10 @@ function CoachChat({ chatId }: { chatId: string }) {
     try {
       const res = await fetch("/api/coach", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         signal: controller.signal,
         body: JSON.stringify({
           context,
