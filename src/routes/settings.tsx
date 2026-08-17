@@ -196,6 +196,41 @@ function SettingsPage() {
           <LogOut className="mr-2 h-4 w-4" /> Sign out
         </Button>
       </div>
+
+      <section className="mt-4 rounded-2xl border border-destructive/40 p-5">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-destructive">
+          <Trash2 className="h-3.5 w-3.5" /> Danger zone
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Permanently delete your account, every workout session, set log, note and
+          custom split. This cannot be undone.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" className="mt-4 w-full font-bold" disabled={deleting}>
+              <Trash2 className="mr-2 h-4 w-4" /> {deleting ? "Deleting…" : "Delete account"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently erases your account and all training data. There is no
+                way to recover it.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete forever
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </section>
     </main>
   );
 }
