@@ -1,15 +1,39 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, LogOut, User as UserIcon, Mail, Shield, Save, Moon, Sun } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  ArrowLeft,
+  LogOut,
+  User as UserIcon,
+  Mail,
+  Shield,
+  Save,
+  Moon,
+  Sun,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useProfile, writeProfile, resolveDisplayName } from "@/lib/profile";
 import { useTheme } from "@/lib/theme";
+import { deleteMyAccount } from "@/lib/account.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
