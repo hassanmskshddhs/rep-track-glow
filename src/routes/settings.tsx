@@ -46,6 +46,28 @@ function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [draft, setDraft] = useState(profile);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
+  const purgeAccount = useServerFn(deleteMyAccount);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await purgeAccount({ data: undefined });
+      try {
+        localStorage.clear();
+      } catch {
+        /* ignore */
+      }
+      await supabase.auth.signOut();
+      toast.success("Account deleted");
+      navigate({ to: "/" });
+    } catch {
+      toast.error("Could not delete your account. Try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
   if (!user) return <AuthScreen />;
