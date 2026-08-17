@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { getThread, saveMessages, type CoachAttachment, type CoachMessage } from "@/lib/coach-chats";
+import { sanitizeText } from "@/lib/sanitize";
 
 export const Route = createFileRoute("/coach/$chatId")({
   component: CoachChatRoute,
