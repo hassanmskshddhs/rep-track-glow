@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "app.lovable.rep_track_glow.twa",
+      "package_name": "app.vercel.ironlog_orcin.twa",
       "sha256_cert_fingerprints": [
         "54:FE:A3:B6:73:84:07:A3:4A:9C:04:C3:6D:B3:7E:F6:83:62:5D:BC:87:A3:67:BA:24:42:67:C2:36:D3:95:55"
       ]
