@@ -1,3 +1,17 @@
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
