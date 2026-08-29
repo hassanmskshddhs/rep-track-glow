@@ -69,236 +69,55 @@ input, textarea, [contenteditable="true"] {
    ============================================================ */
 :root, .dark {
   --radius: 0.875rem;
-  /* Deep matte obsidian #0B0B0C */
-  --background: oklch(0.135 0 0);
-  --foreground: oklch(1 0 0);
-  /* Charcoal slate #161618 */
-  --card: oklch(0.185 0 0);
-  --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.185 0 0);
-  --popover-foreground: oklch(1 0 0);
-  /* Ice blue / premium cyan #0EA5E9 — the only pop of color */
-  --primary: oklch(0.70 0.14 230);
-  --primary-foreground: oklch(0.135 0 0);
+  
+  /* Deep Matte Obsidian Background */
+  --background: oklch(0.12 0 0);
+  --foreground: oklch(0.98 0 0);
+  
+  /* Charcoal Slate Cards (Matte & Clean) */
+  --card: oklch(0.16 0 0);
+  --card-foreground: oklch(0.98 0 0);
+  
+  --popover: oklch(0.16 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  
+  /* Executive Primary - Solid White (No Glow / No Cyan) */
+  --primary: oklch(0.98 0 0);
+  --primary-foreground: oklch(0.12 0 0);
+  
+  /* Subtle Secondary & Muted Elements */
   --secondary: oklch(0.22 0 0);
-  --secondary-foreground: oklch(1 0 0);
-  --muted: oklch(0.185 0 0);
-  /* Muted slate gray #94A3B8 */
-  --muted-foreground: oklch(0.72 0.02 250);
+  --secondary-foreground: oklch(0.85 0 0);
+  
+  --muted: oklch(0.20 0 0);
+  --muted-foreground: oklch(0.65 0 0);
+  
   --accent: oklch(0.22 0 0);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.62 0.18 27);
-  --destructive-foreground: oklch(1 0 0);
-  /* Ultra-thin 1px border #242427 */
-  --border: oklch(0.25 0.003 270);
-  --input: oklch(0.22 0 0);
-  --ring: oklch(0.70 0.14 230);
-
-  --chart-1: oklch(1 0 0);
-  --chart-2: oklch(0.55 0 0);
-  --chart-3: oklch(0.72 0.02 250);
-  --chart-4: oklch(0.70 0.14 230);
-  --chart-5: oklch(0.72 0.18 145);
-
-  --push: oklch(0.62 0.16 27);
-  --pull: oklch(0.70 0.14 230);
-  --legs: oklch(0.72 0.18 145);
-  --upper: oklch(0.6 0.13 300);
-  --progress: oklch(0.70 0.14 230);
-  --color-progress: var(--progress);
-  --success: oklch(0.72 0.18 145);
-  --color-success: var(--success);
-
-  --gradient-primary: linear-gradient(135deg, oklch(0.74 0.16 230), oklch(0.58 0.16 230));
-  --gradient-card: linear-gradient(160deg, oklch(0.22 0 0), oklch(0.17 0 0));
-  --gradient-hero: linear-gradient(135deg, oklch(0.70 0.14 230 / 0.14), oklch(0.70 0.14 230 / 0.04) 60%, transparent);
-  --shadow-glow: 0 1px 0 0 rgba(255,255,255,0.04) inset;
-  --shadow-card: 0 1px 0 0 rgba(255,255,255,0.03) inset;
+  --accent-foreground: oklch(0.98 0 0);
+  
+  --destructive: oklch(0.45 0.15 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  
+  /* Minimalist Borders */
+  --border: oklch(0.24 0 0);
+  --input: oklch(0.24 0 0);
+  --ring: oklch(0.40 0 0);
 }
 
-/* Light mode — Clean studio white */
-.light {
-  --background: oklch(0.985 0.002 250);
-  --foreground: oklch(0.18 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0 0);
-  --primary: oklch(0.66 0.14 230);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.005 250);
-  --secondary-foreground: oklch(0.18 0 0);
-  --muted: oklch(0.96 0.003 250);
-  --muted-foreground: oklch(0.55 0.03 250);
-  --accent: oklch(0.95 0.005 250);
-  --accent-foreground: oklch(0.18 0 0);
-  --destructive: oklch(0.60 0.20 27);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.91 0.005 250);
-  --input: oklch(0.94 0.005 250);
-  --ring: oklch(0.66 0.14 230);
-
-  --shadow-glow: 0 6px 20px -10px oklch(0.66 0.14 230 / 0.35);
-  --shadow-card: 0 4px 12px -6px oklch(0 0 0 / 0.06);
-  --gradient-card: linear-gradient(160deg, oklch(1 0 0), oklch(0.98 0.003 250));
-  --gradient-hero: linear-gradient(135deg, oklch(0.66 0.14 230 / 0.10), oklch(0.66 0.14 230 / 0.02) 60%, transparent);
-}
-
-/* Hide scrollbars on horizontal scrollers (week streak) */
-@utility no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.no-scrollbar::-webkit-scrollbar { display: none; }
-
-.dark { color-scheme: dark; }
-
-html, body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  overscroll-behavior-y: auto;
-  overscroll-behavior-x: none;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-html {
-  /* Native/instant scrolling — JS-driven smooth scroll drops frames on Android WebView */
-  scroll-behavior: auto;
-}
-
-/* Respect users who ask for less motion, and keep frame budget free */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-
-/* Keep document scrolling native; the app shell below is also scrollable for Android WebView/PWA reliability. */
-html, body {
-  overflow-x: hidden;
-  overflow-y: auto;
-  min-height: 100%;
-  height: auto;
-  touch-action: pan-y pinch-zoom;
-}
+/* Base Body Styles */
 body {
-  min-height: 100dvh;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
-.scroll-gpu {
-  -webkit-overflow-scrolling: touch;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Use native document scroll — a single scroll container performs
-   dramatically better on Android WebView than a nested one. */
-.app-scroll-root {
-  min-height: 100dvh;
+/* Subtle Natural Card Physics (No Neon Shadow) */
+div[class*="bg-card"], div[class*="rounded-"] {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
 
-
-
-@layer base {
-  * { border-color: var(--color-border); }
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Inter", sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  h1, h2, h3 { letter-spacing: -0.02em; font-weight: 700; }
-  input, textarea { -webkit-user-select: text; user-select: text; }
+div[class*="bg-card"]:active {
+  transform: scale(0.985) !important;
 }
-
-/* ---------- Surface utilities (solid, no backdrop-filter) ----------
-   Android WebView's compositor produces horizontal stripe / tearing
-   artifacts on translucent elements with backdrop-filter over dark
-   backgrounds. Use solid semi-opaque surfaces instead. */
-@utility glass {
-  background-color: color-mix(in oklab, var(--card) 94%, transparent);
-  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
-}
-@utility glass-strong {
-  background-color: var(--card);
-  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
-}
-
-/* ---------- Animations ---------- */
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-.animate-fade-in-up { animation: fade-in-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.animate-fade-in    { animation: fade-in 0.35s ease-out both; }
-.stagger-1 { animation-delay: 60ms; }
-.stagger-2 { animation-delay: 120ms; }
-.stagger-3 { animation-delay: 180ms; }
-.stagger-4 { animation-delay: 240ms; }
-
-/* Micro-interactions (all under 300ms) */
-@keyframes check-pop {
-  0%   { transform: scale(0.6); opacity: 0; }
-  60%  { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.animate-check-pop { animation: check-pop 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-
-@keyframes timer-flash {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent); background-color: transparent; }
-  40%      { box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 35%, transparent); background-color: color-mix(in oklab, var(--primary) 15%, transparent); }
-}
-.animate-timer-flash { animation: timer-flash 280ms ease-out 3; }
-
-@keyframes pr-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 30%, transparent); }
-  50%      { box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 0%, transparent); }
-}
-.animate-pr-pulse { animation: pr-pulse 1.6s ease-in-out infinite; }
-
-/* Press feedback for primary actions */
-.press-on-tap { transition: transform 120ms ease-out, box-shadow 120ms ease-out; }
-.press-on-tap:active { transform: scale(0.96); }
-
-/* Bottom nav offset so content doesn't hide under it */
-.has-bottom-nav { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
-
-/* iOS-style spring transition for layout / opacity changes */
-.spring-transition {
-  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1),
-              opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1),
-              background-color 0.2s ease-out,
-              color 0.2s ease-out;
-}
-
-/* ---------- Editorial primitives (no backdrop-filter) ---------- */
-@utility flat-glass {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-}
-
-@utility hairline {
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* Plain solid dark backdrop for loading states — no stripes, no shimmer. */
-@utility skeleton-shimmer {
-  background: #0B0B0C;
-}
-
-
