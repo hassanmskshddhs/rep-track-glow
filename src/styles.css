@@ -1,21 +1,25 @@
-html, body {
-  overscroll-behavior: none !important;
-  overscroll-behavior-y: none !important;
+html {
+  overscroll-behavior-y: none;
+}
+
+body {
   -webkit-touch-callout: none !important;
   -webkit-user-select: none !important;
   user-select: none !important;
 }
 
-* {
+img, a {
   -webkit-touch-callout: none !important;
   -webkit-user-select: none !important;
   user-select: none !important;
+  -webkit-user-drag: none !important;
 }
 
 input, textarea, [contenteditable="true"] {
   -webkit-user-select: text !important;
   user-select: text !important;
 }
+
 
 @import "tailwindcss" source(none);
 @source "../src";
