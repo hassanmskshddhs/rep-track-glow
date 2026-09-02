@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -8,7 +8,9 @@ import { Reorder, useDragControls } from "framer-motion";
 
 import type { DayConfig } from "@/lib/exercises";
 import { ExerciseThumb } from "@/components/ExerciseThumb";
-import { ExercisePicker } from "@/components/ExercisePicker";
+const ExercisePicker = lazy(() =>
+  import("@/components/ExercisePicker").then((m) => ({ default: m.ExercisePicker })),
+);
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,11 +31,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RestTimer } from "@/components/RestTimer";
-import { ExerciseChart } from "@/components/ExerciseChart";
-import { ShareWorkoutDialog, type WorkoutSummary } from "@/components/ShareWorkoutDialog";
+import type { WorkoutSummary } from "@/components/ShareWorkoutDialog";
+const ExerciseChart = lazy(() =>
+  import("@/components/ExerciseChart").then((m) => ({ default: m.ExerciseChart })),
+);
+const ShareWorkoutDialog = lazy(() =>
+  import("@/components/ShareWorkoutDialog").then((m) => ({ default: m.ShareWorkoutDialog })),
+);
 import { getSplitAccent } from "@/lib/split-accent";
 import { useSessionTimer } from "@/lib/session-timer";
 import { sharePlan } from "@/lib/share-plan";
+import {
+  buildInsights,
+  useExerciseHistory,
+  useExerciseNotes,
+  useSplit,
+  useSplitSummaries,
+} from "@/hooks/useWorkoutData";
+import { saveWorkout } from "@/lib/offline-queue";
+import { qk } from "@/lib/query-keys";
+import type { ExerciseInsight, SetInput } from "@/types/workout";
 
 export const Route = createFileRoute("/day/$day")({
   component: DayRoute,
@@ -50,7 +67,7 @@ function DayRoute() {
   return <DayPage key={day} day={day} />;
 }
 
-type SetRow = { weight: string; reps: string };
+type SetRow = SetInput;
 type State = Record<string, SetRow[]>;
 
 const setSchema = z.object({
@@ -119,27 +136,20 @@ function DayPage({ day }: { day: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: customDay, isLoading: customLoading, isError: customError } = useQuery({
-    queryKey: ["custom-day", day],
-    enabled: !!user,
-    queryFn: async (): Promise<DayConfig | null> => {
-      const { data, error } = await supabase
-        .from("custom_workout_days")
-        .select("name, subtitle, accent, exercises")
-        .eq("id", day)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
-      return {
-        name: data.name,
-        subtitle: data.subtitle ?? "",
-        accent: data.accent ?? "primary",
-        exercises: Array.isArray(data.exercises) ? (data.exercises as string[]) : [],
-      };
-    },
-  });
+  const { data: split, isLoading: customLoading, isError: customError } = useSplit(day);
 
-  const config: DayConfig | null = customDay ?? null;
+  const config: DayConfig | null = useMemo(
+    () =>
+      split
+        ? {
+            name: split.name,
+            subtitle: split.subtitle ?? "",
+            accent: split.accent ?? "primary",
+            exercises: split.exercises,
+          }
+        : null,
+    [split],
+  );
 
   const draftKey = user ? `ironlog:draft:${user.id}:${day}` : null;
   const orderKey = user ? `ironlog:order:${user.id}:${day}` : null;
@@ -213,84 +223,25 @@ function DayPage({ day }: { day: string }) {
   }, [order, orderKey]);
 
 
-  const { data: customDays } = useQuery({
-    queryKey: ["custom-days-list", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("custom_workout_days")
-        .select("id, name, accent, muscle_groups")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: customDays } = useSplitSummaries();
 
   // Pull recent set history once for all exercises in this config — used for
   // both "last session" recommendations and all-time PR detection.
-  const { data: history } = useQuery({
-    queryKey: ["history-window", user?.id, day, config?.exercises?.join("|")],
-    enabled: !!user && !!config && config.exercises.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("set_logs")
-        .select("exercise_name, weight, reps, set_number, session_id, created_at")
-        .eq("user_id", user!.id)
-        .in("exercise_name", config!.exercises)
-        .order("created_at", { ascending: false })
-        .limit(800);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: history } = useExerciseHistory(day, config?.exercises ?? []);
 
   // Per-exercise: latest session sets + all-time best weight
-  const insights = useMemo(() => {
-    const out: Record<
-      string,
-      { lastSets: LastSetEntry[]; bestWeight: number | null }
-    > = {};
-    if (!config) return out;
-    for (const ex of config.exercises) {
-      const rows = (history ?? []).filter((r) => r.exercise_name === ex);
-      const latestSessionId = rows[0]?.session_id ?? null;
-      const lastSets: LastSetEntry[] = latestSessionId
-        ? rows
-            .filter((r) => r.session_id === latestSessionId)
-            .map((r) => ({
-              weight: r.weight,
-              reps: r.reps,
-              set_number: r.set_number,
-            }))
-            .sort((a, b) => a.set_number - b.set_number)
-        : [];
-      const bestWeight = rows.reduce<number | null>((max, r) => {
-        if (r.weight == null) return max;
-        return max == null || r.weight > max ? r.weight : max;
-      }, null);
-      out[ex] = { lastSets, bestWeight };
-    }
-    return out;
-  }, [history, config]);
+  const insights: Record<string, ExerciseInsight> = useMemo(
+    () => buildInsights(config?.exercises ?? [], history),
+    [config, history],
+  );
 
-  // Hydrate notes
+  // Notes come from the data layer; local edits win until they are saved.
+  const { data: remoteNotes } = useExerciseNotes(day, config?.exercises ?? []);
   useEffect(() => {
-    if (!user || !config || notesHydrated) return;
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("exercise_notes")
-        .select("exercise_name, note")
-        .eq("user_id", user.id)
-        .in("exercise_name", config.exercises);
-      if (cancelled) return;
-      const map: Record<string, string> = {};
-      (data ?? []).forEach((r) => { map[r.exercise_name] = r.note ?? ""; });
-      setNotes(map);
-      setNotesHydrated(true);
-    })();
-    return () => { cancelled = true; };
-  }, [user, config, notesHydrated]);
+    if (!remoteNotes || notesHydrated) return;
+    setNotes(remoteNotes);
+    setNotesHydrated(true);
+  }, [remoteNotes, notesHydrated]);
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
   if (!user) return <AuthScreen />;
@@ -357,7 +308,8 @@ function DayPage({ day }: { day: string }) {
       const { error } = await supabase
         .from("custom_workout_days")
         .update({ exercises: updated, updated_at: new Date().toISOString() })
-        .eq("id", day);
+        .eq("id", day)
+        .eq("user_id", user!.id);
       if (error) throw error;
     } catch (e) {
       console.warn("rename persist failed", e);
@@ -377,8 +329,8 @@ function DayPage({ day }: { day: string }) {
       return { ...rest, [newName]: v };
     });
     // Refresh caches that hold the old name
-    queryClient.invalidateQueries({ queryKey: ["custom-day", day] });
-    queryClient.invalidateQueries({ queryKey: ["history-window"] });
+    queryClient.invalidateQueries({ queryKey: qk.split(user?.id, day) });
+    queryClient.invalidateQueries({ queryKey: qk.historyWindow(user?.id, day) });
     toast.success("Exercise renamed");
   }, [config, day, queryClient]);
 
@@ -386,10 +338,11 @@ function DayPage({ day }: { day: string }) {
     const { error } = await supabase
       .from("custom_workout_days")
       .update({ exercises: updated, updated_at: new Date().toISOString() })
-      .eq("id", day);
+      .eq("id", day)
+      .eq("user_id", user!.id);
     if (error) throw error;
-    queryClient.invalidateQueries({ queryKey: ["custom-day", day] });
-    queryClient.invalidateQueries({ queryKey: ["history-window"] });
+    queryClient.invalidateQueries({ queryKey: qk.split(user?.id, day) });
+    queryClient.invalidateQueries({ queryKey: qk.historyWindow(user?.id, day) });
   }, [day, queryClient]);
 
   const removeExercise = useCallback(async (name: string) => {
@@ -478,17 +431,18 @@ function DayPage({ day }: { day: string }) {
 
     setSaving(true);
     try {
-      const { data: session, error: sErr } = await supabase
-        .from("workout_sessions")
-        .insert({ user_id: user.id, day, title: config.name })
-        .select("id")
-        .single();
-      if (sErr) throw sErr;
-
-      const { error: lErr } = await supabase.from("set_logs").insert(
-        rows.map((r) => ({ ...r, session_id: session!.id, user_id: user.id }))
-      );
-      if (lErr) throw lErr;
+      // Never lose a session: if the network is down the payload is stored
+      // locally and replayed automatically once we're back online.
+      const { status } = await saveWorkout({
+        userId: user.id,
+        day,
+        title: config.name,
+        performedAt: new Date().toISOString(),
+        rows,
+      });
+      if (status === "queued") {
+        toast.success("Saved offline — will sync automatically");
+      }
 
       // Compute summary
       const totalVolume = rows.reduce(
@@ -656,7 +610,9 @@ function DayPage({ day }: { day: string }) {
           <DialogHeader>
             <DialogTitle>Add exercises</DialogTitle>
           </DialogHeader>
-          <ExercisePicker selected={addSelection} onChange={setAddSelection} />
+          <Suspense fallback={<div className="py-10 text-center text-sm text-muted-foreground">Loading exercises…</div>}>
+            <ExercisePicker selected={addSelection} onChange={setAddSelection} />
+          </Suspense>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button
@@ -731,6 +687,7 @@ function DayPage({ day }: { day: string }) {
 
 
 
+      <Suspense fallback={null}>
       <ShareWorkoutDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
@@ -740,6 +697,7 @@ function DayPage({ day }: { day: string }) {
           navigate({ to: "/history" });
         }}
       />
+      </Suspense>
     </main>
   );
 }
@@ -980,7 +938,9 @@ const ExerciseCard = memo(function ExerciseCard({
         </div>
 
         <div className="pt-2">
-          <ExerciseChart userId={userId} exercise={ex} />
+          <Suspense fallback={<div className="h-24 animate-pulse rounded-lg bg-muted/40" />}>
+            <ExerciseChart userId={userId} exercise={ex} />
+          </Suspense>
         </div>
       </div>
     </Reorder.Item>

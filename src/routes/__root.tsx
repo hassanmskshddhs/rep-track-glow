@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { registerServiceWorker } from "@/lib/pwa";
 import { SessionTimerProvider, useSessionTimer, useElapsedMs, formatElapsed } from "@/lib/session-timer";
 import { ThemeProvider } from "@/lib/theme";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 function NotFoundComponent() {
   return (
@@ -142,9 +143,15 @@ function Header() {
 
 function AppShell() {
   const { user } = useAuth();
+  const { online } = useOfflineSync();
   return (
     <div className={`app-scroll-root bg-background text-foreground animate-fade-in ${user ? "has-bottom-nav" : ""}`}>
       <Header />
+      {!online && (
+        <div className="bg-muted px-4 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          Offline — your sets are saved on this device
+        </div>
+      )}
       <Outlet />
       {user && <BottomNav />}
     </div>
