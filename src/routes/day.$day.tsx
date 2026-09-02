@@ -431,17 +431,18 @@ function DayPage({ day }: { day: string }) {
 
     setSaving(true);
     try {
-      const { data: session, error: sErr } = await supabase
-        .from("workout_sessions")
-        .insert({ user_id: user.id, day, title: config.name })
-        .select("id")
-        .single();
-      if (sErr) throw sErr;
-
-      const { error: lErr } = await supabase.from("set_logs").insert(
-        rows.map((r) => ({ ...r, session_id: session!.id, user_id: user.id }))
-      );
-      if (lErr) throw lErr;
+      // Never lose a session: if the network is down the payload is stored
+      // locally and replayed automatically once we're back online.
+      const { status } = await saveWorkout({
+        userId: user.id,
+        day,
+        title: config.name,
+        performedAt: new Date().toISOString(),
+        rows,
+      });
+      if (status === "queued") {
+        toast.success("Saved offline — will sync automatically");
+      }
 
       // Compute summary
       const totalVolume = rows.reduce(
@@ -609,7 +610,9 @@ function DayPage({ day }: { day: string }) {
           <DialogHeader>
             <DialogTitle>Add exercises</DialogTitle>
           </DialogHeader>
-          <ExercisePicker selected={addSelection} onChange={setAddSelection} />
+          <Suspense fallback={<div className="py-10 text-center text-sm text-muted-foreground">Loading exercises…</div>}>
+            <ExercisePicker selected={addSelection} onChange={setAddSelection} />
+          </Suspense>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button
@@ -684,6 +687,7 @@ function DayPage({ day }: { day: string }) {
 
 
 
+      <Suspense fallback={null}>
       <ShareWorkoutDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
@@ -693,6 +697,7 @@ function DayPage({ day }: { day: string }) {
           navigate({ to: "/history" });
         }}
       />
+      </Suspense>
     </main>
   );
 }
@@ -933,7 +938,9 @@ const ExerciseCard = memo(function ExerciseCard({
         </div>
 
         <div className="pt-2">
-          <ExerciseChart userId={userId} exercise={ex} />
+          <Suspense fallback={<div className="h-24 animate-pulse rounded-lg bg-muted/40" />}>
+            <ExerciseChart userId={userId} exercise={ex} />
+          </Suspense>
         </div>
       </div>
     </Reorder.Item>
