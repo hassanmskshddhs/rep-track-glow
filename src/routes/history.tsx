@@ -234,12 +234,14 @@ function HistoryPage() {
                                 const { error: e1 } = await supabase
                                   .from("set_logs")
                                   .delete()
-                                  .eq("session_id", s.id);
+                                  .eq("session_id", s.id)
+                                  .eq("user_id", user.id);
                                 if (e1) throw e1;
                                 const { error: e2 } = await supabase
                                   .from("workout_sessions")
                                   .delete()
-                                  .eq("id", s.id);
+                                  .eq("id", s.id)
+                                  .eq("user_id", user.id);
                                 if (e2) throw e2;
                                 toast.success("Workout log deleted");
                                 qc.invalidateQueries({ queryKey: ["history", user.id] });
@@ -404,7 +406,8 @@ function EditSessionDialog({
       const { error: dErr } = await supabase
         .from("set_logs")
         .delete()
-        .eq("session_id", session.id);
+        .eq("session_id", session.id)
+        .eq("user_id", userId);
       if (dErr) throw dErr;
 
       const rows: {
