@@ -65,7 +65,8 @@ function HistoryPage() {
       const { error } = await supabase
         .from("workout_sessions")
         .update({ title: title || null })
-        .eq("id", renaming.id);
+        .eq("id", renaming.id)
+        .eq("user_id", user!.id);
       if (error) throw error;
       toast.success("Renamed");
       setRenaming(null);
@@ -83,7 +84,8 @@ function HistoryPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_workout_days")
-        .select("id, name, accent");
+        .select("id, name, accent")
+        .eq("user_id", user!.id);
       if (error) throw error;
       return data ?? [];
     },
@@ -97,6 +99,7 @@ function HistoryPage() {
       const { data: sessions, error } = await supabase
         .from("workout_sessions")
         .select("id, day, performed_at, title")
+        .eq("user_id", user!.id)
         .order("performed_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -106,6 +109,7 @@ function HistoryPage() {
       const { data: sets, error: e2 } = await supabase
         .from("set_logs")
         .select("id, session_id, exercise_name, set_number, weight, reps")
+        .eq("user_id", user!.id)
         .in("session_id", ids)
         .order("set_number", { ascending: true });
       if (e2) throw e2;

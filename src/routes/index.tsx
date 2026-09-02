@@ -53,6 +53,7 @@ function Index() {
       const { data, error } = await supabase
         .from("custom_workout_days")
         .select("id, name, subtitle, accent, exercises, muscle_groups, created_at")
+        .eq("user_id", user!.id)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as CustomDay[];
@@ -70,6 +71,7 @@ function Index() {
       const { data, error } = await supabase
         .from("workout_sessions")
         .select("id, day, performed_at")
+        .eq("user_id", user!.id)
         .gte("performed_at", since)
         .order("performed_at", { ascending: false });
       if (error) throw error;
@@ -170,7 +172,7 @@ function Index() {
     if (!pendingDelete) return;
     const { id } = pendingDelete;
     setPendingDelete(null);
-    const { error } = await supabase.from("custom_workout_days").delete().eq("id", id);
+    const { error } = await supabase.from("custom_workout_days").delete().eq("id", id).eq("user_id", user.id);
     if (error) toast.error(error.message);
     else {
       toast.success("Split deleted");

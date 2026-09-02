@@ -23,13 +23,14 @@ function EditSplit() {
   const [saving, setSaving] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["custom-day-edit", id],
+    queryKey: ["custom-day-edit", user?.id, id],
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_workout_days")
         .select("name, subtitle, accent, exercises, muscle_groups")
         .eq("id", id)
+        .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -88,7 +89,8 @@ function EditSplit() {
                   exercises: draft.exercises,
                   updated_at: new Date().toISOString(),
                 })
-                .eq("id", id);
+                .eq("id", id)
+                .eq("user_id", user.id);
               if (error) throw error;
               toast.success("Split updated");
               qc.invalidateQueries({ queryKey: ["custom-days-list", user.id] });

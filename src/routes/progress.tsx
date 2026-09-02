@@ -44,6 +44,7 @@ function ProgressPage() {
       const { data, error } = await supabase
         .from("set_logs")
         .select("exercise_name, weight, reps, created_at, session_id")
+        .eq("user_id", user!.id)
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(4000);
@@ -235,6 +236,7 @@ function OneRepMaxTracker({ userId }: { userId: string }) {
       const { data, error } = await supabase
         .from("set_logs")
         .select("exercise_name, created_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(2000);
       if (error) throw error;
@@ -264,6 +266,7 @@ function OneRepMaxTracker({ userId }: { userId: string }) {
       const { data, error } = await supabase
         .from("set_logs")
         .select("created_at, weight, reps")
+        .eq("user_id", userId)
         .eq("exercise_name", selected!)
         .not("weight", "is", null)
         .not("reps", "is", null)
