@@ -22,7 +22,7 @@ function NavLink({
     <Link
       to={to}
       className={cn(
-        "flex flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-[11px] font-semibold transition-all",
+        "flex flex-col items-center gap-1 rounded-2xl px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors",
         active ? "text-primary" : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -30,6 +30,7 @@ function NavLink({
     </Link>
   );
 }
+
 
 export function BottomNav() {
   const { pathname } = useLocation();
