@@ -69,6 +69,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Bebas+Neue&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
@@ -125,14 +131,16 @@ function Header() {
   if (!user) return null;
   return (
     <header className="sticky top-0 z-30 glass-strong border-b border-border/60">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
+      <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Dumbbell className="h-5 w-5" />
           </div>
-          <div>
-            <div className="text-sm font-bold tracking-tight">IRONLOG</div>
-            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Track. Lift. Repeat.</div>
+          <div className="leading-none">
+            <div className="text-display text-2xl italic tracking-wide">IRONLOG</div>
+            <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.28em] text-muted-foreground">
+              Track. Lift. Repeat.
+            </div>
           </div>
         </Link>
         <SessionTimerBadge />
