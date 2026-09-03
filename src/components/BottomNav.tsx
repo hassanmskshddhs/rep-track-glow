@@ -22,7 +22,7 @@ function NavLink({
     <Link
       to={to}
       className={cn(
-        "flex flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-[11px] font-semibold transition-all",
+        "flex flex-col items-center gap-1 rounded-2xl px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors",
         active ? "text-primary" : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -30,6 +30,7 @@ function NavLink({
     </Link>
   );
 }
+
 
 export function BottomNav() {
   const { pathname } = useLocation();
@@ -77,11 +78,11 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 glass-strong border-t border-border/60"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed inset-x-0 bottom-0 z-40 px-4"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)" }}
       aria-label="Primary"
     >
-      <ul className="mx-auto flex max-w-3xl items-stretch justify-around px-2 py-1.5">
+      <ul className="glass-strong mx-auto flex max-w-md items-stretch justify-around rounded-3xl px-2 py-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)]">
         {items.map((it, idx) => {
           const active = it.match(pathname);
           const Icon = it.icon;
@@ -90,7 +91,7 @@ export function BottomNav() {
               <NavLink to={tos[idx]} active={active}>
                 <span
                   className={cn(
-                    "flex h-9 w-12 items-center justify-center rounded-xl transition-all",
+                    "flex h-9 w-11 items-center justify-center rounded-xl transition-colors",
                     active && "bg-primary/15",
                   )}
                 >
@@ -105,3 +106,4 @@ export function BottomNav() {
     </nav>
   );
 }
+
