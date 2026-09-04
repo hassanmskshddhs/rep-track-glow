@@ -12,7 +12,12 @@ import { QuickImportDialog, type ImportedDraft } from "@/components/QuickImportD
 
 export const Route = createFileRoute("/custom/new")({
   component: NewSplit,
-  head: () => ({ meta: [{ title: "New Split — IronLog" }] }),
+  head: () => ({
+    meta: [
+      { title: "New Split — IronLog" },
+      { name: "description", content: "Build a custom workout split in IronLog — name it, tag muscle groups, and pick exercises from a full training library." },
+    ],
+  }),
 });
 
 function NewSplit() {
