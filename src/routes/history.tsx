@@ -22,7 +22,14 @@ import {
 
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
-  head: () => ({ meta: [{ title: "History — IronLog" }, { name: "description", content: "Your workout history." }] }),
+  head: () => ({
+    meta: [
+      { title: "History — IronLog" },
+      { name: "description", content: "Review, edit, and compare every logged workout session in IronLog to keep progressive overload on track." },
+      { property: "og:title", content: "History — IronLog" },
+      { property: "og:description", content: "Review, edit, and compare every logged workout session in IronLog to keep progressive overload on track." },
+    ],
+  }),
 });
 
 type SetRow = {

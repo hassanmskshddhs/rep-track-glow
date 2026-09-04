@@ -29,7 +29,14 @@ import {
 
 export const Route = createFileRoute("/progress")({
   component: ProgressPage,
-  head: () => ({ meta: [{ title: "Progress — IronLog" }] }),
+  head: () => ({
+    meta: [
+      { title: "Progress — IronLog" },
+      { name: "description", content: "Track strength gains, PRs, estimated 1RMs, and week-over-week volume trends across every lift in IronLog." },
+      { property: "og:title", content: "Progress — IronLog" },
+      { property: "og:description", content: "Track strength gains, PRs, estimated 1RMs, and week-over-week volume trends across every lift in IronLog." },
+    ],
+  }),
 });
 
 function ProgressPage() {

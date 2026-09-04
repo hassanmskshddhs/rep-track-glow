@@ -37,7 +37,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
-  head: () => ({ meta: [{ title: "Settings — IronLog" }] }),
+  head: () => ({
+    meta: [
+      { title: "Settings — IronLog" },
+      { name: "description", content: "Manage your IronLog profile, body metrics, theme preferences, and account options." },
+    ],
+  }),
 });
 
 function SettingsPage() {
