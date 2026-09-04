@@ -377,86 +377,88 @@ function Index() {
         </section>
 
 
-      {/* Up Next */}
-      {upNext && (
-        <section className="relative mt-5 animate-fade-in-up stagger-1">
-          <button
-            type="button"
-            onClick={() => deleteSplit(upNext.id, upNext.name)}
-            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground transition-colors hover:text-destructive"
-            aria-label={`Delete ${upNext.name}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-          <Link
-            to="/day/$day"
-            params={{ day: upNext.id }}
-            className="group glass-strong relative block overflow-hidden rounded-3xl p-6 pr-14 transition-all hover:-translate-y-0.5"
-          >
-            <div
-              className="absolute inset-x-0 top-0 h-1.5"
-              style={{ backgroundColor: `var(--${getSplitAccent(upNext.name, upNext.muscle_groups, upNext.accent ?? "primary")})` }}
-            />
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              <Sparkles className="h-3.5 w-3.5" /> Up Next
-            </div>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">
-              {upNext.name}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {upNext.subtitle ||
-                (Array.isArray(upNext.muscle_groups) && upNext.muscle_groups.length > 0
-                  ? upNext.muscle_groups.join(" · ")
-                  : "Your next session in the rotation")}
-            </p>
+        {/* Up Next — featured session */}
+        {upNext && (
+          <section className="relative mt-5 animate-fade-in-up stagger-1">
+            <button
+              type="button"
+              onClick={() => deleteSplit(upNext.id, upNext.name)}
+              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground transition-colors hover:text-destructive"
+              aria-label={`Delete ${upNext.name}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            <div className="glass-strong relative overflow-hidden rounded-[28px] p-6">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full"
+                style={{
+                  background: `color-mix(in oklab, var(--${getSplitAccent(upNext.name, upNext.muscle_groups, upNext.accent ?? "primary")}) 14%, transparent)`,
+                }}
+              />
+              <div className="relative">
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                  <Sparkles className="h-3 w-3" /> Next Session
+                </span>
+                <h2 className="text-display mt-2 text-4xl leading-none tracking-wide">
+                  {upNext.name.toUpperCase()}
+                </h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  {upNext.subtitle ||
+                    (Array.isArray(upNext.muscle_groups) && upNext.muscle_groups.length > 0
+                      ? upNext.muscle_groups.join(" · ")
+                      : "Your next session in the rotation")}
+                  {" · "}
+                  {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
+                </p>
 
-            <div className="mt-5 flex items-center justify-between">
-              <div className="text-xs text-muted-foreground">
-                {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
+                <Link
+                  to="/day/$day"
+                  params={{ day: upNext.id }}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-primary-foreground transition-transform active:scale-[0.98]"
+                >
+                  <span className="text-display text-xl tracking-[0.15em]">START WORKOUT</span>
+                  <ChevronRight className="h-5 w-5" />
+                </Link>
               </div>
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform group-hover:translate-x-0.5"
-              >
-                Start Workout <ChevronRight className="h-4 w-4" />
-              </span>
             </div>
-          </Link>
+          </section>
+        )}
+
+        {/* My Programs */}
+        <section className="mt-7 animate-fade-in-up stagger-2">
+          <div className="mb-3 flex items-end justify-between">
+            <h3 className="text-display text-2xl tracking-wide">MY PROGRAMS</h3>
+            <Link
+              to="/custom/new"
+              className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary"
+            >
+              <Plus className="h-3.5 w-3.5" /> New split
+            </Link>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(splits ?? []).map((s) => (
+              <SplitCard key={s.id} split={s} onDelete={deleteSplit} />
+            ))}
+
+            <Link
+              to="/custom/new"
+              className="group flex min-h-[172px] items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 p-5 text-center transition-colors hover:border-primary/50"
+            >
+              <div>
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
+                  <Plus className="h-5 w-5 text-primary" />
+                </div>
+                <div className="text-display mt-2 text-lg tracking-wide">NEW SPLIT</div>
+                <div className="text-[11px] text-muted-foreground">Build your own day</div>
+              </div>
+            </Link>
+          </div>
         </section>
-      )}
-
-      {/* My Programs */}
-      <section className="mt-6 animate-fade-in-up stagger-2">
-        <div className="mb-3 flex items-end justify-between">
-          <h3 className="text-lg font-bold tracking-tight">My Programs</h3>
-          <Link
-            to="/custom/new"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-          >
-            <Plus className="h-3.5 w-3.5" /> New split
-          </Link>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(splits ?? []).map((s) => (
-            <SplitCard key={s.id} split={s} onDelete={deleteSplit} />
-          ))}
-
-          <Link
-            to="/custom/new"
-            className="group flex min-h-[150px] items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card/30 p-5 text-center transition-all hover:border-primary/60 hover:bg-card/60"
-          >
-            <div>
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
-                <Plus className="h-5 w-5 text-primary" />
-              </div>
-              <div className="mt-2 text-sm font-bold">New split</div>
-              <div className="text-[11px] text-muted-foreground">Build your own day</div>
-            </div>
-          </Link>
-        </div>
-      </section>
+      </div>
       {dialogs}
     </main>
-
   );
 }
+
