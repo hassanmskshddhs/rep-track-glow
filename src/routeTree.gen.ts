@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkoutRouteImport } from './routes/workout'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShareReceiverRouteImport } from './routes/share-receiver'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProgressRouteImport } from './routes/progress'
@@ -27,6 +28,11 @@ import { Route as CustomIdEditRouteImport } from './routes/custom.$id.edit'
 const WorkoutRoute = WorkoutRouteImport.update({
   id: '/workout',
   path: '/workout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShareReceiverRoute = ShareReceiverRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
   '/coach/$chatId': typeof CoachChatIdRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
   '/coach/$chatId': typeof CoachChatIdRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/progress': typeof ProgressRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
   '/coach/$chatId': typeof CoachChatIdRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/settings'
     | '/share-receiver'
+    | '/sitemap.xml'
     | '/workout'
     | '/api/coach'
     | '/coach/$chatId'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/settings'
     | '/share-receiver'
+    | '/sitemap.xml'
     | '/workout'
     | '/api/coach'
     | '/coach/$chatId'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/settings'
     | '/share-receiver'
+    | '/sitemap.xml'
     | '/workout'
     | '/api/coach'
     | '/coach/$chatId'
@@ -201,6 +213,7 @@ export interface RootRouteChildren {
   ProgressRoute: typeof ProgressRoute
   SettingsRoute: typeof SettingsRoute
   ShareReceiverRoute: typeof ShareReceiverRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WorkoutRoute: typeof WorkoutRoute
   ApiCoachRoute: typeof ApiCoachRoute
   CustomNewRoute: typeof CustomNewRoute
@@ -215,6 +228,13 @@ declare module '@tanstack/react-router' {
       path: '/workout'
       fullPath: '/workout'
       preLoaderRoute: typeof WorkoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/share-receiver': {
@@ -331,6 +351,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProgressRoute: ProgressRoute,
   SettingsRoute: SettingsRoute,
   ShareReceiverRoute: ShareReceiverRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   WorkoutRoute: WorkoutRoute,
   ApiCoachRoute: ApiCoachRoute,
   CustomNewRoute: CustomNewRoute,
