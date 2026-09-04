@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { resolveDisplayName, useProfile } from "@/lib/profile";
+import heroLift from "@/assets/hero-lift.jpg";
 
 
 export const Route = createFileRoute("/")({
@@ -244,7 +245,7 @@ function Index() {
   if (!splitsLoading && (splits?.length ?? 0) === 0) {
 
     return (
-      <main className="mx-auto max-w-3xl px-4 py-12 animate-fade-in-up">
+      <main className="mx-auto max-w-3xl px-5 py-12 animate-fade-in-up">
         <div className="glass relative overflow-hidden rounded-3xl p-10 text-center">
           <div
             aria-hidden
