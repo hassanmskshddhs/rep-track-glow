@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { resolveDisplayName, useProfile } from "@/lib/profile";
+import heroLift from "@/assets/hero-lift.jpg";
 
 
 export const Route = createFileRoute("/")({
@@ -244,7 +245,7 @@ function Index() {
   if (!splitsLoading && (splits?.length ?? 0) === 0) {
 
     return (
-      <main className="mx-auto max-w-3xl px-4 py-12 animate-fade-in-up">
+      <main className="mx-auto max-w-3xl px-5 py-12 animate-fade-in-up">
         <div className="glass relative overflow-hidden rounded-3xl p-10 text-center">
           <div
             aria-hidden
@@ -281,178 +282,184 @@ function Index() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 pt-6 pb-4">
-      {/* Hero greeting */}
-      <section className="animate-fade-in-up">
-        <div className="glass relative overflow-hidden rounded-3xl p-5 md:p-6">
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 opacity-90"
-            style={{ background: "var(--gradient-hero)" }}
-          />
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                <Flame className="h-3.5 w-3.5" />
-                {streak > 0 ? `${streak}-day streak` : "Let's lift"}
-              </div>
-              <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
-                Welcome back, <span className="text-primary">{firstName}</span>!
-              </h1>
-              <p className="text-sm text-muted-foreground">Weekly activity</p>
-            </div>
+    <main className="pb-4">
+      {/* Cinematic hero */}
+      <section className="relative -mt-[1px] h-[360px] w-full overflow-hidden md:h-[420px]">
+        <img
+          src={heroLift}
+          alt="Athlete lifting a barbell in a dark gym"
+          width={1024}
+          height={1152}
+          className="absolute inset-0 h-full w-full object-cover object-center contrast-125"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to top, var(--background) 4%, color-mix(in oklab, var(--background) 55%, transparent) 45%, transparent 100%)",
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-7 mx-auto max-w-3xl px-5">
+          <h1 className="text-display text-6xl leading-[0.85] tracking-tight md:text-7xl">
+            HELLO,
+            <br />
+            <span className="text-primary">{firstName.toUpperCase()}</span>
+          </h1>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-primary" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground/70">
+              {streak > 0 ? `${streak}-day streak` : "Let's lift"}
+              {upNext ? ` • ${upNext.name}` : ""}
+            </p>
           </div>
+        </div>
+      </section>
 
+      <div className="mx-auto max-w-3xl px-5">
+        {/* Activity strip */}
+        <section className="animate-fade-in-up">
+          <div className="mb-2 flex items-end justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">
+              Weekly activity
+            </p>
+            <p className="text-display text-xl leading-none">
+              {days.filter((d) => d.active).length} SESSIONS
+            </p>
+          </div>
           <div
             ref={scrollerRef}
             onScroll={onScrollerScroll}
-            className="no-scrollbar scroll-gpu -mx-1 mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
+            className="no-scrollbar scroll-gpu -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
             style={{ scrollPaddingInline: 8 }}
           >
             {days.map((d, i) => {
               const isToday = i === days.length - 1;
               const split = d.splitId ? (splits ?? []).find((s) => s.id === d.splitId) : null;
-              const splitLabel = split?.name ?? "";
               return (
                 <div
                   key={d.date.toISOString()}
-                  className="flex w-12 shrink-0 snap-end flex-col items-center gap-1.5"
+                  className="flex w-11 shrink-0 snap-end flex-col items-center gap-1.5"
+                  title={`${format(d.date, "EEE, MMM d")}${split ? ` — ${split.name}` : ""}`}
                 >
-                  <div
-                    className={cn(
-                      "relative flex h-14 w-full flex-col items-center justify-center rounded-xl text-xs font-bold transition-all",
-                      d.active
-                        ? "bg-primary/15 text-primary shadow-[var(--shadow-glow)]"
-                        : "bg-card/60 text-muted-foreground/70 border border-border/60",
-                      isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                    )}
-                    title={format(d.date, "EEE, MMM d, yyyy")}
-                  >
-                    <span className="text-[11px] font-extrabold tabular-nums">
-                      {format(d.date, "d")}
-                    </span>
-                    {d.active ? (
-                      <Flame className="mt-0.5 h-4 w-4 text-primary" fill="currentColor" />
-                    ) : (
-                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
-                    )}
+                  <div className="flex h-20 w-full items-end justify-center">
+                    <div
+                      className={cn(
+                        "w-2 rounded-full transition-all",
+                        d.active ? "bg-primary" : "bg-secondary",
+                      )}
+                      style={{ height: d.active ? "100%" : isToday ? "40%" : "28%" }}
+                    />
                   </div>
                   <span
                     className={cn(
-                      "text-[10px] font-semibold uppercase tracking-wider",
+                      "text-[9px] font-bold uppercase",
                       isToday ? "text-primary" : "text-muted-foreground",
                     )}
                   >
                     {d.label}
                   </span>
-                  {splitLabel && (
-                    <span
-                      className="max-w-full truncate text-[9px] font-semibold text-foreground/70"
-                      title={splitLabel}
-                    >
-                      {splitLabel}
-                    </span>
-                  )}
                 </div>
               );
             })}
           </div>
-
-        </div>
-      </section>
-
-      {/* Quick actions */}
-      <section className="mt-4 animate-fade-in-up">
-        <Button
-          size="lg"
-          variant="outline"
-          className="w-full font-bold"
-          onClick={() => setImportOpen(true)}
-        >
-          <Zap className="mr-2 h-4 w-4 text-primary" /> Quick Import Routine
-        </Button>
-      </section>
-
-      {/* Up Next */}
-      {upNext && (
-        <section className="relative mt-5 animate-fade-in-up stagger-1">
-          <button
-            type="button"
-            onClick={() => deleteSplit(upNext.id, upNext.name)}
-            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground transition-colors hover:text-destructive"
-            aria-label={`Delete ${upNext.name}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-          <Link
-            to="/day/$day"
-            params={{ day: upNext.id }}
-            className="group glass-strong relative block overflow-hidden rounded-3xl p-6 pr-14 transition-all hover:-translate-y-0.5"
-          >
-            <div
-              className="absolute inset-x-0 top-0 h-1.5"
-              style={{ backgroundColor: `var(--${getSplitAccent(upNext.name, upNext.muscle_groups, upNext.accent ?? "primary")})` }}
-            />
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              <Sparkles className="h-3.5 w-3.5" /> Up Next
-            </div>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">
-              {upNext.name}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {upNext.subtitle ||
-                (Array.isArray(upNext.muscle_groups) && upNext.muscle_groups.length > 0
-                  ? upNext.muscle_groups.join(" · ")
-                  : "Your next session in the rotation")}
-            </p>
-
-            <div className="mt-5 flex items-center justify-between">
-              <div className="text-xs text-muted-foreground">
-                {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
-              </div>
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform group-hover:translate-x-0.5"
-              >
-                Start Workout <ChevronRight className="h-4 w-4" />
-              </span>
-            </div>
-          </Link>
         </section>
-      )}
 
-      {/* My Programs */}
-      <section className="mt-6 animate-fade-in-up stagger-2">
-        <div className="mb-3 flex items-end justify-between">
-          <h3 className="text-lg font-bold tracking-tight">My Programs</h3>
-          <Link
-            to="/custom/new"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        {/* Quick actions */}
+        <section className="mt-5 animate-fade-in-up">
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full font-bold uppercase tracking-wider"
+            onClick={() => setImportOpen(true)}
           >
-            <Plus className="h-3.5 w-3.5" /> New split
-          </Link>
-        </div>
+            <Zap className="mr-2 h-4 w-4 text-primary" /> Quick Import Routine
+          </Button>
+        </section>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(splits ?? []).map((s) => (
-            <SplitCard key={s.id} split={s} onDelete={deleteSplit} />
-          ))}
 
-          <Link
-            to="/custom/new"
-            className="group flex min-h-[150px] items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card/30 p-5 text-center transition-all hover:border-primary/60 hover:bg-card/60"
-          >
-            <div>
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
-                <Plus className="h-5 w-5 text-primary" />
+        {/* Up Next — featured session */}
+        {upNext && (
+          <section className="relative mt-5 animate-fade-in-up stagger-1">
+            <button
+              type="button"
+              onClick={() => deleteSplit(upNext.id, upNext.name)}
+              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground transition-colors hover:text-destructive"
+              aria-label={`Delete ${upNext.name}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            <div className="glass-strong relative overflow-hidden rounded-[28px] p-6">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full"
+                style={{
+                  background: `color-mix(in oklab, var(--${getSplitAccent(upNext.name, upNext.muscle_groups, upNext.accent ?? "primary")}) 14%, transparent)`,
+                }}
+              />
+              <div className="relative">
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                  <Sparkles className="h-3 w-3" /> Next Session
+                </span>
+                <h2 className="text-display mt-2 text-4xl leading-none tracking-wide">
+                  {upNext.name.toUpperCase()}
+                </h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  {upNext.subtitle ||
+                    (Array.isArray(upNext.muscle_groups) && upNext.muscle_groups.length > 0
+                      ? upNext.muscle_groups.join(" · ")
+                      : "Your next session in the rotation")}
+                  {" · "}
+                  {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
+                </p>
+
+                <Link
+                  to="/day/$day"
+                  params={{ day: upNext.id }}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-primary-foreground transition-transform active:scale-[0.98]"
+                >
+                  <span className="text-display text-xl tracking-[0.15em]">START WORKOUT</span>
+                  <ChevronRight className="h-5 w-5" />
+                </Link>
               </div>
-              <div className="mt-2 text-sm font-bold">New split</div>
-              <div className="text-[11px] text-muted-foreground">Build your own day</div>
             </div>
-          </Link>
-        </div>
-      </section>
+          </section>
+        )}
+
+        {/* My Programs */}
+        <section className="mt-7 animate-fade-in-up stagger-2">
+          <div className="mb-3 flex items-end justify-between">
+            <h3 className="text-display text-2xl tracking-wide">MY PROGRAMS</h3>
+            <Link
+              to="/custom/new"
+              className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary"
+            >
+              <Plus className="h-3.5 w-3.5" /> New split
+            </Link>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(splits ?? []).map((s) => (
+              <SplitCard key={s.id} split={s} onDelete={deleteSplit} />
+            ))}
+
+            <Link
+              to="/custom/new"
+              className="group flex min-h-[172px] items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 p-5 text-center transition-colors hover:border-primary/50"
+            >
+              <div>
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
+                  <Plus className="h-5 w-5 text-primary" />
+                </div>
+                <div className="text-display mt-2 text-lg tracking-wide">NEW SPLIT</div>
+                <div className="text-[11px] text-muted-foreground">Build your own day</div>
+              </div>
+            </Link>
+          </div>
+        </section>
+      </div>
       {dialogs}
     </main>
-
   );
 }
+
