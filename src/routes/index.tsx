@@ -281,97 +281,101 @@ function Index() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 pt-6 pb-4">
-      {/* Hero greeting */}
-      <section className="animate-fade-in-up">
-        <div className="glass relative overflow-hidden rounded-3xl p-5 md:p-6">
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 opacity-90"
-            style={{ background: "var(--gradient-hero)" }}
-          />
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                <Flame className="h-3.5 w-3.5" />
-                {streak > 0 ? `${streak}-day streak` : "Let's lift"}
-              </div>
-              <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
-                Welcome back, <span className="text-primary">{firstName}</span>!
-              </h1>
-              <p className="text-sm text-muted-foreground">Weekly activity</p>
-            </div>
+    <main className="pb-4">
+      {/* Cinematic hero */}
+      <section className="relative -mt-[1px] h-[360px] w-full overflow-hidden md:h-[420px]">
+        <img
+          src={heroLift}
+          alt="Athlete lifting a barbell in a dark gym"
+          width={1024}
+          height={1152}
+          className="absolute inset-0 h-full w-full object-cover object-center contrast-125"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to top, var(--background) 4%, color-mix(in oklab, var(--background) 55%, transparent) 45%, transparent 100%)",
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-7 mx-auto max-w-3xl px-5">
+          <h1 className="text-display text-6xl leading-[0.85] tracking-tight md:text-7xl">
+            HELLO,
+            <br />
+            <span className="text-primary">{firstName.toUpperCase()}</span>
+          </h1>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-primary" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground/70">
+              {streak > 0 ? `${streak}-day streak` : "Let's lift"}
+              {upNext ? ` • ${upNext.name}` : ""}
+            </p>
           </div>
+        </div>
+      </section>
 
+      <div className="mx-auto max-w-3xl px-5">
+        {/* Activity strip */}
+        <section className="animate-fade-in-up">
+          <div className="mb-2 flex items-end justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">
+              Weekly activity
+            </p>
+            <p className="text-display text-xl leading-none">
+              {days.filter((d) => d.active).length} SESSIONS
+            </p>
+          </div>
           <div
             ref={scrollerRef}
             onScroll={onScrollerScroll}
-            className="no-scrollbar scroll-gpu -mx-1 mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
+            className="no-scrollbar scroll-gpu -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
             style={{ scrollPaddingInline: 8 }}
           >
             {days.map((d, i) => {
               const isToday = i === days.length - 1;
               const split = d.splitId ? (splits ?? []).find((s) => s.id === d.splitId) : null;
-              const splitLabel = split?.name ?? "";
               return (
                 <div
                   key={d.date.toISOString()}
-                  className="flex w-12 shrink-0 snap-end flex-col items-center gap-1.5"
+                  className="flex w-11 shrink-0 snap-end flex-col items-center gap-1.5"
+                  title={`${format(d.date, "EEE, MMM d")}${split ? ` — ${split.name}` : ""}`}
                 >
-                  <div
-                    className={cn(
-                      "relative flex h-14 w-full flex-col items-center justify-center rounded-xl text-xs font-bold transition-all",
-                      d.active
-                        ? "bg-primary/15 text-primary shadow-[var(--shadow-glow)]"
-                        : "bg-card/60 text-muted-foreground/70 border border-border/60",
-                      isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                    )}
-                    title={format(d.date, "EEE, MMM d, yyyy")}
-                  >
-                    <span className="text-[11px] font-extrabold tabular-nums">
-                      {format(d.date, "d")}
-                    </span>
-                    {d.active ? (
-                      <Flame className="mt-0.5 h-4 w-4 text-primary" fill="currentColor" />
-                    ) : (
-                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
-                    )}
+                  <div className="flex h-20 w-full items-end justify-center">
+                    <div
+                      className={cn(
+                        "w-2 rounded-full transition-all",
+                        d.active ? "bg-primary" : "bg-secondary",
+                      )}
+                      style={{ height: d.active ? "100%" : isToday ? "40%" : "28%" }}
+                    />
                   </div>
                   <span
                     className={cn(
-                      "text-[10px] font-semibold uppercase tracking-wider",
+                      "text-[9px] font-bold uppercase",
                       isToday ? "text-primary" : "text-muted-foreground",
                     )}
                   >
                     {d.label}
                   </span>
-                  {splitLabel && (
-                    <span
-                      className="max-w-full truncate text-[9px] font-semibold text-foreground/70"
-                      title={splitLabel}
-                    >
-                      {splitLabel}
-                    </span>
-                  )}
                 </div>
               );
             })}
           </div>
+        </section>
 
-        </div>
-      </section>
+        {/* Quick actions */}
+        <section className="mt-5 animate-fade-in-up">
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full font-bold uppercase tracking-wider"
+            onClick={() => setImportOpen(true)}
+          >
+            <Zap className="mr-2 h-4 w-4 text-primary" /> Quick Import Routine
+          </Button>
+        </section>
 
-      {/* Quick actions */}
-      <section className="mt-4 animate-fade-in-up">
-        <Button
-          size="lg"
-          variant="outline"
-          className="w-full font-bold"
-          onClick={() => setImportOpen(true)}
-        >
-          <Zap className="mr-2 h-4 w-4 text-primary" /> Quick Import Routine
-        </Button>
-      </section>
 
       {/* Up Next */}
       {upNext && (
