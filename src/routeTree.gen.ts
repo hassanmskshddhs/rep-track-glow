@@ -13,6 +13,7 @@ import { Route as WorkoutRouteImport } from './routes/workout'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShareReceiverRouteImport } from './routes/share-receiver'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProgressiveOverloadTrackerRouteImport } from './routes/progressive-overload-tracker'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -45,6 +46,12 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProgressiveOverloadTrackerRoute =
+  ProgressiveOverloadTrackerRouteImport.update({
+    id: '/progressive-overload-tracker',
+    path: '/progressive-overload-tracker',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProgressRoute = ProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/progressive-overload-tracker': typeof ProgressiveOverloadTrackerRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -123,6 +131,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/progressive-overload-tracker': typeof ProgressiveOverloadTrackerRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -141,6 +150,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/progressive-overload-tracker': typeof ProgressiveOverloadTrackerRoute
   '/settings': typeof SettingsRoute
   '/share-receiver': typeof ShareReceiverRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/nutrition'
     | '/progress'
+    | '/progressive-overload-tracker'
     | '/settings'
     | '/share-receiver'
     | '/sitemap.xml'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/nutrition'
     | '/progress'
+    | '/progressive-overload-tracker'
     | '/settings'
     | '/share-receiver'
     | '/sitemap.xml'
@@ -193,6 +205,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/nutrition'
     | '/progress'
+    | '/progressive-overload-tracker'
     | '/settings'
     | '/share-receiver'
     | '/sitemap.xml'
@@ -211,6 +224,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   NutritionRoute: typeof NutritionRoute
   ProgressRoute: typeof ProgressRoute
+  ProgressiveOverloadTrackerRoute: typeof ProgressiveOverloadTrackerRoute
   SettingsRoute: typeof SettingsRoute
   ShareReceiverRoute: typeof ShareReceiverRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -249,6 +263,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progressive-overload-tracker': {
+      id: '/progressive-overload-tracker'
+      path: '/progressive-overload-tracker'
+      fullPath: '/progressive-overload-tracker'
+      preLoaderRoute: typeof ProgressiveOverloadTrackerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progress': {
@@ -349,6 +370,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   NutritionRoute: NutritionRoute,
   ProgressRoute: ProgressRoute,
+  ProgressiveOverloadTrackerRoute: ProgressiveOverloadTrackerRoute,
   SettingsRoute: SettingsRoute,
   ShareReceiverRoute: ShareReceiverRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
