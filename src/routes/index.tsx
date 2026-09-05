@@ -458,6 +458,12 @@ function Index() {
           </div>
         </section>
       </div>
+
+      <footer className="mt-10 border-t border-border/60 px-5 py-6 text-center text-xs text-muted-foreground">
+        <Link to="/progressive-overload-tracker" className="hover:text-foreground">
+          How IronLog tracks progressive overload
+        </Link>
+      </footer>
       {dialogs}
     </main>
   );
