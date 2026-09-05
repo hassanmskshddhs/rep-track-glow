@@ -24,15 +24,24 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-primary">404</h1>
-        <p className="mt-2 text-muted-foreground">This page doesn't exist.</p>
-        <Link to="/" className="mt-6 inline-block text-primary underline">Go home</Link>
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-6">
+      <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-8 text-center">
+        <div className="text-display text-6xl italic tracking-wide text-primary">404</div>
+        <h1 className="mt-3 text-lg font-semibold text-foreground">Page not found</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This screen doesn't exist. Let's get you back to your training.
+        </p>
+        <Link
+          to="/"
+          className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-primary text-sm font-bold uppercase tracking-wider text-primary-foreground"
+        >
+          Back to home
+        </Link>
       </div>
     </div>
   );
 }
+
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
