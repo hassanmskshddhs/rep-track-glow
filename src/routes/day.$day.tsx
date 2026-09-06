@@ -509,7 +509,7 @@ function DayPage({ day }: { day: string }) {
   const dayAccent = getSplitAccent(config.name, null, config.accent);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6" style={{ paddingBottom: "calc(64px + 80px + env(safe-area-inset-bottom))" }}>
+    <main className="mx-auto max-w-3xl px-4 py-6" style={{ paddingBottom: "calc(90px + 80px + env(safe-area-inset-bottom))" }}>
       <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-1 h-4 w-4" /> All workouts
       </Link>
@@ -626,10 +626,10 @@ function DayPage({ day }: { day: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Bottom session controls — sits above the bottom nav (64px). */}
+      {/* Bottom session controls — sits above the bottom nav (90px). */}
       <div
         className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
-        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
+        style={{ bottom: "calc(90px + env(safe-area-inset-bottom))" }}
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 text-sm">
