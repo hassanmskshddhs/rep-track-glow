@@ -163,14 +163,16 @@ function AppShell() {
   const { user } = useAuth();
   const { online } = useOfflineSync();
   return (
-    <div className={`app-scroll-root bg-background text-foreground animate-fade-in ${user ? "has-bottom-nav pb-24" : ""}`}>
-      <Header />
-      {!online && (
-        <div className="bg-muted px-4 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          Offline — your sets are saved on this device
-        </div>
-      )}
-      <Outlet />
+    <div className="bg-background text-foreground min-h-screen">
+      <div className={`app-scroll-root animate-fade-in ${user ? "has-bottom-nav pb-24" : ""}`}>
+        <Header />
+        {!online && (
+          <div className="bg-muted px-4 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            Offline — your sets are saved on this device
+          </div>
+        )}
+        <Outlet />
+      </div>
       {user && <BottomNav />}
     </div>
   );

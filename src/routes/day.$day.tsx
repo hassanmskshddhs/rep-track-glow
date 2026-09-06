@@ -82,6 +82,7 @@ const DEFAULT_MAX_REPS = 12;
 const WEIGHT_INCREMENT = 2.5;
 
 function parseRepRange(name: string): { min: number; max: number } {
+  if (typeof name !== "string") return { min: DEFAULT_MIN_REPS, max: DEFAULT_MAX_REPS };
   const m = name.match(/(\d+)\s*-\s*(\d+)\s*reps?/i);
   if (m) return { min: parseInt(m[1], 10), max: parseInt(m[2], 10) };
   return { min: DEFAULT_MIN_REPS, max: DEFAULT_MAX_REPS };

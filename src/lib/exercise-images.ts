@@ -136,10 +136,9 @@ export const EXERCISE_IMAGE_SLUGS: Record<string, string> = {
 };
 
 const normalize = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+  typeof s === "string"
+    ? s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+    : "";
 
 const NORMALIZED: Record<string, string> = Object.fromEntries(
   Object.entries(EXERCISE_IMAGE_SLUGS).map(([k, v]) => [normalize(k), v]),

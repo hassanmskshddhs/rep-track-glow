@@ -32,7 +32,7 @@ export function useSplits() {
       if (error) throw error;
       return (data ?? []).map((d) => ({
         ...d,
-        exercises: Array.isArray(d.exercises) ? (d.exercises as string[]) : [],
+        exercises: Array.isArray(d.exercises) ? (d.exercises.filter(Boolean) as string[]) : [],
       }));
     },
   });
@@ -67,7 +67,7 @@ export function useSplit(splitId: string) {
       if (!data) return null;
       return {
         ...data,
-        exercises: Array.isArray(data.exercises) ? (data.exercises as string[]) : [],
+        exercises: Array.isArray(data.exercises) ? (data.exercises.filter(Boolean) as string[]) : [],
       };
     },
   });
