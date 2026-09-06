@@ -146,9 +146,13 @@ export const Route = createFileRoute("/api/coach")({
 
         const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
+          headers: {
+            "Content-Type": "application/json",
+            "Lovable-API-Key": key,
+            "X-Lovable-AIG-SDK": "fetch",
+          },
           body: JSON.stringify({
-            model: "google/gemini-3.6-flash",
+            model: "google/gemini-3.7-flash",
             stream: true,
             messages: [
               { role: "system", content: SYSTEM },
@@ -165,12 +169,23 @@ export const Route = createFileRoute("/api/coach")({
           }),
         });
 
-        if (upstream.status === 429)
-          return new Response("Too many requests — give it a moment.", { status: 429 });
-        if (upstream.status === 402)
-          return new Response("AI credits exhausted. Add credits to keep coaching.", { status: 402 });
-        if (!upstream.ok || !upstream.body)
-          return new Response(`Coach unavailable (${upstream.status})`, { status: 502 });
+        if (!upstream.ok || !upstream.body) {
+          const gatewayMessage = await upstream.text();
+          if (upstream.status === 429)
+            return new Response(gatewayMessage || "Too many requests — give it a moment.", {
+              status: 429,
+            });
+          if (upstream.status === 402 || upstream.status === 403)
+            return new Response(gatewayMessage || "IronCoach needs attention from the app owner.", {
+              status: upstream.status,
+            });
+          if (upstream.status === 401)
+            return new Response("IronCoach is not configured correctly.", { status: 500 });
+          return new Response(
+            gatewayMessage || `IronCoach could not connect (error ${upstream.status}).`,
+            { status: upstream.status >= 500 ? upstream.status : 502 },
+          );
+        }
 
         return new Response(upstream.body, {
           headers: {
