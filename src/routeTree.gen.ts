@@ -9,46 +9,41 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as CoachRouteImport } from './routes/coach'
-import { Route as HistoryRouteImport } from './routes/history'
-import { Route as NutritionRouteImport } from './routes/nutrition'
-import { Route as ProgressRouteImport } from './routes/progress'
-import { Route as ProgressiveOverloadTrackerRouteImport } from './routes/progressive-overload-tracker'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as ShareReceiverRouteImport } from './routes/share-receiver'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as WorkoutRouteImport } from './routes/workout'
-import { Route as ApiCoachRouteImport } from './routes/api/coach'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ShareReceiverRouteImport } from './routes/share-receiver'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProgressiveOverloadTrackerRouteImport } from './routes/progressive-overload-tracker'
+import { Route as ProgressRouteImport } from './routes/progress'
+import { Route as NutritionRouteImport } from './routes/nutrition'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as CoachRouteImport } from './routes/coach'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
-import { Route as CoachChatIdRouteImport } from './routes/coach.$chatId'
-import { Route as CustomNewRouteImport } from './routes/custom.new'
 import { Route as DayDayRouteImport } from './routes/day.$day'
+import { Route as CustomNewRouteImport } from './routes/custom.new'
+import { Route as CoachChatIdRouteImport } from './routes/coach.$chatId'
+import { Route as ApiCoachRouteImport } from './routes/api/coach'
 import { Route as CustomIdEditRouteImport } from './routes/custom.$id.edit'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const WorkoutRoute = WorkoutRouteImport.update({
+  id: '/workout',
+  path: '/workout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CoachRoute = CoachRouteImport.update({
-  id: '/coach',
-  path: '/coach',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HistoryRoute = HistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
+const ShareReceiverRoute = ShareReceiverRouteImport.update({
+  id: '/share-receiver',
+  path: '/share-receiver',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NutritionRoute = NutritionRouteImport.update({
-  id: '/nutrition',
-  path: '/nutrition',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProgressRoute = ProgressRouteImport.update({
-  id: '/progress',
-  path: '/progress',
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgressiveOverloadTrackerRoute =
@@ -57,29 +52,29 @@ const ProgressiveOverloadTrackerRoute =
     path: '/progressive-overload-tracker',
     getParentRoute: () => rootRouteImport,
   } as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+const ProgressRoute = ProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ShareReceiverRoute = ShareReceiverRouteImport.update({
-  id: '/share-receiver',
-  path: '/share-receiver',
+const NutritionRoute = NutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkoutRoute = WorkoutRouteImport.update({
-  id: '/workout',
-  path: '/workout',
+const CoachRoute = CoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCoachRoute = ApiCoachRouteImport.update({
-  id: '/api/coach',
-  path: '/api/coach',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoachIndexRoute = CoachIndexRouteImport.update({
@@ -87,19 +82,24 @@ const CoachIndexRoute = CoachIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CoachRoute,
 } as any)
-const CoachChatIdRoute = CoachChatIdRouteImport.update({
-  id: '/$chatId',
-  path: '/$chatId',
-  getParentRoute: () => CoachRoute,
+const DayDayRoute = DayDayRouteImport.update({
+  id: '/day/$day',
+  path: '/day/$day',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CustomNewRoute = CustomNewRouteImport.update({
   id: '/custom/new',
   path: '/custom/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DayDayRoute = DayDayRouteImport.update({
-  id: '/day/$day',
-  path: '/day/$day',
+const CoachChatIdRoute = CoachChatIdRouteImport.update({
+  id: '/$chatId',
+  path: '/$chatId',
+  getParentRoute: () => CoachRoute,
+} as any)
+const ApiCoachRoute = ApiCoachRouteImport.update({
+  id: '/api/coach',
+  path: '/api/coach',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomIdEditRoute = CustomIdEditRouteImport.update({
@@ -237,60 +237,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/coach': {
-      id: '/coach'
-      path: '/coach'
-      fullPath: '/coach'
-      preLoaderRoute: typeof CoachRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/history': {
-      id: '/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nutrition': {
-      id: '/nutrition'
-      path: '/nutrition'
-      fullPath: '/nutrition'
-      preLoaderRoute: typeof NutritionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/progress': {
-      id: '/progress'
-      path: '/progress'
-      fullPath: '/progress'
-      preLoaderRoute: typeof ProgressRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/progressive-overload-tracker': {
-      id: '/progressive-overload-tracker'
-      path: '/progressive-overload-tracker'
-      fullPath: '/progressive-overload-tracker'
-      preLoaderRoute: typeof ProgressiveOverloadTrackerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/share-receiver': {
-      id: '/share-receiver'
-      path: '/share-receiver'
-      fullPath: '/share-receiver'
-      preLoaderRoute: typeof ShareReceiverRouteImport
+    '/workout': {
+      id: '/workout'
+      path: '/workout'
+      fullPath: '/workout'
+      preLoaderRoute: typeof WorkoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -300,18 +251,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workout': {
-      id: '/workout'
-      path: '/workout'
-      fullPath: '/workout'
-      preLoaderRoute: typeof WorkoutRouteImport
+    '/share-receiver': {
+      id: '/share-receiver'
+      path: '/share-receiver'
+      fullPath: '/share-receiver'
+      preLoaderRoute: typeof ShareReceiverRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/coach': {
-      id: '/api/coach'
-      path: '/api/coach'
-      fullPath: '/api/coach'
-      preLoaderRoute: typeof ApiCoachRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progressive-overload-tracker': {
+      id: '/progressive-overload-tracker'
+      path: '/progressive-overload-tracker'
+      fullPath: '/progressive-overload-tracker'
+      preLoaderRoute: typeof ProgressiveOverloadTrackerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progress': {
+      id: '/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nutrition': {
+      id: '/nutrition'
+      path: '/nutrition'
+      fullPath: '/nutrition'
+      preLoaderRoute: typeof NutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coach': {
+      id: '/coach'
+      path: '/coach'
+      fullPath: '/coach'
+      preLoaderRoute: typeof CoachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/coach/': {
@@ -321,12 +314,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachIndexRouteImport
       parentRoute: typeof CoachRoute
     }
-    '/coach/$chatId': {
-      id: '/coach/$chatId'
-      path: '/$chatId'
-      fullPath: '/coach/$chatId'
-      preLoaderRoute: typeof CoachChatIdRouteImport
-      parentRoute: typeof CoachRoute
+    '/day/$day': {
+      id: '/day/$day'
+      path: '/day/$day'
+      fullPath: '/day/$day'
+      preLoaderRoute: typeof DayDayRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/custom/new': {
       id: '/custom/new'
@@ -335,11 +328,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomNewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/day/$day': {
-      id: '/day/$day'
-      path: '/day/$day'
-      fullPath: '/day/$day'
-      preLoaderRoute: typeof DayDayRouteImport
+    '/coach/$chatId': {
+      id: '/coach/$chatId'
+      path: '/$chatId'
+      fullPath: '/coach/$chatId'
+      preLoaderRoute: typeof CoachChatIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/api/coach': {
+      id: '/api/coach'
+      path: '/api/coach'
+      fullPath: '/api/coach'
+      preLoaderRoute: typeof ApiCoachRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/custom/$id/edit': {
