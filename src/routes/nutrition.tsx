@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
-import { ArrowLeft, ArrowRight, Search, Plus, Trash2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Activity, Flame, Droplet, Wheat, Beef, Target, RotateCcw, X, Check } from "lucide-react";
+import { ArrowLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, Droplet, Wheat, Beef, Target, RotateCcw, X, Check, Bot, Settings as SettingsIcon, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { format, addDays, subDays, isToday, parseISO } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 
@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { parseFoodWithAI, AIFoodResponse } from "@/lib/ai-food-parser";
 
 // -----------------------------------------------------------------------------
 // TYPES & DATA
@@ -57,13 +58,13 @@ type FoodDBItem = {
   protein: number;
   carbs: number;
   fat: number;
-  supportedUnits: { unit: string; multiplier: number }[]; // multiplier against base unit
+  supportedUnits: { unit: string; multiplier: number }[];
 };
 
 const GRAMS = { unit: "g", multiplier: 1 };
 const OUNCES = { unit: "oz", multiplier: 28.3495 };
 const ML = { unit: "ml", multiplier: 1 };
-const CUPS = { unit: "cup", multiplier: 240 }; // Approx for volume
+const CUPS = { unit: "cup", multiplier: 240 }; 
 const TBSP = { unit: "tbsp", multiplier: 15 };
 
 const FOOD_DB: FoodDBItem[] = [
@@ -78,13 +79,7 @@ const FOOD_DB: FoodDBItem[] = [
   { id: "9", name: "Banana", baseAmount: 100, baseUnit: "g", calories: 89, protein: 1.1, carbs: 22.8, fat: 0.3, supportedUnits: [GRAMS, OUNCES, { unit: "medium pc", multiplier: 118 }] },
   { id: "10", name: "Peanut Butter", baseAmount: 15, baseUnit: "g", calories: 94, protein: 3.8, carbs: 3.1, fat: 8, supportedUnits: [GRAMS, TBSP] },
   { id: "11", name: "Whole Milk", baseAmount: 100, baseUnit: "ml", calories: 61, protein: 3.2, carbs: 4.8, fat: 3.3, supportedUnits: [ML, CUPS] },
-  { id: "12", name: "Almond Milk (Unsweetened)", baseAmount: 100, baseUnit: "ml", calories: 15, protein: 0.5, carbs: 0.3, fat: 1.2, supportedUnits: [ML, CUPS] },
-  { id: "13", name: "Olive Oil", baseAmount: 15, baseUnit: "ml", calories: 119, protein: 0, carbs: 0, fat: 13.5, supportedUnits: [ML, TBSP] },
-  { id: "14", name: "Broccoli", baseAmount: 100, baseUnit: "g", calories: 34, protein: 2.8, carbs: 6.6, fat: 0.4, supportedUnits: [GRAMS, OUNCES, CUPS] },
-  { id: "15", name: "Sweet Potato (Cooked)", baseAmount: 100, baseUnit: "g", calories: 90, protein: 2, carbs: 20.7, fat: 0.1, supportedUnits: [GRAMS, OUNCES, { unit: "medium pc", multiplier: 114 }] },
-  { id: "16", name: "Greek Yogurt (0% Fat)", baseAmount: 100, baseUnit: "g", calories: 59, protein: 10.3, carbs: 3.6, fat: 0.4, supportedUnits: [GRAMS, OUNCES, CUPS] },
-  { id: "17", name: "Salmon (Raw)", baseAmount: 100, baseUnit: "g", calories: 208, protein: 20, carbs: 0, fat: 13, supportedUnits: [GRAMS, OUNCES] },
-  { id: "18", name: "Pasta (Dry)", baseAmount: 100, baseUnit: "g", calories: 371, protein: 13, carbs: 74, fat: 1.5, supportedUnits: [GRAMS, OUNCES] },
+  { id: "12", name: "Olive Oil", baseAmount: 15, baseUnit: "ml", calories: 119, protein: 0, carbs: 0, fat: 13.5, supportedUnits: [ML, TBSP] },
 ];
 
 // -----------------------------------------------------------------------------
@@ -126,12 +121,13 @@ export const Route = createFileRoute("/nutrition")({
 
 function NutritionRoute() {
   const [targets, setTargets] = useLocalStorage<MacroTargets | null>("ironlog_macro_targets", null);
+  const [apiKey, setApiKey] = useLocalStorage<string>("ironlog_gemini_key", "");
 
   if (!targets) {
     return <OnboardingWizard onComplete={setTargets} />;
   }
 
-  return <NutritionDashboard targets={targets} onReset={() => setTargets(null)} />;
+  return <NutritionDashboard targets={targets} onReset={() => setTargets(null)} apiKey={apiKey} setApiKey={setApiKey} />;
 }
 
 // -----------------------------------------------------------------------------
@@ -162,7 +158,6 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
     const act = parseFloat(activity);
     const r = parseFloat(rate);
 
-    // BMR Mifflin-St Jeor
     const bmr = sex === "Male" 
       ? (10 * w) + (6.25 * h) - (5 * a) + 5
       : (10 * w) + (6.25 * h) - (5 * a) - 161;
@@ -173,9 +168,8 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
     if (goal === "Lose") targetCalories = tdee - (r * 1100);
     if (goal === "Gain") targetCalories = tdee + (r * 1100);
 
-    // Macro Distribution (ISSN Guidelines)
-    const protein = w * 2.0; // 2g per kg
-    const fat = (targetCalories * 0.25) / 9; // 25% of calories
+    const protein = w * 2.0; 
+    const fat = (targetCalories * 0.25) / 9; 
     const carbs = (targetCalories - (protein * 4) - (fat * 9)) / 4;
 
     onComplete({
@@ -205,6 +199,7 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
         </div>
 
         <div className="bg-card border border-border p-6 rounded-2xl space-y-6">
+          {/* Steps content is same as previous version... */}
           <div className="flex justify-between items-center mb-4 text-sm font-semibold text-muted-foreground">
             <span>Step {step} of 3</span>
             <div className="flex gap-1">
@@ -215,7 +210,6 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <h2 className="text-xl font-bold mb-4">Biological Profile</h2>
-              
               <div className="space-y-2">
                 <Label>Biological Sex</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -223,7 +217,6 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
                   <Button variant={sex === "Female" ? "default" : "outline"} onClick={() => setSex("Female")}>Female</Button>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Age (years)</Label>
@@ -234,7 +227,6 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
                   <Input type="number" value={height} onChange={(e) => setHeight(e.target.value)} />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label>Current Weight (kg)</Label>
                 <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} />
@@ -245,7 +237,6 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
           {step === 2 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <h2 className="text-xl font-bold mb-4">Activity & Lifestyle</h2>
-              
               <div className="space-y-2">
                 <Label>Activity Level</Label>
                 <Select value={activity} onValueChange={setActivity}>
@@ -256,9 +247,6 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Be honest! Overestimating activity is the most common reason for stalled progress.
-                </p>
               </div>
             </div>
           )}
@@ -266,7 +254,6 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
           {step === 3 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <h2 className="text-xl font-bold mb-4">Your Goal</h2>
-              
               <div className="space-y-2">
                 <Label>Primary Goal</Label>
                 <div className="grid grid-cols-1 gap-2">
@@ -293,9 +280,7 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
           )}
 
           <div className="pt-4 flex justify-between">
-            <Button variant="ghost" disabled={step === 1} onClick={() => setStep(s => s - 1)}>
-              Back
-            </Button>
+            <Button variant="ghost" disabled={step === 1} onClick={() => setStep(s => s - 1)}>Back</Button>
             {step < 3 ? (
               <Button onClick={() => setStep(s => s + 1)}>Next <ArrowRight className="ml-2 h-4 w-4" /></Button>
             ) : (
@@ -311,17 +296,21 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
 // -----------------------------------------------------------------------------
 // NUTRITION DASHBOARD
 // -----------------------------------------------------------------------------
-function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onReset: () => void }) {
+function NutritionDashboard({ targets, onReset, apiKey, setApiKey }: { targets: MacroTargets; onReset: () => void; apiKey: string; setApiKey: (k: string) => void }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const dateStr = format(currentDate, "yyyy-MM-dd");
 
   const [logsStorage, setLogsStorage] = useLocalStorage<Record<string, FoodLog[]>>("ironlog_food_logs", {});
-  const todaysLogs = logsStorage[dateStr] || [];
-
+  const [recentFoods, setRecentFoods] = useLocalStorage<FoodDBItem[]>("ironlog_recent_foods", []);
+  
+  const rawTodaysLogs = (logsStorage || {})[dateStr] || [];
+  const todaysLogs = Array.isArray(rawTodaysLogs) ? rawTodaysLogs : [];
+  const rawRecentFoods = recentFoods || [];
+  const safeRecentFoods = Array.isArray(rawRecentFoods) ? rawRecentFoods : [];
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState<MealType>("Breakfast");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Aggregation
   const consumed = todaysLogs.reduce((acc, log) => ({
     calories: acc.calories + log.calories,
     protein: acc.protein + log.protein,
@@ -332,10 +321,16 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
   const remainingCals = targets.calories - consumed.calories;
   const calsPercent = Math.min(100, (consumed.calories / targets.calories) * 100);
 
-  const addFood = (food: FoodLog) => {
+  const addFood = (food: FoodLog, baseFoodItem: FoodDBItem) => {
+    // Add to daily logs
     setLogsStorage(prev => {
       const existing = prev[dateStr] || [];
       return { ...prev, [dateStr]: [...existing, food] };
+    });
+    // Add to recents if not exists
+    setRecentFoods(prev => {
+      const filtered = prev.filter(p => p.id !== baseFoodItem.id);
+      return [baseFoodItem, ...filtered].slice(0, 15); // Keep last 15
     });
     setSearchModalOpen(false);
   };
@@ -368,8 +363,8 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-          <button onClick={onReset} className="p-2 text-muted-foreground hover:text-foreground">
-            <RotateCcw className="h-5 w-5" />
+          <button onClick={() => setSettingsOpen(true)} className="p-2 text-muted-foreground hover:text-foreground">
+            <SettingsIcon className="h-5 w-5" />
           </button>
         </div>
 
@@ -392,7 +387,6 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
             </div>
           </div>
         </div>
-
         <div className="mt-4 h-3 w-full bg-secondary rounded-full overflow-hidden">
           <div 
             className={cn("h-full transition-all duration-500", remainingCals < 0 ? "bg-destructive" : "bg-primary")} 
@@ -400,7 +394,6 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
           />
         </div>
 
-        {/* MACRO PROGRESS */}
         <div className="grid grid-cols-3 gap-4 mt-6">
           <MacroRing label="Protein" consumed={consumed.protein} target={targets.protein} color="bg-[#3B82F6]" icon={<Beef className="h-3 w-3" />} />
           <MacroRing label="Carbs" consumed={consumed.carbs} target={targets.carbs} color="bg-[#F59E0B]" icon={<Wheat className="h-3 w-3" />} />
@@ -420,7 +413,6 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
                 <h3 className="font-bold text-lg">{meal}</h3>
                 <span className="text-sm font-semibold">{Math.round(mealCals)} kcal</span>
               </div>
-              
               <div className="divide-y divide-border/50">
                 {items.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground italic">No food logged yet.</div>
@@ -443,7 +435,6 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
                   ))
                 )}
               </div>
-
               <div className="p-3">
                 <button 
                   onClick={() => { setSelectedMealType(meal); setSearchModalOpen(true); }}
@@ -461,8 +452,31 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
         open={searchModalOpen} 
         onClose={() => setSearchModalOpen(false)} 
         mealType={selectedMealType} 
-        onAdd={addFood} 
+        onAdd={addFood}
+        apiKey={apiKey}
+        recentFoods={safeRecentFoods}
       />
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-w-md bg-background border-border">
+          <DialogHeader>
+            <DialogTitle>Nutrition Settings</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+            <div className="space-y-2">
+              <Label>Gemini API Key (For AI Food Parser)</Label>
+              <Input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="AIzaSy..." />
+              <p className="text-xs text-muted-foreground mt-1">Stored locally on your device.</p>
+            </div>
+            <div className="space-y-2 pt-4 border-t border-border">
+              <Label>Reset Macro Targets</Label>
+              <Button variant="destructive" onClick={() => { onReset(); setSettingsOpen(false); }} className="w-full">
+                <RotateCcw className="h-4 w-4 mr-2" /> Recalculate Macros
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -486,20 +500,30 @@ function MacroRing({ label, consumed, target, color, icon }: any) {
 }
 
 // -----------------------------------------------------------------------------
-// FOOD SEARCH MODAL
+// FOOD SEARCH MODAL (AI + DB + RECENT)
 // -----------------------------------------------------------------------------
-function FoodSearchModal({ open, onClose, mealType, onAdd }: { open: boolean, onClose: () => void, mealType: MealType, onAdd: (f: FoodLog) => void }) {
+function FoodSearchModal({ open, onClose, mealType, onAdd, apiKey, recentFoods }: { 
+  open: boolean, 
+  onClose: () => void, 
+  mealType: MealType, 
+  onAdd: (f: FoodLog, b: FoodDBItem) => void,
+  apiKey: string,
+  recentFoods: FoodDBItem[]
+}) {
   const [query, setQuery] = useState("");
   const [selectedFood, setSelectedFood] = useState<FoodDBItem | null>(null);
   
-  // Selected food state
   const [unit, setUnit] = useState<string>("");
   const [quantity, setQuantity] = useState("1");
+
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
     if (!open) {
       setQuery("");
       setSelectedFood(null);
+      setAiError("");
     }
   }, [open]);
 
@@ -511,11 +535,46 @@ function FoodSearchModal({ open, onClose, mealType, onAdd }: { open: boolean, on
   }, [selectedFood]);
 
   const filteredFoods = useMemo(() => {
-    if (!query) return FOOD_DB;
+    if (!query) return recentFoods.length > 0 ? recentFoods : FOOD_DB;
     return FOOD_DB.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
-  }, [query]);
+  }, [query, recentFoods]);
 
-  // Dynamic calculator
+  const handleAISearch = async () => {
+    if (!query.trim()) return;
+    if (!apiKey) {
+      setAiError("Please set your Gemini API Key in Nutrition Settings first.");
+      return;
+    }
+    
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const aiResponse = await parseFoodWithAI(query, apiKey);
+      
+      // Convert AI response into a FoodDBItem structure
+      const parsedItem: FoodDBItem = {
+        id: `ai_${uuidv4()}`,
+        name: aiResponse.food_name,
+        baseAmount: aiResponse.serving_size_quantity,
+        baseUnit: aiResponse.serving_size_unit,
+        calories: aiResponse.calories,
+        protein: aiResponse.protein,
+        carbs: aiResponse.carbs,
+        fat: aiResponse.fats,
+        supportedUnits: [
+          { unit: aiResponse.serving_size_unit, multiplier: 1 },
+          { unit: "serving", multiplier: aiResponse.serving_size_quantity },
+        ]
+      };
+      
+      setSelectedFood(parsedItem);
+    } catch (err: any) {
+      setAiError(err.message || "Failed to parse food.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const calculatedMacros = useMemo(() => {
     if (!selectedFood) return null;
     
@@ -523,7 +582,6 @@ function FoodSearchModal({ open, onClose, mealType, onAdd }: { open: boolean, on
     const selectedUnitObj = selectedFood.supportedUnits.find(u => u.unit === unit);
     if (!selectedUnitObj) return null;
 
-    // Convert to base unit quantity
     const totalBaseUnits = qty * selectedUnitObj.multiplier;
     const ratio = totalBaseUnits / selectedFood.baseAmount;
 
@@ -548,32 +606,57 @@ function FoodSearchModal({ open, onClose, mealType, onAdd }: { open: boolean, on
       protein: calculatedMacros.protein,
       carbs: calculatedMacros.carbs,
       fat: calculatedMacros.fat
-    });
+    }, selectedFood);
   };
 
   return (
     <Dialog open={open} onOpenChange={o => !o && onClose()}>
       <DialogContent className="max-w-md w-[95vw] p-0 overflow-hidden bg-background border-border max-h-[85vh] flex flex-col rounded-2xl">
         <DialogHeader className="p-4 border-b border-border bg-card">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-3">
             <DialogTitle>Add to {mealType}</DialogTitle>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search database..." 
-              className="pl-9 bg-background border-border"
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setSelectedFood(null); }}
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search database or ask AI..." 
+                className="pl-9 bg-background border-border"
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setSelectedFood(null); setAiError(""); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAISearch(); }}
+              />
+            </div>
+            <Button onClick={handleAISearch} disabled={aiLoading || !query.trim()} className="bg-primary/20 text-primary hover:bg-primary/30">
+              {aiLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+            </Button>
           </div>
+          {aiError && (
+            <div className="text-xs text-destructive mt-2 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> {aiError}
+            </div>
+          )}
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto">
           {!selectedFood ? (
             <div className="divide-y divide-border">
+              {(!query && recentFoods.length > 0) && (
+                <div className="px-4 py-2 bg-secondary/50 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                  Recent Foods
+                </div>
+              )}
+              {(!query && recentFoods.length === 0) && (
+                <div className="px-4 py-2 bg-secondary/50 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                  Database
+                </div>
+              )}
+
               {filteredFoods.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">No foods found.</div>
+                <div className="p-8 text-center text-muted-foreground">
+                  <p>No local foods found.</p>
+                  <p className="text-xs mt-2">Click the ✨ button to ask AI to parse your query.</p>
+                </div>
               ) : (
                 filteredFoods.map(food => (
                   <button 
@@ -584,7 +667,7 @@ function FoodSearchModal({ open, onClose, mealType, onAdd }: { open: boolean, on
                     <div>
                       <div className="font-semibold text-foreground group-hover:text-primary transition-colors">{food.name}</div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {food.baseAmount}{food.baseUnit} • {food.calories} kcal
+                        {food.baseAmount} {food.baseUnit} • {Math.round(food.calories)} kcal
                       </div>
                     </div>
                     <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
@@ -598,7 +681,14 @@ function FoodSearchModal({ open, onClose, mealType, onAdd }: { open: boolean, on
                 <ArrowLeft className="h-4 w-4" /> Back to Search
               </button>
               
-              <h3 className="text-2xl font-bold mb-6">{selectedFood.name}</h3>
+              <div className="flex items-start justify-between mb-6">
+                <h3 className="text-2xl font-bold">{selectedFood.name}</h3>
+                {selectedFood.id.startsWith("ai_") && (
+                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary px-2 py-1 rounded">
+                    <Bot className="h-3 w-3" /> AI Parsed
+                  </span>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
                 <div className="space-y-2">
