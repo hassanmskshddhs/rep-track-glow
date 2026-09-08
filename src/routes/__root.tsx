@@ -138,7 +138,6 @@ function SessionTimerBadge() {
 
 function Header() {
   const { user } = useAuth();
-  if (!user) return null;
   return (
     <header className="sticky top-0 z-30 glass-strong border-b border-border/60">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
@@ -173,7 +172,7 @@ function AppShell() {
 
   return (
     <div className="bg-background text-foreground min-h-screen">
-      <div className={`app-scroll-root animate-fade-in ${user ? "has-bottom-nav pb-24" : ""}`}>
+      <div className="app-scroll-root animate-fade-in has-bottom-nav pb-24">
         <Header />
         {!online && (
           <div className="bg-muted px-4 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -182,7 +181,7 @@ function AppShell() {
         )}
         <Outlet />
       </div>
-      {user && <BottomNav />}
+      <BottomNav />
     </div>
   );
 }
