@@ -9,8 +9,10 @@ import {
   Moon,
   Sun,
   Trash2,
+  Download,
+  Upload,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 
@@ -72,6 +74,56 @@ function SettingsPage() {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    try {
+      const data: Record<string, string> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("ironlog") || key.includes("supabase"))) {
+          data[key] = localStorage.getItem(key) || "";
+        }
+      }
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ironlog_backup.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Backup exported successfully!");
+    } catch (e) {
+      toast.error("Failed to export backup.");
+    }
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = event.target?.result as string;
+        const data = JSON.parse(json);
+        if (typeof data !== "object" || data === null) throw new Error("Invalid format");
+        for (const [key, value] of Object.entries(data)) {
+          if (typeof value === "string") {
+            localStorage.setItem(key, value);
+          }
+        }
+        toast.success("Backup imported! Refreshing...");
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        toast.error("Invalid backup file.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
@@ -240,6 +292,30 @@ function SettingsPage() {
           only on this device. The app caches your data locally so it works
           offline after first load.
         </p>
+      </section>
+
+      <section className="mt-4 glass rounded-2xl p-5">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Save className="h-3.5 w-3.5" /> Backup & Restore
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Export all your local data to a JSON file or restore from a previous backup.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <Button variant="outline" className="flex-1 font-semibold" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" /> Export Backup
+          </Button>
+          <Button variant="outline" className="flex-1 font-semibold" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" /> Import Backup
+          </Button>
+          <input
+            type="file"
+            accept=".json"
+            ref={fileInputRef}
+            onChange={handleImport}
+            className="hidden"
+          />
+        </div>
       </section>
 
       <div className="mt-6">
