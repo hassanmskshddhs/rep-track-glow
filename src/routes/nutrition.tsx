@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
-import { ArrowLeft, Search, Plus, Trash2, ChevronLeft, ChevronRight, Droplet, Wheat, Beef, Target, RotateCcw, X, Check, Bot, Settings as SettingsIcon, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Search, Plus, Trash2, ChevronLeft, ChevronRight, Droplet, Wheat, Beef, Target, RotateCcw, X, Check, Bot, Settings as SettingsIcon, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { format, addDays, subDays, isToday, parseISO } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 
@@ -68,6 +68,7 @@ const CUPS = { unit: "cup", multiplier: 240 };
 const TBSP = { unit: "tbsp", multiplier: 15 };
 
 const FOOD_DB: FoodDBItem[] = [
+  // Generic / Western
   { id: "1", name: "Chicken Breast (Raw)", baseAmount: 100, baseUnit: "g", calories: 120, protein: 22.5, carbs: 0, fat: 2.6, supportedUnits: [GRAMS, OUNCES] },
   { id: "2", name: "Chicken Breast (Cooked)", baseAmount: 100, baseUnit: "g", calories: 165, protein: 31, carbs: 0, fat: 3.6, supportedUnits: [GRAMS, OUNCES] },
   { id: "3", name: "White Rice (Cooked)", baseAmount: 100, baseUnit: "g", calories: 130, protein: 2.7, carbs: 28, fat: 0.3, supportedUnits: [GRAMS, OUNCES, CUPS] },
@@ -80,6 +81,23 @@ const FOOD_DB: FoodDBItem[] = [
   { id: "10", name: "Peanut Butter", baseAmount: 15, baseUnit: "g", calories: 94, protein: 3.8, carbs: 3.1, fat: 8, supportedUnits: [GRAMS, TBSP] },
   { id: "11", name: "Whole Milk", baseAmount: 100, baseUnit: "ml", calories: 61, protein: 3.2, carbs: 4.8, fat: 3.3, supportedUnits: [ML, CUPS] },
   { id: "12", name: "Olive Oil", baseAmount: 15, baseUnit: "ml", calories: 119, protein: 0, carbs: 0, fat: 13.5, supportedUnits: [ML, TBSP] },
+  
+  // Egyptian / Arabic Local Foods
+  { id: "13", name: "عيش بلدي (رغيف متوسط)", baseAmount: 1, baseUnit: "pc", calories: 275, protein: 9, carbs: 55, fat: 1.5, supportedUnits: [{ unit: "pc", multiplier: 1 }] },
+  { id: "14", name: "فول مدمس (بدون زيت)", baseAmount: 100, baseUnit: "g", calories: 110, protein: 8, carbs: 20, fat: 0.5, supportedUnits: [GRAMS, TBSP, CUPS] },
+  { id: "15", name: "طعمية / فلافل (حبة مقلية)", baseAmount: 1, baseUnit: "pc", calories: 57, protein: 2, carbs: 5, fat: 3.5, supportedUnits: [{ unit: "pc", multiplier: 1 }] },
+  { id: "16", name: "كشري مصري", baseAmount: 100, baseUnit: "g", calories: 160, protein: 5, carbs: 27, fat: 3.5, supportedUnits: [GRAMS, { unit: "plate", multiplier: 350 }] },
+  { id: "17", name: "حواوشي لحم (رغيف كامل)", baseAmount: 1, baseUnit: "pc", calories: 650, protein: 25, carbs: 50, fat: 35, supportedUnits: [{ unit: "pc", multiplier: 1 }, { unit: "half", multiplier: 0.5 }] },
+  { id: "18", name: "مكرونة بشاميل", baseAmount: 100, baseUnit: "g", calories: 180, protein: 8, carbs: 18, fat: 9, supportedUnits: [GRAMS, { unit: "piece", multiplier: 200 }] },
+  { id: "19", name: "شاورما دجاج (ساندوتش سوري)", baseAmount: 1, baseUnit: "pc", calories: 450, protein: 25, carbs: 45, fat: 18, supportedUnits: [{ unit: "pc", multiplier: 1 }] },
+  { id: "20", name: "شاورما لحم (ساندوتش سوري)", baseAmount: 1, baseUnit: "pc", calories: 550, protein: 22, carbs: 45, fat: 30, supportedUnits: [{ unit: "pc", multiplier: 1 }] },
+  { id: "21", name: "محشي كرنب", baseAmount: 100, baseUnit: "g", calories: 130, protein: 3, carbs: 22, fat: 4, supportedUnits: [GRAMS, { unit: "piece", multiplier: 25 }] },
+  { id: "22", name: "بطاطس مقلية (French Fries)", baseAmount: 100, baseUnit: "g", calories: 312, protein: 3.4, carbs: 41, fat: 15, supportedUnits: [GRAMS] },
+  { id: "23", name: "كبدة إسكندراني", baseAmount: 100, baseUnit: "g", calories: 190, protein: 26, carbs: 4, fat: 7, supportedUnits: [GRAMS] },
+  { id: "24", name: "جبنة قريش", baseAmount: 100, baseUnit: "g", calories: 98, protein: 11, carbs: 3.4, fat: 4.3, supportedUnits: [GRAMS, TBSP] },
+  { id: "25", name: "جبنة رومي", baseAmount: 100, baseUnit: "g", calories: 393, protein: 24, carbs: 1.5, fat: 32, supportedUnits: [GRAMS, { unit: "slice", multiplier: 20 }] },
+  { id: "26", name: "زبادي طبيعي", baseAmount: 100, baseUnit: "g", calories: 61, protein: 3.5, carbs: 4.7, fat: 3.3, supportedUnits: [GRAMS, { unit: "cup", multiplier: 105 }] },
+  { id: "27", name: "رز بلبن", baseAmount: 100, baseUnit: "g", calories: 111, protein: 3, carbs: 19, fat: 2.5, supportedUnits: [GRAMS, { unit: "plate", multiplier: 150 }] },
 ];
 
 // -----------------------------------------------------------------------------
@@ -123,11 +141,13 @@ function NutritionRoute() {
   const [targets, setTargets] = useLocalStorage<MacroTargets | null>("ironlog_macro_targets", null);
   const [apiKey, setApiKey] = useLocalStorage<string>("ironlog_gemini_key", "");
 
+  const effectiveApiKey = import.meta.env.VITE_GEMINI_API_KEY || apiKey;
+
   if (!targets) {
     return <OnboardingWizard onComplete={setTargets} />;
   }
 
-  return <NutritionDashboard targets={targets} onReset={() => setTargets(null)} apiKey={apiKey} setApiKey={setApiKey} />;
+  return <NutritionDashboard targets={targets} onReset={() => setTargets(null)} apiKey={effectiveApiKey} setApiKey={setApiKey} />;
 }
 
 // -----------------------------------------------------------------------------
@@ -620,16 +640,13 @@ function FoodSearchModal({ open, onClose, mealType, onAdd, apiKey, recentFoods }
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search database or ask AI..." 
+                placeholder="Search database or type any meal..." 
                 className="pl-9 bg-background border-border"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setSelectedFood(null); setAiError(""); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAISearch(); }}
               />
             </div>
-            <Button onClick={handleAISearch} disabled={aiLoading || !query.trim()} className="bg-primary/20 text-primary hover:bg-primary/30">
-              {aiLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            </Button>
           </div>
           {aiError && (
             <div className="text-xs text-destructive mt-2 flex items-center gap-1">
@@ -652,10 +669,28 @@ function FoodSearchModal({ open, onClose, mealType, onAdd, apiKey, recentFoods }
                 </div>
               )}
 
-              {filteredFoods.length === 0 ? (
+              {query.trim().length > 0 && (
+                <button 
+                  onClick={handleAISearch}
+                  disabled={aiLoading}
+                  className="w-full text-left p-4 hover:bg-primary/10 bg-primary/5 transition-colors flex justify-between items-center group border-b border-primary/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
+                      {aiLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <div className="font-bold text-primary">Search online for "{query}"</div>
+                      <div className="text-xs text-primary/80 mt-1">Get precise macros for any food, meal, or recipe</div>
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {filteredFoods.length === 0 && !aiLoading ? (
                 <div className="p-8 text-center text-muted-foreground">
-                  <p>No local foods found.</p>
-                  <p className="text-xs mt-2">Click the ✨ button to ask AI to parse your query.</p>
+                  <p>Not found in local database.</p>
+                  <p className="text-xs mt-2">Click "Search online" above or press Enter to find it.</p>
                 </div>
               ) : (
                 filteredFoods.map(food => (

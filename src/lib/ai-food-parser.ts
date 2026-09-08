@@ -34,7 +34,7 @@ Query: "${query}"
 `;
 
   try {
-    const response = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=\${apiKey}\`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ Query: "${query}"
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     
     // Clean up potential markdown formatting if the model still returns it
-    const cleanText = text.replace(/\`\`\`json/g, "").replace(/\`\`\`/g, "").trim();
+    const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
     
     const parsed = JSON.parse(cleanText) as AIFoodResponse;
     return parsed;
