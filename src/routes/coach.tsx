@@ -128,7 +128,6 @@ function CoachLayout() {
   }, [navigate]);
 
   if (loading) return null;
-  if (!user) return <AuthScreen />;
 
   const sidebar = (
     <div className="flex h-full flex-col">

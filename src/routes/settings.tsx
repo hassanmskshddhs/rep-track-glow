@@ -127,7 +127,6 @@ function SettingsPage() {
   };
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
-  if (!user) return <AuthScreen />;
 
   const fullName =
     (user.user_metadata?.full_name as string | undefined) ??

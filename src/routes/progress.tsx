@@ -35,7 +35,6 @@ function ProgressApp() {
   const progressData = useProgressData();
 
   if (loading || progressData.isLoading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
-  if (!user) return <AuthScreen />;
   
   const data = progressData.data;
   if (!data) return <div className="p-10 text-center text-muted-foreground">Failed to load data</div>;
