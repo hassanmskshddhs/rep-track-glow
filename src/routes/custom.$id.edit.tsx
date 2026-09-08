@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
 import { SplitForm } from "@/components/SplitForm";
 import type { MuscleGroup } from "@/lib/exercises";
 
@@ -23,22 +24,14 @@ function EditSplit() {
   const [saving, setSaving] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["custom-day-edit", user?.id, id],
-    enabled: !!user,
+    queryKey: ["custom-day-edit", user?.id || "guest", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("custom_workout_days")
-        .select("name, subtitle, accent, exercises, muscle_groups")
-        .eq("id", id)
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      if (error) throw error;
+      const data = await db.getCustomDayById(id, user?.id);
       return data;
     },
   });
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
-  if (!user) return <AuthScreen />;
   if (isLoading) return <div className="p-10 text-center text-muted-foreground">Loading split…</div>;
   if (!data) {
     return (
@@ -79,21 +72,15 @@ function EditSplit() {
               return toast.error("Add at least one exercise.");
             setSaving(true);
             try {
-              const { error } = await supabase
-                .from("custom_workout_days")
-                .update({
+              await db.updateCustomDay(id, {
                   name: draft.name,
                   subtitle: draft.subtitle || null,
                   accent: draft.accent,
                   muscle_groups: draft.muscleGroups,
                   exercises: draft.exercises,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("id", id)
-                .eq("user_id", user.id);
-              if (error) throw error;
+              }, user?.id);
               toast.success("Split updated");
-              qc.invalidateQueries({ queryKey: ["custom-days-list", user.id] });
+              qc.invalidateQueries({ queryKey: ["custom-days-list", user?.id || "guest"] });
               qc.invalidateQueries({ queryKey: ["custom-day", id] });
               navigate({ to: "/" });
             } catch (e) {

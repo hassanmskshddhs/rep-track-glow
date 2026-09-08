@@ -27,6 +27,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -245,7 +246,6 @@ function DayPage({ day }: { day: string }) {
   }, [remoteNotes, notesHydrated]);
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
-  if (!user) return <AuthScreen />;
   if (customLoading) {
     return <div className="p-10 text-center text-muted-foreground">Loading workout…</div>;
   }
@@ -306,12 +306,7 @@ function DayPage({ day }: { day: string }) {
     // Persist to DB — update the custom routine so it sticks across sessions.
     try {
       const updated = config.exercises.map((e) => (e === oldName ? newName : e));
-      const { error } = await supabase
-        .from("custom_workout_days")
-        .update({ exercises: updated, updated_at: new Date().toISOString() })
-        .eq("id", day)
-        .eq("user_id", user!.id);
-      if (error) throw error;
+      await db.updateCustomDay(day, { exercises: updated }, user?.id);
     } catch (e) {
       console.warn("rename persist failed", e);
       toast.error("Couldn't save the new name");
@@ -336,12 +331,7 @@ function DayPage({ day }: { day: string }) {
   }, [config, day, queryClient]);
 
   const persistExercises = useCallback(async (updated: string[]) => {
-    const { error } = await supabase
-      .from("custom_workout_days")
-      .update({ exercises: updated, updated_at: new Date().toISOString() })
-      .eq("id", day)
-      .eq("user_id", user!.id);
-    if (error) throw error;
+    await db.updateCustomDay(day, { exercises: updated }, user?.id);
     queryClient.invalidateQueries({ queryKey: qk.split(user?.id, day) });
     queryClient.invalidateQueries({ queryKey: qk.historyWindow(user?.id, day) });
   }, [day, queryClient]);
@@ -399,13 +389,7 @@ function DayPage({ day }: { day: string }) {
   const saveNote = async (ex: string, value: string) => {
     const trimmed = value.trim();
     try {
-      const { error } = await supabase
-        .from("exercise_notes")
-        .upsert(
-          { user_id: user.id, exercise_name: ex, note: trimmed, updated_at: new Date().toISOString() },
-          { onConflict: "user_id,exercise_name" },
-        );
-      if (error) throw error;
+      await db.saveExerciseNote(ex, trimmed, user?.id);
     } catch (e) {
       // silent — notes shouldn't block workflow
       console.warn("note save failed", e);
@@ -435,7 +419,7 @@ function DayPage({ day }: { day: string }) {
       // Never lose a session: if the network is down the payload is stored
       // locally and replayed automatically once we're back online.
       const { status } = await saveWorkout({
-        userId: user.id,
+        userId: user?.id,
         day,
         title: config.name,
         performedAt: new Date().toISOString(),
@@ -591,7 +575,7 @@ function DayPage({ day }: { day: string }) {
             removeSet={removeSet}
             onRename={renameExercise}
             onRemove={removeExercise}
-            userId={user.id}
+            userId={user?.id || "guest"}
           />
         ))}
       </Reorder.Group>

@@ -7,6 +7,8 @@
  * connection returns — the user never loses a set and the app never crashes.
  */
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
+import { v4 as uuidv4 } from "uuid";
 import type { PendingWorkout } from "@/types/workout";
 
 const DB_NAME = "ironlog-outbox";
@@ -52,24 +54,16 @@ export async function pendingWorkoutCount(): Promise<number> {
   }
 }
 
-/** Writes one session + its sets. Throws on any backend error. */
 async function pushWorkout(w: PendingWorkout): Promise<void> {
-  const { data: session, error: sErr } = await supabase
-    .from("workout_sessions")
-    .insert({
-      user_id: w.userId,
+  const sessionId = uuidv4();
+  await db.createSession({
+      id: sessionId,
       day: w.day,
       title: w.title,
       performed_at: w.performedAt,
-    })
-    .select("id")
-    .single();
-  if (sErr) throw sErr;
+  }, w.userId);
 
-  const { error: lErr } = await supabase.from("set_logs").insert(
-    w.rows.map((r) => ({ ...r, session_id: session!.id, user_id: w.userId })),
-  );
-  if (lErr) throw lErr;
+  await db.appendSessionLogs(sessionId, w.rows.map(r => ({ ...r, user_id: w.userId })), w.userId);
 }
 
 /**

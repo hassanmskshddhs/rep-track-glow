@@ -162,6 +162,15 @@ function Header() {
 function AppShell() {
   const { user } = useAuth();
   const { online } = useOfflineSync();
+  
+  useEffect(() => {
+    if (user && online) {
+      import("@/lib/db").then((db) => {
+        db.migrateLocalDataToSupabase(user.id).catch(console.error);
+      });
+    }
+  }, [user, online]);
+
   return (
     <div className="bg-background text-foreground min-h-screen">
       <div className={`app-scroll-root animate-fade-in ${user ? "has-bottom-nav pb-24" : ""}`}>

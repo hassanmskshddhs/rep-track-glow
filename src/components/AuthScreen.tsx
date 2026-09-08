@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dumbbell } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { migrateLocalDataToSupabase } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,19 +29,27 @@ export function AuthScreen() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        toast.success("Account created. You're in.");
+        if (data.user) {
+            await migrateLocalDataToSupabase(data.user.id);
+        }
+        toast.success("Account created. Data migrated! You're in.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
     } catch (err: any) {
-      toast.error(err.message ?? "Auth failed");
+      if (mode === "signin" && err.message === "Invalid login credentials") {
+        toast.error("Account not found. Please sign up instead.");
+        setMode("signup");
+      } else {
+        toast.error(err.message ?? "Auth failed");
+      }
     } finally {
       setBusy(false);
     }

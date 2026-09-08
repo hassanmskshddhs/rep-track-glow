@@ -63,7 +63,7 @@ export interface ExerciseInsight {
 
 /** Payload handed to the persistence layer when a session is logged. */
 export interface PendingWorkout {
-  userId: string;
+  userId: string | undefined;
   day: string;
   title: string;
   performedAt: string;

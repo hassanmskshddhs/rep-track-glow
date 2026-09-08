@@ -8,6 +8,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
 import { useAuth } from "@/lib/auth-context";
 import { qk } from "@/lib/query-keys";
 import type {
@@ -21,16 +22,10 @@ import type {
 export function useSplits() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: qk.splits(user?.id),
-    enabled: !!user,
+    queryKey: qk.splits(user?.id || "guest"),
     queryFn: async (): Promise<WorkoutSplit[]> => {
-      const { data, error } = await supabase
-        .from("custom_workout_days")
-        .select("id, name, subtitle, accent, exercises, muscle_groups, created_at")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data ?? []).map((d) => ({
+      const data = await db.getCustomDays(user?.id);
+      return data.map((d) => ({
         ...d,
         exercises: Array.isArray(d.exercises) ? (d.exercises.filter(Boolean) as string[]) : [],
       }));
@@ -54,16 +49,10 @@ export function useSplitSummaries() {
 export function useSplit(splitId: string) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: qk.split(user?.id, splitId),
-    enabled: !!user && !!splitId,
+    queryKey: qk.split(user?.id || "guest", splitId),
+    enabled: !!splitId,
     queryFn: async (): Promise<WorkoutSplit | null> => {
-      const { data, error } = await supabase
-        .from("custom_workout_days")
-        .select("id, name, subtitle, accent, exercises, muscle_groups, created_at")
-        .eq("id", splitId)
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      if (error) throw error;
+      const data = await db.getCustomDayById(splitId, user?.id);
       if (!data) return null;
       return {
         ...data,
@@ -77,18 +66,10 @@ export function useSplit(splitId: string) {
 export function useExerciseHistory(splitId: string, exercises: string[]) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: [...qk.historyWindow(user?.id, splitId), exercises.join("|")],
-    enabled: !!user && exercises.length > 0,
+    queryKey: [...qk.historyWindow(user?.id || "guest", splitId), exercises.join("|")],
+    enabled: exercises.length > 0,
     queryFn: async (): Promise<LoggedSetRow[]> => {
-      const { data, error } = await supabase
-        .from("set_logs")
-        .select("exercise_name, weight, reps, set_number, session_id, created_at")
-        .eq("user_id", user!.id)
-        .in("exercise_name", exercises)
-        .order("created_at", { ascending: false })
-        .limit(800);
-      if (error) throw error;
-      return (data ?? []) as LoggedSetRow[];
+      return await db.getExerciseHistoryForExercises(exercises, user?.id) as LoggedSetRow[];
     },
   });
 }
@@ -121,17 +102,12 @@ export function buildInsights(
 export function useExerciseNotes(splitId: string, exercises: string[]) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: [...qk.notes(user?.id, splitId), exercises.join("|")],
-    enabled: !!user && exercises.length > 0,
+    queryKey: [...qk.notes(user?.id || "guest", splitId), exercises.join("|")],
+    enabled: exercises.length > 0,
     queryFn: async (): Promise<Record<string, string>> => {
-      const { data, error } = await supabase
-        .from("exercise_notes")
-        .select("exercise_name, note")
-        .eq("user_id", user!.id)
-        .in("exercise_name", exercises);
-      if (error) throw error;
+      const data = await db.getExerciseNotes(exercises, user?.id);
       const map: Record<string, string> = {};
-      (data ?? []).forEach((r) => { map[r.exercise_name] = r.note ?? ""; });
+      data.forEach((r) => { map[r.exercise_name] = r.note ?? ""; });
       return map;
     },
   });

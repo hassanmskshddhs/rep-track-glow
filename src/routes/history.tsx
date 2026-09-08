@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,15 +70,10 @@ function HistoryPage() {
     const title = renameValue.trim();
     setRenameSaving(true);
     try {
-      const { error } = await supabase
-        .from("workout_sessions")
-        .update({ title: title || null })
-        .eq("id", renaming.id)
-        .eq("user_id", user!.id);
-      if (error) throw error;
+      await db.updateSession(renaming.id, { title: title || null }, user?.id);
       toast.success("Renamed");
       setRenaming(null);
-      qc.invalidateQueries({ queryKey: ["history", user?.id] });
+      qc.invalidateQueries({ queryKey: ["history", user?.id || "guest"] });
     } catch (e: any) {
       toast.error(e.message ?? "Failed to rename");
     } finally {
@@ -86,40 +82,21 @@ function HistoryPage() {
   };
 
   const { data: splits } = useQuery({
-    queryKey: ["custom-days-list", user?.id],
-    enabled: !!user,
+    queryKey: ["custom-days-list", user?.id || "guest"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("custom_workout_days")
-        .select("id, name, accent")
-        .eq("user_id", user!.id);
-      if (error) throw error;
-      return data ?? [];
+      return await db.getCustomDays(user?.id);
     },
   });
   const splitMap = new Map((splits ?? []).map((s) => [s.id, s]));
 
   const { data, isLoading } = useQuery({
-    queryKey: ["history", user?.id],
-    enabled: !!user,
+    queryKey: ["history", user?.id || "guest"],
     queryFn: async () => {
-      const { data: sessions, error } = await supabase
-        .from("workout_sessions")
-        .select("id, day, performed_at, title")
-        .eq("user_id", user!.id)
-        .order("performed_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
+      const sessions = await db.getRecentSessions(user?.id);
       if (!sessions || sessions.length === 0) return [] as SessionWithSets[];
 
       const ids = sessions.map((s) => s.id);
-      const { data: sets, error: e2 } = await supabase
-        .from("set_logs")
-        .select("id, session_id, exercise_name, set_number, weight, reps")
-        .eq("user_id", user!.id)
-        .in("session_id", ids)
-        .order("set_number", { ascending: true });
-      if (e2) throw e2;
+      const sets = await db.getSetLogsBySessions(ids, user?.id);
 
       return sessions.map((s) => ({
         ...s,
@@ -129,7 +106,6 @@ function HistoryPage() {
   });
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
-  if (!user) return <AuthScreen />;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
@@ -238,22 +214,11 @@ function HistoryPage() {
                             label: "Delete",
                             onClick: async () => {
                               try {
-                                const { error: e1 } = await supabase
-                                  .from("set_logs")
-                                  .delete()
-                                  .eq("session_id", s.id)
-                                  .eq("user_id", user.id);
-                                if (e1) throw e1;
-                                const { error: e2 } = await supabase
-                                  .from("workout_sessions")
-                                  .delete()
-                                  .eq("id", s.id)
-                                  .eq("user_id", user.id);
-                                if (e2) throw e2;
+                                await db.deleteSessionAndLogs(s.id, user?.id);
                                 toast.success("Workout log deleted");
-                                qc.invalidateQueries({ queryKey: ["history", user.id] });
-                                qc.invalidateQueries({ queryKey: ["recent-sessions", user.id] });
-                                qc.invalidateQueries({ queryKey: ["progress-sets", user.id] });
+                                qc.invalidateQueries({ queryKey: ["history", user?.id || "guest"] });
+                                qc.invalidateQueries({ queryKey: ["recent-sessions", user?.id || "guest"] });
+                                qc.invalidateQueries({ queryKey: ["progress-sets", user?.id || "guest"] });
                               } catch (err) {
                                 const msg = err instanceof Error ? err.message : "Failed to delete";
                                 toast.error(msg);
@@ -309,10 +274,10 @@ function HistoryPage() {
         onClose={() => setEditing(null)}
         onSaved={() => {
           setEditing(null);
-          qc.invalidateQueries({ queryKey: ["history", user.id] });
+          qc.invalidateQueries({ queryKey: ["history", user?.id || "guest"] });
           qc.invalidateQueries({ queryKey: ["last-sets"] });
         }}
-        userId={user.id}
+        userId={user?.id}
       />
 
       <Dialog open={!!renaming} onOpenChange={(o) => !o && setRenaming(null)}>
@@ -357,7 +322,7 @@ function EditSessionDialog({
   session: SessionWithSets | null;
   onClose: () => void;
   onSaved: () => void;
-  userId: string;
+  userId: string | undefined;
 }) {
   const [draft, setDraft] = useState<Record<string, DraftSet[]>>({});
   const [saving, setSaving] = useState(false);
@@ -410,16 +375,7 @@ function EditSessionDialog({
     setSaving(true);
     try {
       // Delete all existing rows for this session, re-insert from draft
-      const { error: dErr } = await supabase
-        .from("set_logs")
-        .delete()
-        .eq("session_id", session.id)
-        .eq("user_id", userId);
-      if (dErr) throw dErr;
-
       const rows: {
-        session_id: string;
-        user_id: string;
         exercise_name: string;
         set_number: number;
         weight: number | null;
@@ -437,8 +393,6 @@ function EditSessionDialog({
             throw new Error(`Invalid reps for ${ex}`);
           }
           rows.push({
-            session_id: session.id,
-            user_id: userId,
             exercise_name: ex,
             set_number: i + 1,
             weight: w,
@@ -446,11 +400,8 @@ function EditSessionDialog({
           });
         });
       }
-
-      if (rows.length > 0) {
-        const { error: iErr } = await supabase.from("set_logs").insert(rows);
-        if (iErr) throw iErr;
-      }
+      
+      await db.replaceSessionLogs(session.id, rows, userId);
 
       toast.success("Session updated");
       setDraft({});

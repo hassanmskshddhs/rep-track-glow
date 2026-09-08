@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
 import { SplitForm, type SplitDraft } from "@/components/SplitForm";
 import { Button } from "@/components/ui/button";
 import { QuickImportDialog, type ImportedDraft } from "@/components/QuickImportDialog";
@@ -29,7 +30,6 @@ function NewSplit() {
   const [formKey, setFormKey] = useState(0);
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
-  if (!user) return <AuthScreen />;
 
   const applyImport = (draft: ImportedDraft) => {
     setImported({
@@ -84,21 +84,15 @@ function NewSplit() {
               return toast.error("Add at least one exercise.");
             setSaving(true);
             try {
-              const { data, error } = await supabase
-                .from("custom_workout_days")
-                .insert({
-                  user_id: user.id,
+              const { id } = await db.createCustomDay({
                   name: draft.name,
                   subtitle: draft.subtitle || null,
                   accent: draft.accent,
                   muscle_groups: draft.muscleGroups,
                   exercises: draft.exercises,
-                })
-                .select("id")
-                .single();
-              if (error) throw error;
+              }, user?.id);
               toast.success("Split created");
-              navigate({ to: "/day/$day", params: { day: data!.id } });
+              navigate({ to: "/day/$day", params: { day: id } });
             } catch (e) {
               const msg = e instanceof Error ? e.message : "Failed to create split";
               toast.error(msg);

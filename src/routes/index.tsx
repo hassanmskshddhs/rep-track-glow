@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
@@ -48,16 +49,9 @@ function Index() {
   const navigate = useNavigate();
 
   const { data: splits, isLoading: splitsLoading } = useQuery({
-    queryKey: ["custom-days-list", user?.id],
-    enabled: !!user,
+    queryKey: ["custom-days-list", user?.id || "guest"],
     queryFn: async (): Promise<CustomDay[]> => {
-      const { data, error } = await supabase
-        .from("custom_workout_days")
-        .select("id, name, subtitle, accent, exercises, muscle_groups, created_at")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as CustomDay[];
+      return await db.getCustomDays(user?.id);
     },
   });
 
@@ -65,18 +59,10 @@ function Index() {
   // scroller. 26 weeks (~6 months) is plenty for a streak view; we extend
   // it client-side if the user scrolls further left.
   const { data: recent } = useQuery({
-    queryKey: ["recent-sessions", user?.id],
-    enabled: !!user,
+    queryKey: ["recent-sessions", user?.id || "guest"],
     queryFn: async () => {
       const since = subDays(new Date(), 26 * 7).toISOString();
-      const { data, error } = await supabase
-        .from("workout_sessions")
-        .select("id, day, performed_at")
-        .eq("user_id", user!.id)
-        .gte("performed_at", since)
-        .order("performed_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      return await db.getRecentSessions(user?.id, since);
     },
   });
 
@@ -158,14 +144,13 @@ function Index() {
       </div>
     );
   }
-  if (!user) return <AuthScreen />;
 
   const fullName =
-    (user.user_metadata?.full_name as string | undefined) ??
-    (user.user_metadata?.name as string | undefined) ??
-    (user.user_metadata?.display_name as string | undefined) ??
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
+    (user?.user_metadata?.display_name as string | undefined) ??
     null;
-  const firstName = resolveDisplayName(profile, { fullName, email: user.email });
+  const firstName = resolveDisplayName(profile, { fullName, email: user?.email });
 
   const deleteSplit = (id: string, name: string) => setPendingDelete({ id, name });
 
@@ -173,34 +158,29 @@ function Index() {
     if (!pendingDelete) return;
     const { id } = pendingDelete;
     setPendingDelete(null);
-    const { error } = await supabase.from("custom_workout_days").delete().eq("id", id).eq("user_id", user.id);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await db.deleteCustomDay(id, user?.id);
       toast.success("Split deleted");
-      qc.invalidateQueries({ queryKey: ["custom-days-list", user.id] });
+      qc.invalidateQueries({ queryKey: ["custom-days-list", user?.id || "guest"] });
+    } catch (error: any) {
+      toast.error(error.message);
     }
   };
 
   const handleImport = async (draft: ImportedDraft) => {
     setImporting(true);
     try {
-      const { data, error } = await supabase
-        .from("custom_workout_days")
-        .insert({
-          user_id: user.id,
+      const { id } = await db.createCustomDay({
           name: draft.name,
           subtitle: draft.subtitle || null,
           accent: "primary",
           muscle_groups: draft.muscleGroups,
           exercises: draft.exercises,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
+      }, user?.id);
       setImportOpen(false);
       toast.success("Routine imported");
-      qc.invalidateQueries({ queryKey: ["custom-days-list", user.id] });
-      navigate({ to: "/day/$day", params: { day: data!.id } });
+      qc.invalidateQueries({ queryKey: ["custom-days-list", user?.id || "guest"] });
+      navigate({ to: "/day/$day", params: { day: id } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save routine");
     } finally {
