@@ -11,6 +11,7 @@ import {
   Trash2,
   Download,
   Upload,
+  RotateCcw,
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ import { useProfile, writeProfile, resolveDisplayName } from "@/lib/profile";
 import { useTheme } from "@/lib/theme";
 import { deleteMyAccount } from "@/lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -124,6 +126,11 @@ function SettingsPage() {
     };
     reader.readAsText(file);
     e.target.value = "";
+  };
+
+  const handleResetDefaultRoutines = () => {
+    db.resetToDefaultDays();
+    toast.success("تم استعادة التمارين الافتراضية بنجاح (Push, Pull, Legs, Upper)!");
   };
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
@@ -314,6 +321,11 @@ function SettingsPage() {
             onChange={handleImport}
             className="hidden"
           />
+        </div>
+        <div className="mt-3">
+          <Button variant="secondary" className="w-full font-semibold text-xs" onClick={handleResetDefaultRoutines}>
+            <RotateCcw className="mr-2 h-4 w-4" /> Restore Default Routines (Push · Pull · Legs · Upper)
+          </Button>
         </div>
       </section>
 

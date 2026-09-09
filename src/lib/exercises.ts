@@ -1,19 +1,87 @@
-export type DayKey = string;
+export type DayKey = "push" | "pull" | "legs" | "upper" | string;
 
 export type DayConfig = {
   name: string;
   subtitle: string;
   accent: string;
+  muscle_groups?: string[];
   exercises: string[];
 };
 
-export const DAYS: Record<string, DayConfig> = {};
-export const DAY_KEYS: string[] = [];
+export const DEFAULT_BUILTIN_DAYS: Record<string, DayConfig> = {
+  push: {
+    name: "Push",
+    subtitle: "Chest · Shoulders · Triceps",
+    accent: "push",
+    muscle_groups: ["Chest", "Shoulders", "Triceps"],
+    exercises: [
+      "Incline DB Press",
+      "Bar Flat Machine Press",
+      "Decline Machine Fly (Panatta)",
+      "DB Lateral Raise",
+      "Front Rope Raise",
+      "Cable Extension",
+      "V-Grip Overhead Extension",
+    ],
+  },
+  pull: {
+    name: "Pull",
+    subtitle: "Back · Biceps · Rear Delts",
+    accent: "pull",
+    muscle_groups: ["Back", "Biceps", "Shoulders"],
+    exercises: [
+      "Seated Low Row",
+      "Lat Pulldown Wide Grip",
+      "Straight Arm Pulldown",
+      "Cable Face-away Curl",
+      "DB Hammer Curl",
+      "Reverse Pec Fly",
+      "Back Extension",
+    ],
+  },
+  legs: {
+    name: "Legs + Abs",
+    subtitle: "Quads · Hams · Calves · Core",
+    accent: "legs",
+    muscle_groups: ["Quads", "Hamstrings", "Glutes", "Calves", "Core"],
+    exercises: [
+      "Leg Extension",
+      "Super Hack Squat",
+      "Seated Leg Curl",
+      "Adduction",
+      "Abduction",
+      "Standing Calf Raise Machine",
+      "Hanging Leg Raise",
+      "Abdominal Machine",
+      "Plank",
+    ],
+  },
+  upper: {
+    name: "Upper",
+    subtitle: "Full Upper Body",
+    accent: "upper",
+    muscle_groups: ["Chest", "Back", "Shoulders", "Biceps", "Triceps"],
+    exercises: [
+      "Seated DB Shoulder Press",
+      "Machine Lateral Raise",
+      "Incline Bar Smith Machine",
+      "Pec Fly",
+      "Seated Row Machine Wide Grip",
+      "Pull-ups Neutral Grip",
+      "EZ Bar Pushdown",
+      "Preacher Curl",
+      "Shrugs (Multi)",
+    ],
+  },
+};
+
+export const DAYS: Record<string, DayConfig> = { ...DEFAULT_BUILTIN_DAYS };
+export const DAY_KEYS: string[] = ["push", "pull", "legs", "upper"];
 
 export const ACCENT_OPTIONS = ["push", "pull", "legs", "upper", "primary"] as const;
 
-export function isBuiltInDay(_key: string): boolean {
-  return false;
+export function isBuiltInDay(key: string): boolean {
+  return (DAY_KEYS as string[]).includes(key);
 }
 
 // ---------- Exercise database ----------
