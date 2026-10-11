@@ -6,6 +6,7 @@ import { TrendingUp } from "lucide-react";
 export function ExerciseChart({ userId, exercise }: { userId: string; exercise: string }) {
   const { data } = useQuery({
     queryKey: ["chart", userId, exercise],
+    enabled: !!userId && userId !== "guest",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("set_logs")
