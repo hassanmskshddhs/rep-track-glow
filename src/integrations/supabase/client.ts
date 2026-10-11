@@ -2,8 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || "https://lgmxenmdqmotjcxivtao.supabase.co";
-const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_EUOBu3gq9NmJmCDXi7pKqw_bI7pphA6";
+const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || "https://oeqwcpnfndatxrmmemyw.supabase.co";
+const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lcXdjcG5mbmRhdHhybW1lbXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNzM2NzgsImV4cCI6MjA5Mzc0OTY3OH0.YVCEpk4xs6lrbwDURZsx_IgFUchpLGesCaiQm3GPkeY";
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {

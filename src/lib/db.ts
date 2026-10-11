@@ -645,22 +645,22 @@ export async function migrateLocalDataToSupabase(userId: string) {
 
     if (customDays.length > 0) {
       const inserts = customDays.map(d => ({ ...d, user_id: userId }));
-      await supabase.from("custom_workout_days").upsert(inserts).catch(() => {});
+      await supabase.from("custom_workout_days").upsert(inserts as any);
     }
 
     if (sessions.length > 0) {
       const inserts = sessions.map(s => ({ ...s, user_id: userId }));
-      await supabase.from("workout_sessions").upsert(inserts).catch(() => {});
+      await supabase.from("workout_sessions").upsert(inserts as any);
     }
 
     if (logs.length > 0) {
       const inserts = logs.map(l => ({ ...l, user_id: userId }));
-      await supabase.from("set_logs").upsert(inserts).catch(() => {});
+      await supabase.from("set_logs").upsert(inserts as any);
     }
 
     if (notes.length > 0) {
       const inserts = notes.map(n => ({ ...n, user_id: userId }));
-      await supabase.from("exercise_notes").upsert(inserts).catch(() => {});
+      await supabase.from("exercise_notes").upsert(inserts as any);
     }
   } catch (e) {
     console.warn("Cloud backup notice:", e);
