@@ -11,6 +11,7 @@ import {
   Trash2,
   Download,
   Upload,
+  RotateCcw,
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ import { useProfile, writeProfile, resolveDisplayName } from "@/lib/profile";
 import { useTheme } from "@/lib/theme";
 import { deleteMyAccount } from "@/lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
+import * as db from "@/lib/db";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -126,13 +128,18 @@ function SettingsPage() {
     e.target.value = "";
   };
 
+  const handleResetDefaultRoutines = () => {
+    db.resetToDefaultDays();
+    toast.success("تم استعادة التمارين الافتراضية بنجاح (Push, Pull, Legs, Upper)!");
+  };
+
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
 
   const fullName =
-    (user.user_metadata?.full_name as string | undefined) ??
-    (user.user_metadata?.name as string | undefined) ??
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
     null;
-  const greetName = resolveDisplayName(profile, { fullName, email: user.email });
+  const greetName = resolveDisplayName(profile, { fullName, email: user?.email });
 
   const update = <K extends keyof typeof draft>(k: K, v: string) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -165,7 +172,7 @@ function SettingsPage() {
           <div className="min-w-0">
             <div className="truncate text-lg font-bold">{greetName}</div>
             <div className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-              <Mail className="h-3 w-3" /> {user.email}
+              <Mail className="h-3 w-3" /> {user?.email || "Guest User"}
             </div>
           </div>
         </div>
@@ -315,12 +322,27 @@ function SettingsPage() {
             className="hidden"
           />
         </div>
+        <div className="mt-3">
+          <Button variant="secondary" className="w-full font-semibold text-xs" onClick={handleResetDefaultRoutines}>
+            <RotateCcw className="mr-2 h-4 w-4" /> Restore Default Routines (Push · Pull · Legs · Upper)
+          </Button>
+        </div>
       </section>
 
       <div className="mt-6">
-        <Button variant="outline" className="w-full" onClick={signOut}>
-          <LogOut className="mr-2 h-4 w-4" /> Sign out
-        </Button>
+        {user ? (
+          <Button variant="outline" className="w-full" onClick={signOut}>
+            <LogOut className="mr-2 h-4 w-4" /> Sign out
+          </Button>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="font-bold">Cloud Sync</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Sign in to back up your progress across devices.
+            </p>
+            <AuthScreen />
+          </div>
+        )}
       </div>
 
       <section className="mt-4 rounded-2xl border border-destructive/40 p-5">

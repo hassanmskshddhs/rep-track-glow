@@ -51,26 +51,25 @@ export function getMuscleGroup(exerciseName: string): string {
   return "Others";
 }
 
+import * as db from "@/lib/db";
+
 export function useProgressData() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["progress_data", user?.id],
-    enabled: !!user,
+    queryKey: ["progress_data", user?.id || "guest"],
     queryFn: async () => {
-      if (!user) throw new Error("No user");
+      // Fetch all sessions and sets from local storage / db
+      const rawSessions = await db.getRecentSessions(user?.id);
+      const sessionIds = rawSessions.map((s) => s.id);
+      const rawSets = await db.getSetLogsBySessions(sessionIds, user?.id);
 
-      // Fetch all sessions and sets
-      const [sessionsRes, setsRes] = await Promise.all([
-        supabase.from("workout_sessions").select("id, performed_at, created_at").eq("user_id", user.id).order('performed_at', { ascending: true }),
-        supabase.from("set_logs").select("exercise_name, weight, reps, created_at").eq("user_id", user.id).order('created_at', { ascending: true })
-      ]);
-
-      if (sessionsRes.error) throw sessionsRes.error;
-      if (setsRes.error) throw setsRes.error;
-
-      const sessions = sessionsRes.data || [];
-      const sets = setsRes.data || [];
+      const sessions = [...rawSessions].sort(
+        (a, b) => new Date(a.performed_at || a.created_at).getTime() - new Date(b.performed_at || b.created_at).getTime()
+      );
+      const sets = [...rawSets].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
 
       const now = new Date();
       const lastMonth = subMonths(now, 1);

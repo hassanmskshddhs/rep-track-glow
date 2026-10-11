@@ -153,8 +153,8 @@ function DayPage({ day }: { day: string }) {
     [split],
   );
 
-  const draftKey = user ? `ironlog:draft:${user.id}:${day}` : null;
-  const orderKey = user ? `ironlog:order:${user.id}:${day}` : null;
+  const draftKey = user ? `ironlog:draft:${user.id}:${day}` : `ironlog:draft:local:${day}`;
+  const orderKey = user ? `ironlog:order:${user.id}:${day}` : `ironlog:order:local:${day}`;
 
   const [state, setState] = useState<State>({});
   const [hydrated, setHydrated] = useState(false);
@@ -477,6 +477,12 @@ function DayPage({ day }: { day: string }) {
         ? ` · ${mins}m ${String(secs).padStart(2, "0")}s`
         : "";
       toast.success(`Logged ${rows.length} sets · ${config.name}${durationLabel}`);
+
+      // Invalidate relevant caches
+      queryClient.invalidateQueries({ queryKey: ["recent-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+      queryClient.invalidateQueries({ queryKey: ["progress_data"] });
+      queryClient.invalidateQueries({ queryKey: ["custom-days-list"] });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to log workout";
       toast.error(msg);
