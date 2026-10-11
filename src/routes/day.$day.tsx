@@ -245,27 +245,6 @@ function DayPage({ day }: { day: string }) {
     setNotesHydrated(true);
   }, [remoteNotes, notesHydrated]);
 
-  if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
-  if (customLoading) {
-    return <div className="p-10 text-center text-muted-foreground">Loading workout…</div>;
-  }
-  if (!config || customError) {
-    return (
-      <main className="mx-auto max-w-3xl px-4 py-12">
-        <p className="text-muted-foreground">This workout day couldn't be loaded.</p>
-        <Link to="/" className="mt-4 inline-block text-primary underline">Back home</Link>
-      </main>
-    );
-  }
-  if (config.exercises.length === 0) {
-    return (
-      <main className="mx-auto max-w-3xl px-4 py-12">
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">← Home</Link>
-        <h1 className="mt-3 text-2xl font-bold">{config.name}</h1>
-        <p className="mt-2 text-muted-foreground">No exercises in this workout yet.</p>
-      </main>
-    );
-  }
 
   const resetInputs = () => {
     if (!confirm("Clear all current inputs and stop the timer? This won't affect saved history.")) return;
@@ -490,6 +469,28 @@ function DayPage({ day }: { day: string }) {
       setSaving(false);
     }
   };
+
+  if (loading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
+  if (customLoading) {
+    return <div className="p-10 text-center text-muted-foreground">Loading workout…</div>;
+  }
+  if (!config || customError) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-12">
+        <p className="text-muted-foreground">This workout day couldn't be loaded.</p>
+        <Link to="/" className="mt-4 inline-block text-primary underline">Back home</Link>
+      </main>
+    );
+  }
+  if (config.exercises.length === 0) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-12">
+        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">← Home</Link>
+        <h1 className="mt-3 text-2xl font-bold">{config.name}</h1>
+        <p className="mt-2 text-muted-foreground">No exercises in this workout yet.</p>
+      </main>
+    );
+  }
 
   const tabs: { key: string; label: string; accent: string }[] = (customDays ?? []).map((c) => ({
     key: c.id,
