@@ -248,7 +248,7 @@ function DayPage({ day }: { day: string }) {
 
   const resetInputs = () => {
     if (!confirm("Clear all current inputs and stop the timer? This won't affect saved history.")) return;
-    setState(Object.fromEntries(config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
+    setState(Object.fromEntries(config!.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
     if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
     sessionTimer.stop();
     toast.success("Session reset");
@@ -377,7 +377,7 @@ function DayPage({ day }: { day: string }) {
 
   const logWorkout = async () => {
     const rows: { exercise_name: string; set_number: number; weight: number | null; reps: number | null }[] = [];
-    for (const ex of config.exercises) {
+    for (const ex of config!.exercises) {
       const sets = state[ex] ?? [];
       sets.forEach((s, i) => {
         const w = s.weight === "" ? null : Number(s.weight);
@@ -400,7 +400,7 @@ function DayPage({ day }: { day: string }) {
       const { status } = await saveWorkout({
         userId: user?.id,
         day,
-        title: config.name,
+        title: config!.name,
         performedAt: new Date().toISOString(),
         rows,
       });
@@ -436,7 +436,7 @@ function DayPage({ day }: { day: string }) {
         .sort((a, b) => b.weight - a.weight);
 
       setSummary({
-        workoutName: config.name,
+        workoutName: config!.name,
         performedAt: new Date(),
         totalVolume,
         totalSets: rows.length,
@@ -455,7 +455,7 @@ function DayPage({ day }: { day: string }) {
       const durationLabel = elapsedMs > 0
         ? ` · ${mins}m ${String(secs).padStart(2, "0")}s`
         : "";
-      toast.success(`Logged ${rows.length} sets · ${config.name}${durationLabel}`);
+      toast.success(`Logged ${rows.length} sets · ${config!.name}${durationLabel}`);
 
       // Invalidate relevant caches
       queryClient.invalidateQueries({ queryKey: ["recent-sessions"] });
