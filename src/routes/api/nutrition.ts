@@ -92,7 +92,7 @@ export const Route = createFileRoute("/api/nutrition")({
             "X-Lovable-AIG-SDK": "fetch",
           },
           body: JSON.stringify({
-            model: "google/gemini-3.7-flash",
+            model: "openai/gpt-6-astra",
             messages: [
               { role: "system", content: SYSTEM },
               { role: "user", content: query },
