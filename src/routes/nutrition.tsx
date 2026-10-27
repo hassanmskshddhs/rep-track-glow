@@ -139,15 +139,12 @@ export const Route = createFileRoute("/nutrition")({
 
 function NutritionRoute() {
   const [targets, setTargets] = useLocalStorage<MacroTargets | null>("ironlog_macro_targets", null);
-  const [apiKey, setApiKey] = useLocalStorage<string>("ironlog_gemini_key", "");
-
-  const effectiveApiKey = import.meta.env.VITE_GEMINI_API_KEY || apiKey;
 
   if (!targets) {
     return <OnboardingWizard onComplete={setTargets} />;
   }
 
-  return <NutritionDashboard targets={targets} onReset={() => setTargets(null)} apiKey={effectiveApiKey} setApiKey={setApiKey} />;
+  return <NutritionDashboard targets={targets} onReset={() => setTargets(null)} />;
 }
 
 // -----------------------------------------------------------------------------
@@ -316,7 +313,7 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
 // -----------------------------------------------------------------------------
 // NUTRITION DASHBOARD
 // -----------------------------------------------------------------------------
-function NutritionDashboard({ targets, onReset, apiKey, setApiKey }: { targets: MacroTargets; onReset: () => void; apiKey: string; setApiKey: (k: string) => void }) {
+function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onReset: () => void }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const dateStr = format(currentDate, "yyyy-MM-dd");
 
@@ -415,9 +412,9 @@ function NutritionDashboard({ targets, onReset, apiKey, setApiKey }: { targets: 
         </div>
 
         <div className="grid grid-cols-3 gap-4 mt-6">
-          <MacroRing label="Protein" consumed={consumed.protein} target={targets.protein} color="bg-[#3B82F6]" icon={<Beef className="h-3 w-3" />} />
-          <MacroRing label="Carbs" consumed={consumed.carbs} target={targets.carbs} color="bg-[#F59E0B]" icon={<Wheat className="h-3 w-3" />} />
-          <MacroRing label="Fat" consumed={consumed.fat} target={targets.fat} color="bg-[#EF4444]" icon={<Droplet className="h-3 w-3" />} />
+          <MacroRing label="Protein" consumed={consumed.protein} target={targets.protein} color="text-protein" icon={<Beef className="h-3 w-3" />} />
+          <MacroRing label="Carbs" consumed={consumed.carbs} target={targets.carbs} color="text-carbs" icon={<Wheat className="h-3 w-3" />} />
+          <MacroRing label="Fat" consumed={consumed.fat} target={targets.fat} color="text-fat" icon={<Droplet className="h-3 w-3" />} />
         </div>
       </header>
 
@@ -435,7 +432,7 @@ function NutritionDashboard({ targets, onReset, apiKey, setApiKey }: { targets: 
               </div>
               <div className="divide-y divide-border/50">
                 {items.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground italic">No food logged yet.</div>
+                  <div className="p-4 text-center text-sm text-muted-foreground">Nothing logged yet — tap Add Food below.</div>
                 ) : (
                   items.map(item => (
                     <div key={item.id} className="p-4 flex items-center justify-between group">
@@ -473,7 +470,6 @@ function NutritionDashboard({ targets, onReset, apiKey, setApiKey }: { targets: 
         onClose={() => setSearchModalOpen(false)} 
         mealType={selectedMealType} 
         onAdd={addFood}
-        apiKey={apiKey}
         recentFoods={safeRecentFoods}
       />
 
@@ -484,9 +480,8 @@ function NutritionDashboard({ targets, onReset, apiKey, setApiKey }: { targets: 
           </DialogHeader>
           <div className="py-4 space-y-6">
             <div className="space-y-2">
-              <Label>Gemini API Key (For AI Food Parser)</Label>
-              <Input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="AIzaSy..." />
-              <p className="text-xs text-muted-foreground mt-1">Stored locally on your device.</p>
+              <Label>AI Food Search</Label>
+              <p className="text-xs text-muted-foreground">Built into the app — no key or setup needed. Just sign in and type any meal.</p>
             </div>
             <div className="space-y-2 pt-4 border-t border-border">
               <Label>Reset Macro Targets</Label>
@@ -501,8 +496,8 @@ function NutritionDashboard({ targets, onReset, apiKey, setApiKey }: { targets: 
   );
 }
 
-function MacroRing({ label, consumed, target, color, icon }: any) {
-  const pct = Math.min(100, (consumed / target) * 100);
+function MacroRing({ label, consumed, target, color, icon }: { label: string; consumed: number; target: number; color: string; icon: React.ReactNode }) {
+  const pct = Math.min(100, target > 0 ? (consumed / target) * 100 : 0);
   return (
     <div className="bg-card border border-border rounded-xl p-3 flex flex-col items-center">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2 uppercase tracking-wider font-semibold">
@@ -511,7 +506,7 @@ function MacroRing({ label, consumed, target, color, icon }: any) {
       <div className="relative w-12 h-12 flex items-center justify-center mb-1">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
           <path className="text-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-          <path className={cn("transition-all duration-500", color.replace('bg-', 'text-'))} strokeDasharray={`${pct}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+          <path className={cn("transition-all duration-500", color)} strokeDasharray={`${pct}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
         </svg>
       </div>
       <div className="text-xs font-bold">{Math.round(consumed)} <span className="text-muted-foreground font-normal">/ {target}g</span></div>
@@ -522,12 +517,11 @@ function MacroRing({ label, consumed, target, color, icon }: any) {
 // -----------------------------------------------------------------------------
 // FOOD SEARCH MODAL (AI + DB + RECENT)
 // -----------------------------------------------------------------------------
-function FoodSearchModal({ open, onClose, mealType, onAdd, apiKey, recentFoods }: { 
+function FoodSearchModal({ open, onClose, mealType, onAdd, recentFoods }: { 
   open: boolean, 
   onClose: () => void, 
   mealType: MealType, 
   onAdd: (f: FoodLog, b: FoodDBItem) => void,
-  apiKey: string,
   recentFoods: FoodDBItem[]
 }) {
   const [query, setQuery] = useState("");
@@ -561,15 +555,11 @@ function FoodSearchModal({ open, onClose, mealType, onAdd, apiKey, recentFoods }
 
   const handleAISearch = async () => {
     if (!query.trim()) return;
-    if (!apiKey) {
-      setAiError("Please set your Gemini API Key in Nutrition Settings first.");
-      return;
-    }
-    
+
     setAiLoading(true);
     setAiError("");
     try {
-      const aiResponse = await parseFoodWithAI(query, apiKey);
+      const aiResponse = await parseFoodWithAI(query);
       
       // Convert AI response into a FoodDBItem structure
       const parsedItem: FoodDBItem = {
