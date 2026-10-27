@@ -8,57 +8,45 @@ export type AIFoodResponse = {
   serving_size_unit: string;
 };
 
-export async function parseFoodWithAI(query: string, apiKey: string): Promise<AIFoodResponse> {
-  if (!apiKey) {
-    throw new Error("Gemini API Key is missing.");
+/**
+ * Parses a free-text food description through the app's server-side AI
+ * endpoint (Lovable AI). Credentials never touch the browser; the endpoint
+ * authenticates the caller via the Supabase bearer token.
+ */
+export async function parseFoodWithAI(query: string): Promise<AIFoodResponse> {
+  const { supabase } = await import("@/integrations/supabase/client");
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+
+  if (!token) {
+    throw new Error("Sign in to use AI food search.");
   }
 
-  const prompt = `
-You are an expert nutritionist and food database parser. 
-I will give you a natural language query describing a food item or meal. The query might be in English, Arabic, or Egyptian slang.
-You must parse this query and return the nutritional information for the EXACT portion described. If no portion is described, assume 1 standard serving or 100g.
-
-Return ONLY a valid JSON object matching this exact schema:
-{
-  "food_name": "String (normalized clean name in the user's language, e.g., 'كشري' or 'Chicken Breast')",
-  "calories": Number (total kcal for the parsed portion),
-  "protein": Number (grams of protein),
-  "carbs": Number (grams of carbohydrates),
-  "fats": Number (grams of fat),
-  "serving_size_quantity": Number (e.g., 100, 1, 2),
-  "serving_size_unit": "String (e.g., 'g', 'oz', 'piece', 'serving', 'plate', 'tablespoon')"
-}
-
-Do not wrap the JSON in markdown code blocks. Just output the raw JSON object.
-Query: "${query}"
-`;
-
+  let response: Response;
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
+    response = await fetch("/api/nutrition", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1 },
-      })
+      body: JSON.stringify({ query }),
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch from Gemini API");
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    
-    // Clean up potential markdown formatting if the model still returns it
-    const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    
-    const parsed = JSON.parse(cleanText) as AIFoodResponse;
-    return parsed;
-  } catch (error) {
-    console.error("AI Parsing Error:", error);
-    throw new Error("Failed to parse food using AI. Please try again or enter manually.");
+  } catch {
+    throw new Error("You're offline — AI search needs a connection.");
   }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    if (response.status === 401) {
+      throw new Error("Sign in to use AI food search.");
+    }
+    throw new Error(detail || "AI search is unavailable right now. Try a database food or add it manually.");
+  }
+
+  const parsed = (await response.json()) as AIFoodResponse;
+  if (!parsed || typeof parsed.calories !== "number") {
+    throw new Error("Couldn't identify that food — try describing it differently.");
+  }
+  return parsed;
 }
