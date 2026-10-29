@@ -220,13 +220,22 @@ h3,
 }
 
 /* ---------- motion ---------- */
+@keyframes ilFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Opacity-only: animating transform on a page wrapper keeps a composited
+   identity transform that traps `position: fixed` children (mobile WebView). */
 @keyframes ilFadeInUp {
   from {
     opacity: 0;
     transform: translate3d(0, 14px, 0);
   }
-  /* No `to { transform: ... }`: a filled keyframe would keep an identity
-     transform on the wrapper and trap `position: fixed` children. */
   to {
     opacity: 1;
   }
