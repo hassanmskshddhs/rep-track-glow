@@ -618,80 +618,80 @@ function DayPage({ day }: { day: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Bottom session controls — sits above the bottom nav (90px). */}
-      <div
-        className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
-        style={{ bottom: "calc(90px + env(safe-area-inset-bottom))" }}
-      >
-        <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 text-sm">
-            <span className="font-semibold tabular-nums">
-              {totalSets} {totalSets === 1 ? "set" : "sets"} ready
-            </span>
-            <span className="text-muted-foreground"> • {config.name}</span>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {sessionTimer.startedAt == null ? (
+    </main>
+
+    {/* Bottom session controls — sits above the bottom nav (90px). */}
+    <div
+      className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
+      style={{ bottom: "calc(90px + env(safe-area-inset-bottom))" }}
+    >
+      <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 text-sm">
+          <span className="font-semibold tabular-nums">
+            {totalSets} {totalSets === 1 ? "set" : "sets"} ready
+          </span>
+          <span className="text-muted-foreground"> • {config.name}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {sessionTimer.startedAt == null ? (
+            <Button
+              size="lg"
+              className="press-on-tap bg-primary font-bold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90"
+              onClick={() => sessionTimer.start()}
+              disabled={saving}
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Start Workout
+            </Button>
+          ) : (
+            <>
               <Button
                 size="lg"
-                className="press-on-tap bg-primary font-bold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90"
-                onClick={() => sessionTimer.start()}
+                variant="outline"
+                onClick={resetInputs}
                 disabled={saving}
+                className="border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                <Play className="mr-2 h-4 w-4" />
-                Start Workout
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset
               </Button>
-            ) : (
-              <>
+              {summary && !shareOpen && (
                 <Button
                   size="lg"
-                  variant="outline"
-                  onClick={resetInputs}
-                  disabled={saving}
-                  className="border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+                  variant="secondary"
+                  onClick={() => setShareOpen(true)}
                 >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share
                 </Button>
-                {summary && !shareOpen && (
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    onClick={() => setShareOpen(true)}
-                  >
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Share
-                  </Button>
-                )}
-                <Button
-                  size="lg"
-                  className="press-on-tap bg-foreground font-bold text-background hover:bg-foreground/90"
-                  onClick={logWorkout}
-                  disabled={saving || totalSets === 0}
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  {saving ? "Saving…" : "Log Workout"}
-                </Button>
-              </>
-            )}
-          </div>
+              )}
+              <Button
+                size="lg"
+                className="press-on-tap bg-foreground font-bold text-background hover:bg-foreground/90"
+                onClick={logWorkout}
+                disabled={saving || totalSets === 0}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? "Saving…" : "Log Workout"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
+    </div>
 
-
-
-      <Suspense fallback={null}>
-      <ShareWorkoutDialog
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        summary={summary}
-        onClose={() => {
-          // After closing the share dialog go to history
-          navigate({ to: "/history" });
-        }}
-      />
-      </Suspense>
-    </main>
+    <Suspense fallback={null}>
+    <ShareWorkoutDialog
+      open={shareOpen}
+      onOpenChange={setShareOpen}
+      summary={summary}
+      onClose={() => {
+        // After closing the share dialog go to history
+        navigate({ to: "/history" });
+      }}
+    />
+    </Suspense>
+    </>
   );
 }
 
