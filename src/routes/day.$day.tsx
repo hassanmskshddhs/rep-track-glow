@@ -500,6 +500,7 @@ function DayPage({ day }: { day: string }) {
   const dayAccent = getSplitAccent(config.name, null, config.accent);
 
   return (
+    <>
     <main className="mx-auto max-w-3xl px-4 py-6" style={{ paddingBottom: "calc(90px + 80px + env(safe-area-inset-bottom))" }}>
       <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-1 h-4 w-4" /> All workouts
