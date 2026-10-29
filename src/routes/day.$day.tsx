@@ -500,6 +500,7 @@ function DayPage({ day }: { day: string }) {
   const dayAccent = getSplitAccent(config.name, null, config.accent);
 
   return (
+    <>
     <main className="mx-auto max-w-3xl px-4 py-6" style={{ paddingBottom: "calc(90px + 80px + env(safe-area-inset-bottom))" }}>
       <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-1 h-4 w-4" /> All workouts
@@ -617,80 +618,80 @@ function DayPage({ day }: { day: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Bottom session controls — sits above the bottom nav (90px). */}
-      <div
-        className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
-        style={{ bottom: "calc(90px + env(safe-area-inset-bottom))" }}
-      >
-        <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 text-sm">
-            <span className="font-semibold tabular-nums">
-              {totalSets} {totalSets === 1 ? "set" : "sets"} ready
-            </span>
-            <span className="text-muted-foreground"> • {config.name}</span>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {sessionTimer.startedAt == null ? (
+    </main>
+
+    {/* Bottom session controls — sits above the bottom nav (90px). */}
+    <div
+      className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
+      style={{ bottom: "calc(90px + env(safe-area-inset-bottom))" }}
+    >
+      <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 text-sm">
+          <span className="font-semibold tabular-nums">
+            {totalSets} {totalSets === 1 ? "set" : "sets"} ready
+          </span>
+          <span className="text-muted-foreground"> • {config.name}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {sessionTimer.startedAt == null ? (
+            <Button
+              size="lg"
+              className="press-on-tap bg-primary font-bold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90"
+              onClick={() => sessionTimer.start()}
+              disabled={saving}
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Start Workout
+            </Button>
+          ) : (
+            <>
               <Button
                 size="lg"
-                className="press-on-tap bg-primary font-bold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90"
-                onClick={() => sessionTimer.start()}
+                variant="outline"
+                onClick={resetInputs}
                 disabled={saving}
+                className="border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                <Play className="mr-2 h-4 w-4" />
-                Start Workout
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset
               </Button>
-            ) : (
-              <>
+              {summary && !shareOpen && (
                 <Button
                   size="lg"
-                  variant="outline"
-                  onClick={resetInputs}
-                  disabled={saving}
-                  className="border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+                  variant="secondary"
+                  onClick={() => setShareOpen(true)}
                 >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share
                 </Button>
-                {summary && !shareOpen && (
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    onClick={() => setShareOpen(true)}
-                  >
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Share
-                  </Button>
-                )}
-                <Button
-                  size="lg"
-                  className="press-on-tap bg-white font-bold text-black hover:bg-white/90"
-                  onClick={logWorkout}
-                  disabled={saving || totalSets === 0}
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  {saving ? "Saving…" : "Log Workout"}
-                </Button>
-              </>
-            )}
-          </div>
+              )}
+              <Button
+                size="lg"
+                className="press-on-tap bg-foreground font-bold text-background hover:bg-foreground/90"
+                onClick={logWorkout}
+                disabled={saving || totalSets === 0}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? "Saving…" : "Log Workout"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
+    </div>
 
-
-
-      <Suspense fallback={null}>
-      <ShareWorkoutDialog
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        summary={summary}
-        onClose={() => {
-          // After closing the share dialog go to history
-          navigate({ to: "/history" });
-        }}
-      />
-      </Suspense>
-    </main>
+    <Suspense fallback={null}>
+    <ShareWorkoutDialog
+      open={shareOpen}
+      onOpenChange={setShareOpen}
+      summary={summary}
+      onClose={() => {
+        // After closing the share dialog go to history
+        navigate({ to: "/history" });
+      }}
+    />
+    </Suspense>
+    </>
   );
 }
 
@@ -890,7 +891,7 @@ const ExerciseCard = memo(function ExerciseCard({
                 placeholder="kg"
                 value={row.weight}
                 onChange={(e) => update(ex, idx, "weight", e.target.value)}
-                className="h-10"
+                className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
               />
               <Input
                 type="number"
@@ -898,12 +899,12 @@ const ExerciseCard = memo(function ExerciseCard({
                 placeholder="reps"
                 value={row.reps}
                 onChange={(e) => update(ex, idx, "reps", e.target.value)}
-                className="h-10"
+                className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
               />
               <Button
                 size="icon"
                 variant="ghost"
-                className="shrink-0 text-muted-foreground hover:text-destructive"
+                className="h-10 w-10 shrink-0 rounded-lg text-muted-foreground hover:text-destructive"
                 onClick={() => removeSet(ex, idx)}
                 disabled={sets.length === 1}
               >

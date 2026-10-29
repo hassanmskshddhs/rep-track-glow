@@ -1,11 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dumbbell, ChevronRight, Plus, Flame, Sparkles, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
-import { QuickImportDialog, type ImportedDraft } from "@/components/QuickImportDialog";
+const QuickImportDialog = lazy(() =>
+  import("@/components/QuickImportDialog").then((m) => ({ default: m.QuickImportDialog })),
+);
+import { type ImportedDraft } from "@/components/QuickImportDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -190,12 +193,14 @@ function Index() {
 
   const dialogs = (
     <>
-      <QuickImportDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onApply={handleImport}
-        applying={importing}
-      />
+      <Suspense fallback={null}>
+        <QuickImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onApply={handleImport}
+          applying={importing}
+        />
+      </Suspense>
       <AlertDialog
         open={pendingDelete !== null}
         onOpenChange={(v) => !v && setPendingDelete(null)}
