@@ -225,9 +225,10 @@ h3,
     opacity: 0;
     transform: translate3d(0, 14px, 0);
   }
+  /* No `to { transform: ... }`: a filled keyframe would keep an identity
+     transform on the wrapper and trap `position: fixed` children. */
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
