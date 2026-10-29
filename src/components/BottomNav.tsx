@@ -22,7 +22,7 @@ function NavLink({
     <Link
       to={to}
       className={cn(
-        "flex flex-col items-center gap-1 rounded-2xl px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors",
+        "flex flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[10px] font-bold transition-colors",
         active ? "text-primary" : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -96,12 +96,12 @@ export function BottomNav() {
           return (
             <li key={it.label} className="flex-1">
               <NavLink to={tos[idx]} active={active}>
-                <span
-                  className={cn(
-                    "flex h-9 w-11 items-center justify-center rounded-xl transition-colors",
-                    active && "bg-primary/15",
-                  )}
-                >
+                  <span
+                    className={cn(
+                      "flex h-9 w-10 items-center justify-center rounded-xl transition-colors",
+                      active && "bg-primary/15",
+                    )}
+                  >
                   <Icon className="h-5 w-5" />
                 </span>
                 {it.label}

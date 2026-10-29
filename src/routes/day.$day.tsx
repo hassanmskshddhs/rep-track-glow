@@ -664,7 +664,7 @@ function DayPage({ day }: { day: string }) {
                 )}
                 <Button
                   size="lg"
-                  className="press-on-tap bg-white font-bold text-black hover:bg-white/90"
+                  className="press-on-tap bg-foreground font-bold text-background hover:bg-foreground/90"
                   onClick={logWorkout}
                   disabled={saving || totalSets === 0}
                 >
@@ -890,7 +890,7 @@ const ExerciseCard = memo(function ExerciseCard({
                 placeholder="kg"
                 value={row.weight}
                 onChange={(e) => update(ex, idx, "weight", e.target.value)}
-                className="h-10"
+                className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
               />
               <Input
                 type="number"
@@ -898,12 +898,12 @@ const ExerciseCard = memo(function ExerciseCard({
                 placeholder="reps"
                 value={row.reps}
                 onChange={(e) => update(ex, idx, "reps", e.target.value)}
-                className="h-10"
+                className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
               />
               <Button
                 size="icon"
                 variant="ghost"
-                className="shrink-0 text-muted-foreground hover:text-destructive"
+                className="h-10 w-10 shrink-0 rounded-lg text-muted-foreground hover:text-destructive"
                 onClick={() => removeSet(ex, idx)}
                 disabled={sets.length === 1}
               >
