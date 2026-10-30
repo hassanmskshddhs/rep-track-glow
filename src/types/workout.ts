@@ -9,6 +9,10 @@
 export interface SetInput {
   weight: string;
   reps: string;
+  /** N normal, W warm-up (not saved), D drop set, F failure. */
+  kind?: "N" | "W" | "D" | "F";
+  /** Ticked as completed during the session. */
+  done?: boolean;
 }
 
 /** Draft state for one workout screen: exercise name -> set rows. */
