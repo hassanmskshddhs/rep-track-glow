@@ -255,7 +255,7 @@ h3,
 }
 
 @utility animate-fade-in {
-  animation: ilFadeInUp 0.35s ease-out both;
+  animation: ilFadeIn 0.35s ease-out both;
 }
 
 @utility stagger-1 {
