@@ -474,7 +474,7 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
       />
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-md bg-background border-border">
+        <DialogContent aria-describedby={undefined} className="max-w-md bg-background border-border">
           <DialogHeader>
             <DialogTitle>Nutrition Settings</DialogTitle>
           </DialogHeader>
@@ -621,7 +621,7 @@ function FoodSearchModal({ open, onClose, mealType, onAdd, recentFoods }: {
 
   return (
     <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-w-md w-[95vw] p-0 overflow-hidden bg-background border-border max-h-[85vh] flex flex-col rounded-2xl">
+      <DialogContent aria-describedby={undefined} className="max-w-md w-[95vw] p-0 overflow-hidden bg-background border-border max-h-[85vh] flex flex-col rounded-2xl">
         <DialogHeader className="p-4 border-b border-border bg-card">
           <div className="flex justify-between items-center mb-3">
             <DialogTitle>Add to {mealType}</DialogTitle>

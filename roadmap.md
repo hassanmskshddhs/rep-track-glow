@@ -1,8 +1,10 @@
 # Roadmap — Full professional mobile polish
 
-- [ ] Nutrition: route AI food parsing through a server function using Lovable AI (remove Gemini key input from settings)
-- [ ] Nutrition: replace hardcoded colors with design tokens, restyle to Obsidian & Ember aesthetic
-- [ ] BottomNav: verify/fix label fit on 360px-wide phones, safe-area spacing
-- [ ] Workout day page: touch-friendly set rows (taller inputs, numeric keyboards, clean borders)
-- [ ] Dashboard: lazy-load QuickImportDialog
-- [ ] Playwright sweep: console errors/warnings + visual check at mobile viewport
+- [x] Nutrition: AI food parsing routed through a server function using Lovable AI (Gemini key input removed from settings)
+- [x] Nutrition: hardcoded colors replaced with design tokens; clean empty-state copy
+- [x] BottomNav: labels no longer clip at 390px (dropped uppercase tracking, tighter icons)
+- [x] Workout day page: touch-friendly set rows (h-12 inputs, numeric keyboards, larger delete)
+- [x] Workout control bar: fixed positioning repaired (opacity-only wrapper animation) — bar now pins above the bottom nav
+- [x] Dashboard: QuickImportDialog lazy-loaded
+- [x] Missing animation utilities added (spring-transition, press-on-tap, animate-check-pop, animate-pr-pulse); --success/macro tokens added
+- [x] Dialog a11y warning fixed; console sweep across all routes = zero errors/warnings

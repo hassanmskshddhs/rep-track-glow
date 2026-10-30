@@ -177,7 +177,7 @@ export function ExercisePicker({ selected, onChange }: Props) {
       </Button>
 
       <Dialog open={customOpen} onOpenChange={setCustomOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent aria-describedby={undefined} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add custom exercise</DialogTitle>
           </DialogHeader>
