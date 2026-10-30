@@ -255,7 +255,7 @@ function DayPage({ day }: { day: string }) {
   };
 
 
-  const update = useCallback((ex: string, idx: number, field: keyof SetRow, value: string) =>
+  const update = useCallback((ex: string, idx: number, field: keyof SetRow, value: string | boolean) =>
     setState((s) => ({
       ...s,
       [ex]: (s[ex] ?? [{ weight: "", reps: "" }]).map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
@@ -378,7 +378,7 @@ function DayPage({ day }: { day: string }) {
   const logWorkout = async () => {
     const rows: { exercise_name: string; set_number: number; weight: number | null; reps: number | null }[] = [];
     for (const ex of config!.exercises) {
-      const sets = state[ex] ?? [];
+      const sets = (state[ex] ?? []).filter((s) => s.kind !== "W");
       sets.forEach((s, i) => {
         const w = s.weight === "" ? null : Number(s.weight);
         const r = s.reps === "" ? null : Number(s.reps);
@@ -697,6 +697,47 @@ function DayPage({ day }: { day: string }) {
 
 const EMPTY_SETS: SetRow[] = [{ weight: "", reps: "" }];
 
+function PlateHelper({ sets }: { sets: SetRow[] }) {
+  const [open, setOpen] = useState(false);
+  const last = [...sets].reverse().find((s) => s.weight !== "" && Number(s.weight) > 0);
+  const total = last ? Number(last.weight) : 0;
+  const { plates, remainder } = platesPerSide(total);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex min-h-9 items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+      >
+        <Calculator className="h-3.5 w-3.5" /> Plate calculator
+      </button>
+      {open && (
+        <div className="mt-1 rounded-lg border border-border bg-background/60 p-3 text-xs">
+          {total <= 20 ? (
+            <span className="text-muted-foreground">Enter a weight above 20 kg to see the plates for a 20 kg bar.</span>
+          ) : (
+            <>
+              <div className="mb-2 text-muted-foreground">
+                {total} kg = 20 kg bar + each side:
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {plates.map((p, i) => (
+                  <span key={i} className="rounded-md bg-primary/15 px-2 py-1 font-bold tabular-nums text-primary">
+                    {p}
+                  </span>
+                ))}
+              </div>
+              {remainder > 0 && (
+                <div className="mt-2 text-muted-foreground">{remainder} kg can't be loaded with standard plates.</div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type ExerciseCardProps = {
   ex: string;
   sets: SetRow[];
@@ -740,6 +781,7 @@ const ExerciseCard = memo(function ExerciseCard({
   };
 
   const currentTopWeight = sets.reduce<number>((m, r) => {
+    if (r.kind === "W") return m;
     const w = r.weight === "" ? NaN : Number(r.weight);
     const reps = r.reps === "" ? NaN : Number(r.reps);
     if (Number.isFinite(w) && Number.isFinite(reps) && reps > 0) return Math.max(m, w);
@@ -870,49 +912,96 @@ const ExerciseCard = memo(function ExerciseCard({
       </div>
 
       <div className="space-y-2 px-4 pb-4 pt-3">
-        {sets.map((row, idx) => {
-          const filled = row.weight !== "" && row.reps !== "";
-          return (
-            <div key={idx} className="flex items-center gap-2">
+        {(() => {
+          let working = 0;
+          return sets.map((row, idx) => {
+            const kind = row.kind ?? "N";
+            if (kind !== "W") working += 1;
+            const label = kind === "N" ? String(working) : kind;
+            const kindTitle = { N: "Normal set", W: "Warm-up (not saved)", D: "Drop set", F: "To failure" }[kind];
+            const canComplete = row.weight !== "" || row.reps !== "";
+            return (
               <div
-                key={`badge-${filled}`}
+                key={idx}
                 className={
-                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums transition-colors " +
-                  (filled
-                    ? "animate-check-pop bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground")
+                  "flex items-center gap-2 rounded-xl p-1 transition-colors " +
+                  (row.done ? "bg-success/10" : "")
                 }
               >
-                {filled ? "✓" : idx + 1}
+                <button
+                  type="button"
+                  aria-label={`Set type: ${kindTitle}. Tap to change`}
+                  title={kindTitle}
+                  onClick={() => update(ex, idx, "kind", nextSetKind(row.kind))}
+                  className={
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sm font-bold tabular-nums press-on-tap " +
+                    (kind === "W"
+                      ? "bg-carbs/15 text-carbs"
+                      : kind === "D"
+                        ? "bg-protein/15 text-protein"
+                        : kind === "F"
+                          ? "bg-destructive/15 text-destructive"
+                          : "bg-muted text-muted-foreground")
+                  }
+                >
+                  {label}
+                </button>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="kg"
+                  value={row.weight}
+                  onChange={(e) => update(ex, idx, "weight", e.target.value)}
+                  className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
+                />
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="reps"
+                  value={row.reps}
+                  onChange={(e) => update(ex, idx, "reps", e.target.value)}
+                  className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
+                />
+                <button
+                  type="button"
+                  aria-label={row.done ? "Mark set not done" : "Complete set and start rest"}
+                  aria-pressed={!!row.done}
+                  disabled={!canComplete && !row.done}
+                  onClick={() => {
+                    const next = !row.done;
+                    update(ex, idx, "done", next);
+                    if (next && typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("ironlog:rest-start"));
+                      navigator.vibrate?.(30);
+                    }
+                  }}
+                  className={
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg press-on-tap disabled:opacity-40 " +
+                    (row.done
+                      ? "animate-check-pop bg-success text-background"
+                      : "border border-border bg-background/60 text-muted-foreground")
+                  }
+                >
+                  <Check className="h-5 w-5" />
+                </button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Delete set"
+                  className="h-10 w-8 shrink-0 rounded-lg text-muted-foreground hover:text-destructive"
+                  onClick={() => removeSet(ex, idx)}
+                  disabled={sets.length === 1}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
-              <Input
-                type="number"
-                inputMode="decimal"
-                placeholder="kg"
-                value={row.weight}
-                onChange={(e) => update(ex, idx, "weight", e.target.value)}
-                className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
-              />
-              <Input
-                type="number"
-                inputMode="numeric"
-                placeholder="reps"
-                value={row.reps}
-                onChange={(e) => update(ex, idx, "reps", e.target.value)}
-                className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 shrink-0 rounded-lg text-muted-foreground hover:text-destructive"
-                onClick={() => removeSet(ex, idx)}
-                disabled={sets.length === 1}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
+        <p className="text-[10px] text-muted-foreground">
+          Tap the set number to tag it: W warm-up (not saved) · D drop set · F failure
+        </p>
+        <PlateHelper sets={sets} />
         <Button variant="secondary" size="sm" className="w-full" onClick={() => addSet(ex)}>
           <Plus className="mr-1 h-4 w-4" /> Add set
         </Button>
