@@ -13,7 +13,7 @@ const schema = z.object({
   password: z.string().min(6, "Min 6 characters").max(72),
 });
 
-export function AuthScreen() {
+export function AuthScreen({ compact = false }: { compact?: boolean } = {}) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,15 +56,23 @@ export function AuthScreen() {
   };
 
   return (
-    <main className="flex min-h-[calc(100vh-64px)] items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
-            <Dumbbell className="h-7 w-7" />
+    <main
+      className={
+        compact
+          ? "w-full pt-4"
+          : "flex min-h-[calc(100vh-64px)] items-center justify-center px-4 py-10"
+      }
+    >
+      <div className="w-full max-w-md mx-auto">
+        {!compact && (
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
+              <Dumbbell className="h-7 w-7" />
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">IRONLOG</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Track every rep. Crush every PR.</p>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight">IRONLOG</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Track every rep. Crush every PR.</p>
-        </div>
+        )}
 
         <form
           onSubmit={submit}

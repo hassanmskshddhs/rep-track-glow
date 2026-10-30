@@ -340,7 +340,7 @@ function SettingsPage() {
             <p className="mt-1 text-xs text-muted-foreground">
               Sign in to back up your progress across devices.
             </p>
-            <AuthScreen />
+            <AuthScreen compact />
           </div>
         )}
       </div>
