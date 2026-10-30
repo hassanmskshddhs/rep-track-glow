@@ -119,7 +119,7 @@ export function QuickImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent aria-describedby={undefined} className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" /> Quick Import Routine
