@@ -112,7 +112,7 @@ export function ShareWorkoutDialog({ open, onOpenChange, summary, onClose }: Pro
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) onClose(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent aria-describedby={undefined} className="max-w-md">
         <DialogHeader>
           <DialogTitle>Workout saved</DialogTitle>
         </DialogHeader>

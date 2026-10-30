@@ -71,7 +71,7 @@ export function ImageCropperDialog({ open, imageSrc, onCancel, onConfirm }: Prop
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
+      <DialogContent aria-describedby={undefined} className="max-w-md p-0 overflow-hidden">
         <DialogHeader className="px-4 pt-4">
           <DialogTitle>Adjust cover</DialogTitle>
         </DialogHeader>

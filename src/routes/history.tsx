@@ -281,7 +281,7 @@ function HistoryPage() {
       />
 
       <Dialog open={!!renaming} onOpenChange={(o) => !o && setRenaming(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent aria-describedby={undefined} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Rename session</DialogTitle>
             <DialogDescription>
@@ -415,7 +415,7 @@ function EditSessionDialog({
 
   return (
     <Dialog open={!!session} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent aria-describedby={undefined} className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Edit session</DialogTitle>
           <DialogDescription>
