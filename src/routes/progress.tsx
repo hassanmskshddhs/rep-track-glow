@@ -35,6 +35,15 @@ function ProgressApp() {
   const progressData = useProgressData();
 
   if (loading || progressData.isLoading) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
+  if (!user) return (
+    <main className="mx-auto max-w-md px-4 pt-10 pb-32">
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h1 className="text-2xl font-extrabold tracking-tight">Sign in to see your workouts</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Your saved sessions and progress are stored in your account.</p>
+        <AuthScreen compact />
+      </div>
+    </main>
+  );
   
   const data = progressData.data;
   if (!data) return <div className="p-10 text-center text-muted-foreground">Failed to load data</div>;
