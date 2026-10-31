@@ -302,7 +302,7 @@ function Index() {
                   className="flex w-11 shrink-0 snap-end flex-col items-center gap-1.5"
                   title={`${format(d.date, "EEE, MMM d")}${split ? ` — ${split.name}` : ""}`}
                 >
-                  <div className="flex h-20 w-full items-end justify-center">
+                  <div className="flex h-10 w-full items-end justify-center">
                     <div
                       className={cn(
                         "w-2 rounded-full transition-all",
