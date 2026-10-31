@@ -101,7 +101,7 @@ const STEPS = [
 function ProgressiveOverloadPage() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-10 pb-32">
-      <p className="text-xs font-bold uppercase tracking-[0.28em] text-primary">IronLog</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-primary">IronLog</p>
       <h1 className="mt-3 text-4xl font-extrabold tracking-tight md:text-5xl">
         The progressive overload tracker that tells you what to lift next
       </h1>

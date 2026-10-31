@@ -89,7 +89,7 @@ export function BottomNav() {
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)" }}
       aria-label="Primary"
     >
-      <ul className="glass-strong mx-auto flex max-w-md items-stretch justify-around rounded-3xl px-2 py-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)]">
+      <ul className="glass-strong mx-auto flex max-w-md items-stretch justify-around rounded-2xl px-2 py-1.5 shadow-lg">
         {items.map((it, idx) => {
           const active = it.match(pathname);
           const Icon = it.icon;

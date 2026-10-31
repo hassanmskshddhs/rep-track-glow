@@ -509,7 +509,7 @@ function DayPage({ day }: { day: string }) {
 
       <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: `var(--${dayAccent})` }}>
+          <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: `var(--${dayAccent})` }}>
             Custom Workout
           </div>
           <div className="flex items-center gap-2">

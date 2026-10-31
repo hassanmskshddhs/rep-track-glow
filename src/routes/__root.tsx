@@ -27,7 +27,7 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-6">
       <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-8 text-center">
-        <div className="text-display text-6xl italic tracking-wide text-primary">404</div>
+        <div className="text-display text-6xl text-primary">404</div>
         <h1 className="mt-3 text-lg font-semibold text-foreground">Page not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           This screen doesn't exist. Let's get you back to your training.
@@ -84,7 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Bebas+Neue&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap",
       },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
@@ -143,14 +143,11 @@ function Header() {
     <header className="sticky top-0 z-30 glass-strong border-b border-border/60">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Dumbbell className="h-5 w-5" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Dumbbell className="h-4 w-4" />
           </div>
           <div className="leading-none">
-            <div className="text-display text-2xl italic tracking-wide">IRONLOG</div>
-            <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.28em] text-muted-foreground">
-              Track. Lift. Repeat.
-            </div>
+            <div className="text-lg font-bold tracking-tight">IronLog</div>
           </div>
         </Link>
         <SessionTimerBadge />
