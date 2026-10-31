@@ -27,7 +27,7 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-6">
       <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-8 text-center">
-        <div className="text-display text-6xl italic tracking-wide text-primary">404</div>
+        <div className="text-display text-6xl text-primary">404</div>
         <h1 className="mt-3 text-lg font-semibold text-foreground">Page not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           This screen doesn't exist. Let's get you back to your training.
@@ -147,7 +147,7 @@ function Header() {
             <Dumbbell className="h-5 w-5" />
           </div>
           <div className="leading-none">
-            <div className="text-display text-2xl italic tracking-wide">IRONLOG</div>
+            <div className="text-lg font-bold tracking-tight">IronLog</div>
             <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
               Track. Lift. Repeat.
             </div>

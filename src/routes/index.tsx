@@ -28,7 +28,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { resolveDisplayName, useProfile } from "@/lib/profile";
-import heroLift from "@/assets/hero-lift.jpg";
 
 
 export const Route = createFileRoute("/")({
@@ -256,7 +255,7 @@ function Index() {
               Create New Split
             </Button>
             <Button size="lg" variant="outline" className="font-bold" onClick={() => setImportOpen(true)}>
-              <Zap className="mr-2 h-4 w-4" /> Quick Import Routine
+              <Zap className="mr-2 h-4 w-4" /> Import a routine
             </Button>
           </div>
         </div>
@@ -268,48 +267,24 @@ function Index() {
 
   return (
     <main className="pb-4">
-      {/* Cinematic hero */}
-      <section className="relative -mt-[1px] h-[360px] w-full overflow-hidden md:h-[420px]">
-        <img
-          src={heroLift}
-          alt="Athlete lifting a barbell in a dark gym"
-          width={1024}
-          height={1152}
-          className="absolute inset-0 h-full w-full object-cover object-center contrast-125"
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to top, var(--background) 4%, color-mix(in oklab, var(--background) 55%, transparent) 45%, transparent 100%)",
-          }}
-        />
-        <div className="absolute inset-x-0 bottom-7 mx-auto max-w-3xl px-5">
-          <h1 className="text-display text-6xl leading-[0.85] tracking-tight md:text-7xl">
-            HELLO,
-            <br />
-            <span className="text-primary">{firstName.toUpperCase()}</span>
-          </h1>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-primary" />
-            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground/70">
-              {streak > 0 ? `${streak}-day streak` : "Let's lift"}
-              {upNext ? ` • ${upNext.name}` : ""}
-            </p>
-          </div>
-        </div>
-      </section>
+      <header className="mx-auto max-w-3xl px-5 pb-5 pt-6">
+        <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMM d")}</p>
+        <h1 className="mt-1 text-3xl">Hi, {firstName}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {streak > 0 ? `${streak}-day streak` : "Ready to train?"}
+          {upNext ? ` · Next up: ${upNext.name}` : ""}
+        </p>
+      </header>
 
       <div className="mx-auto max-w-3xl px-5">
         {/* Activity strip */}
         <section className="animate-fade-in-up">
           <div className="mb-2 flex items-end justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Weekly activity
+            <p className="text-sm font-semibold text-foreground">
+              This week
             </p>
-            <p className="text-display text-xl leading-none">
-              {days.filter((d) => d.active).length} SESSIONS
+            <p className="text-sm text-muted-foreground tabular-nums">
+              {days.filter((d) => d.active).length} sessions
             </p>
           </div>
           <div
@@ -355,10 +330,10 @@ function Index() {
           <Button
             size="lg"
             variant="outline"
-            className="w-full font-bold uppercase tracking-wider"
+            className="w-full font-semibold"
             onClick={() => setImportOpen(true)}
           >
-            <Zap className="mr-2 h-4 w-4 text-primary" /> Quick Import Routine
+            <Zap className="mr-2 h-4 w-4 text-primary" /> Import a routine
           </Button>
         </section>
 
@@ -374,20 +349,13 @@ function Index() {
             >
               <Trash2 className="h-4 w-4" />
             </button>
-            <div className="glass-strong relative overflow-hidden rounded-[28px] p-6">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full"
-                style={{
-                  background: `color-mix(in oklab, var(--${getSplitAccent(upNext.name, upNext.muscle_groups, upNext.accent ?? "primary")}) 14%, transparent)`,
-                }}
-              />
+            <div className="relative overflow-hidden rounded-xl border border-border bg-card p-5">
               <div className="relative">
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-                  <Sparkles className="h-3 w-3" /> Next Session
+                <span className="text-xs font-semibold text-primary">
+                  Next session
                 </span>
-                <h2 className="text-display mt-2 text-4xl leading-none tracking-wide">
-                  {upNext.name.toUpperCase()}
+                <h2 className="mt-1 text-2xl">
+                  {upNext.name}
                 </h2>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   {upNext.subtitle ||
@@ -401,9 +369,9 @@ function Index() {
                 <Link
                   to="/day/$day"
                   params={{ day: upNext.id }}
-                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-primary-foreground transition-transform active:scale-[0.98]"
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3.5 text-primary-foreground transition-transform active:scale-[0.98]"
                 >
-                  <span className="text-display text-xl tracking-[0.15em]">START WORKOUT</span>
+                  <span className="text-base font-semibold">Start workout</span>
                   <ChevronRight className="h-5 w-5" />
                 </Link>
               </div>
@@ -414,10 +382,10 @@ function Index() {
         {/* My Programs */}
         <section className="mt-7 animate-fade-in-up stagger-2">
           <div className="mb-3 flex items-end justify-between">
-            <h3 className="text-display text-2xl tracking-wide">MY PROGRAMS</h3>
+            <h3 className="text-lg">My programs</h3>
             <Link
               to="/custom/new"
-              className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
             >
               <Plus className="h-3.5 w-3.5" /> New split
             </Link>
@@ -436,7 +404,7 @@ function Index() {
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
                   <Plus className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-display mt-2 text-lg tracking-wide">NEW SPLIT</div>
+                <div className="mt-2 text-sm font-semibold">New split</div>
                 <div className="text-[11px] text-muted-foreground">Build your own day</div>
               </div>
             </Link>
