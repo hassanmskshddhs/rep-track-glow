@@ -148,7 +148,7 @@ function Header() {
           </div>
           <div className="leading-none">
             <div className="text-display text-2xl italic tracking-wide">IRONLOG</div>
-            <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.28em] text-muted-foreground">
+            <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
               Track. Lift. Repeat.
             </div>
           </div>

@@ -181,7 +181,7 @@ function SettingsPage() {
       <section className="mt-4 glass rounded-2xl p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold">Profile</h2>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Saved on device
           </span>
         </div>

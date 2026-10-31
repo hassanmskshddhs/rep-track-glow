@@ -184,7 +184,7 @@ export function SplitCard({
             />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#94A3B8]">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Split
             </div>
             <h4 className="mt-1 truncate text-xl font-semibold tracking-tight text-white">
@@ -211,11 +211,11 @@ export function SplitCard({
             )}
           </div>
         ) : split.subtitle ? (
-          <p className="mt-3 truncate text-xs text-[#94A3B8]">{split.subtitle}</p>
+          <p className="mt-3 truncate text-xs text-muted-foreground">{split.subtitle}</p>
         ) : null}
 
         <div className="mt-8 flex items-end justify-between">
-          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#94A3B8]">
+          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
             {exCount} exercises
           </span>
           <span

@@ -696,7 +696,7 @@ function ConsistencyView({ data }: { data: any }) {
               <div 
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-transform",
-                  !isRest ? "text-primary-foreground shadow-[0_0_8px_var(--primary)]" : "text-muted-foreground border border-border"
+                  !isRest ? "text-primary-foreground" : "text-muted-foreground border border-border"
                 )}
                 style={{ backgroundColor: color }}
               >

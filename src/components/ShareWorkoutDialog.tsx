@@ -125,7 +125,7 @@ export function ShareWorkoutDialog({ open, onOpenChange, summary, onClose }: Pro
             border: "1px solid color-mix(in oklab, var(--primary) 30%, var(--border))",
           }}
         >
-          <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-primary">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-primary">
             IronLog · {dateStr}
           </div>
           <div className="mt-1 text-2xl font-extrabold tracking-tight">{summary.workoutName}</div>

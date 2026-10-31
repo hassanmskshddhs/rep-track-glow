@@ -293,7 +293,7 @@ function Index() {
           </h1>
           <div className="mt-3 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground/70">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground/70">
               {streak > 0 ? `${streak}-day streak` : "Let's lift"}
               {upNext ? ` • ${upNext.name}` : ""}
             </p>
@@ -305,7 +305,7 @@ function Index() {
         {/* Activity strip */}
         <section className="animate-fade-in-up">
           <div className="mb-2 flex items-end justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Weekly activity
             </p>
             <p className="text-display text-xl leading-none">
