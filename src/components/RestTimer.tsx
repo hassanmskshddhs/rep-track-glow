@@ -30,6 +30,7 @@ export function RestTimer() {
               o.start();
               o.stop(ctx.currentTime + 0.25);
             } catch {}
+            try { navigator.vibrate?.([200, 100, 200]); } catch {}
           }
           return 0;
         }
@@ -38,6 +39,19 @@ export function RestTimer() {
     }, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running]);
+
+  // Auto-start when a set is ticked as done.
+  useEffect(() => {
+    const onStart = () => {
+      setTarget((t) => {
+        setRemaining(t);
+        return t;
+      });
+      setRunning(true);
+    };
+    window.addEventListener("ironlog:rest-start", onStart);
+    return () => window.removeEventListener("ironlog:rest-start", onStart);
+  }, []);
 
   const setPreset = (s: number) => { setTarget(s); setRemaining(s); setRunning(false); };
   const adjust = (delta: number) => {

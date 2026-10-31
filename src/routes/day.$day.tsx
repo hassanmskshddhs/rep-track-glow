@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X, MoreVertical } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X, MoreVertical, Calculator } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Reorder, useDragControls } from "framer-motion";
