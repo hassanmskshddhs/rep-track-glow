@@ -31,6 +31,7 @@ import * as db from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { platesPerSide, nextSetKind } from "@/lib/plates";
 import { RestTimer } from "@/components/RestTimer";
 import type { WorkoutSummary } from "@/components/ShareWorkoutDialog";
 const ExerciseChart = lazy(() =>
@@ -745,7 +746,7 @@ type ExerciseCardProps = {
   note: string;
   setNote: (ex: string, value: string) => void;
   saveNote: (ex: string, value: string) => void | Promise<void>;
-  update: (ex: string, idx: number, field: keyof SetRow, value: string) => void;
+  update: (ex: string, idx: number, field: keyof SetRow, value: string | boolean) => void;
   addSet: (ex: string) => void;
   removeSet: (ex: string, idx: number) => void;
   onRename: (oldName: string, newName: string) => void | Promise<void>;
