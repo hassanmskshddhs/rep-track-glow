@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X, MoreVertical } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X, MoreVertical, Calculator } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Reorder, useDragControls } from "framer-motion";
@@ -31,6 +31,7 @@ import * as db from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { platesPerSide, nextSetKind } from "@/lib/plates";
 import { RestTimer } from "@/components/RestTimer";
 import type { WorkoutSummary } from "@/components/ShareWorkoutDialog";
 const ExerciseChart = lazy(() =>
@@ -745,7 +746,7 @@ type ExerciseCardProps = {
   note: string;
   setNote: (ex: string, value: string) => void;
   saveNote: (ex: string, value: string) => void | Promise<void>;
-  update: (ex: string, idx: number, field: keyof SetRow, value: string) => void;
+  update: (ex: string, idx: number, field: keyof SetRow, value: string | boolean) => void;
   addSet: (ex: string) => void;
   removeSet: (ex: string, idx: number) => void;
   onRename: (oldName: string, newName: string) => void | Promise<void>;
