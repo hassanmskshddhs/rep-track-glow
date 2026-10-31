@@ -143,14 +143,11 @@ function Header() {
     <header className="sticky top-0 z-30 glass-strong border-b border-border/60">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Dumbbell className="h-5 w-5" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Dumbbell className="h-4 w-4" />
           </div>
           <div className="leading-none">
             <div className="text-lg font-bold tracking-tight">IronLog</div>
-            <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-              Track. Lift. Repeat.
-            </div>
           </div>
         </Link>
         <SessionTimerBadge />
