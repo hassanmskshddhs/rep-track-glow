@@ -1,21 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { ChevronRight, Dumbbell, ImagePlus, Pencil, Share2, Trash2, X } from "lucide-react";
+import { ChevronRight, Dumbbell, Pencil, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { sharePlan } from "@/lib/share-plan";
-import {
-  deleteCardImage,
-  getCardImage,
-  setCardImage,
-} from "@/lib/card-images";
-
-const ImageCropperDialog = lazy(() =>
-  import("@/components/ImageCropperDialog").then((m) => ({ default: m.ImageCropperDialog })),
-);
 
 type SplitLike = {
   id: string;
@@ -37,71 +27,14 @@ export function SplitCard({
   const exCount = Array.isArray(split.exercises) ? (split.exercises as unknown[]).length : 0;
   const muscles = Array.isArray(split.muscle_groups) ? split.muscle_groups : [];
 
-  const [image, setImage] = useState<string | null>(null);
-  const [imageLoading, setImageLoading] = useState(true);
-  const [pending, setPending] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setImageLoading(true);
-    getCardImage(split.id).then((v) => {
-      if (cancelled) return;
-      setImage(v);
-      setImageLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [split.id]);
-
-  const onPick = (file: File | undefined) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const src = typeof reader.result === "string" ? reader.result : null;
-      if (src) setPending(src);
-      else toast.error("Couldn't read image");
-    };
-    reader.onerror = () => toast.error("Couldn't read image");
-    reader.readAsDataURL(file);
-  };
-
-  const onCropConfirm = async (dataUrl: string) => {
-    try {
-      await setCardImage(split.id, dataUrl);
-      setImage(dataUrl);
-      setPending(null);
-      toast.success("Cover updated");
-    } catch {
-      toast.error("Couldn't set cover image");
-    }
-  };
-
-  const onRemove = async () => {
-    await deleteCardImage(split.id);
-    setImage(null);
-    toast.success("Cover removed");
-  };
-
   return (
     <div
-      className={cn(
-        "group relative overflow-hidden rounded-2xl transition-all",
-        "hover:-translate-y-0.5 will-change-transform",
-        imageLoading && !image && "skeleton-shimmer",
-      )}
+      className={cn("group relative overflow-hidden rounded-2xl")}
       style={{
         border: "1px solid rgba(255,255,255,0.06)",
-        backgroundImage: image
-          ? `linear-gradient(180deg, rgba(11,11,12,0.35) 0%, rgba(11,11,12,0.88) 100%), url("${image}")`
-          : imageLoading
-            ? undefined
-            : "linear-gradient(135deg, #161618 0%, #0B0B0C 100%)",
+        backgroundImage: "linear-gradient(135deg, #161618 0%, #0B0B0C 100%)",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        transition:
-          "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.35s cubic-bezier(0.25, 1, 0.5, 1)",
       }}
     >
       {/* Accent hairline — a thin editorial rule, not a glow */}
@@ -110,46 +43,8 @@ export function SplitCard({
         style={{ backgroundColor: `color-mix(in oklab, var(--${accent}) 60%, transparent)` }}
       />
 
-
       {/* Top-right actions */}
       <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.currentTarget.value = "";
-            onPick(f);
-          }}
-        />
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            fileRef.current?.click();
-          }}
-          className="flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-colors hover:bg-white/20"
-          style={{ backgroundColor: "rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.9)" }}
-          aria-label="Upload cover image"
-        >
-          <ImagePlus className="h-4 w-4" />
-        </button>
-        {image && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              onRemove();
-            }}
-            className="flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-colors hover:bg-white/20"
-            style={{ backgroundColor: "rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.9)" }}
-            aria-label="Remove cover image"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
         <button
           type="button"
           onClick={(e) => {
@@ -163,7 +58,6 @@ export function SplitCard({
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
-
 
       <Link
         to="/day/$day"
@@ -229,7 +123,6 @@ export function SplitCard({
         </div>
       </Link>
 
-
       {/* Hover-only management actions */}
       <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <Button
@@ -267,18 +160,6 @@ export function SplitCard({
           </Link>
         </Button>
       </div>
-
-
-      {pending !== null && (
-        <Suspense fallback={null}>
-          <ImageCropperDialog
-            open
-            imageSrc={pending}
-            onCancel={() => setPending(null)}
-            onConfirm={onCropConfirm}
-          />
-        </Suspense>
-      )}
     </div>
   );
 }
