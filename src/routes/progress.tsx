@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { cn } from "@/lib/utils";
 import { useProgressData } from "@/hooks/useProgressData";
+import { BodyTracker } from "@/components/BodyTracker";
 
 // Types
 type Tab = "Overview" | "Strength" | "Body" | "More";
@@ -339,6 +340,10 @@ function SetRow({ date, weight, reps, isPR }: any) {
 // BODY TAB (Empty State)
 // -----------------------------------------------------------------------------
 function BodyTab() {
+  return <BodyTracker />;
+}
+
+function _OldBodyTab() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mt-12 flex flex-col items-center justify-center text-center p-6 bg-card border border-border rounded-2xl">
