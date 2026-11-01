@@ -35,6 +35,45 @@ export type Database = {
         }
         Relationships: []
       }
+      body_measurements: {
+        Row: {
+          arm: number | null
+          body_fat: number | null
+          chest: number | null
+          created_at: string
+          id: string
+          measured_at: string
+          thigh: number | null
+          user_id: string
+          waist: number | null
+          weight: number | null
+        }
+        Insert: {
+          arm?: number | null
+          body_fat?: number | null
+          chest?: number | null
+          created_at?: string
+          id?: string
+          measured_at?: string
+          thigh?: number | null
+          user_id: string
+          waist?: number | null
+          weight?: number | null
+        }
+        Update: {
+          arm?: number | null
+          body_fat?: number | null
+          chest?: number | null
+          created_at?: string
+          id?: string
+          measured_at?: string
+          thigh?: number | null
+          user_id?: string
+          waist?: number | null
+          weight?: number | null
+        }
+        Relationships: []
+      }
       custom_workout_days: {
         Row: {
           accent: string
