@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/AuthScreen";
 import { cn } from "@/lib/utils";
 import { useProgressData } from "@/hooks/useProgressData";
+import { BodyTracker } from "@/components/BodyTracker";
 
 // Types
 type Tab = "Overview" | "Strength" | "Body" | "More";
@@ -339,20 +340,7 @@ function SetRow({ date, weight, reps, isPR }: any) {
 // BODY TAB (Empty State)
 // -----------------------------------------------------------------------------
 function BodyTab() {
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mt-12 flex flex-col items-center justify-center text-center p-6 bg-card border border-border rounded-2xl">
-        <Ruler className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
-        <h2 className="text-xl font-bold mb-2">Track Your Body</h2>
-        <p className="text-sm text-muted-foreground mb-6">
-          Log your body weight and measurements to see how your physique changes over time.
-        </p>
-        <button className="w-full rounded-full bg-primary text-primary-foreground font-bold py-3 flex items-center justify-center gap-2 transition-colors hover:bg-primary/90">
-          <Plus className="h-5 w-5" /> Log First Measurement
-        </button>
-      </div>
-    </div>
-  );
+  return <BodyTracker />;
 }
 
 // -----------------------------------------------------------------------------
