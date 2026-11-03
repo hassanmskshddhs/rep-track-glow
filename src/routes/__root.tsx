@@ -11,7 +11,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, UserRound } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
@@ -128,7 +128,7 @@ function SessionTimerBadge() {
   if (startedAt == null) return null;
   return (
     <div
-      className="ml-3 flex items-center gap-1.5 rounded-md border border-border/60 bg-card/60 px-2 py-1"
+      className="flex items-center gap-1.5 rounded-full border border-border bg-primary/10 px-2.5 py-1"
       title="Active workout session"
     >
       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
@@ -139,18 +139,37 @@ function SessionTimerBadge() {
 
 function Header() {
   const { user } = useAuth();
+  const name =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
+    user?.email ??
+    "";
+  const initial = name.trim().charAt(0).toUpperCase();
   return (
-    <header className="sticky top-0 z-30 glass-strong border-b border-border/60">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Dumbbell className="h-4 w-4" />
+    <header
+      className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
+      <div className="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-5">
+        <Link to="/" className="tap flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Dumbbell className="h-3.5 w-3.5" />
           </div>
-          <div className="leading-none">
-            <div className="text-lg font-bold tracking-tight">IronLog</div>
-          </div>
+          <span className="text-[17px] font-bold tracking-tight">IronLog</span>
         </Link>
-        <SessionTimerBadge />
+        <div className="flex items-center gap-2">
+          <SessionTimerBadge />
+          <Link
+            to="/settings"
+            aria-label="Profile and settings"
+            className="tap relative flex h-9 w-9 items-center justify-center rounded-full border border-border bg-secondary text-sm font-semibold text-foreground"
+          >
+            {initial || <UserRound className="h-4 w-4" />}
+            {user && (
+              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-success" />
+            )}
+          </Link>
+        </div>
       </div>
     </header>
   );

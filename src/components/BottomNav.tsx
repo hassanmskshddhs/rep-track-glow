@@ -1,111 +1,45 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, History, LineChart, Settings, Bot, Apple } from "lucide-react";
+import { Dumbbell, History, LineChart, Apple, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type NavItem = {
-  label: string;
-  icon: typeof Home;
-  link: React.ReactNode;
-  match: (pathname: string) => boolean;
-};
+type To = "/" | "/history" | "/progress" | "/nutrition" | "/coach";
 
-function NavLink({
-  to,
-  active,
-  children,
-}: {
-  to: "/" | "/history" | "/progress" | "/nutrition" | "/coach" | "/settings";
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        "flex flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[10px] font-bold transition-colors",
-        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
-
+const ITEMS: { label: string; to: To; icon: typeof Dumbbell; match: (p: string) => boolean }[] = [
+  { label: "Workout", to: "/", icon: Dumbbell, match: (p) => p === "/" || p.startsWith("/day") || p.startsWith("/custom") },
+  { label: "History", to: "/history", icon: History, match: (p) => p.startsWith("/history") },
+  { label: "Progress", to: "/progress", icon: LineChart, match: (p) => p.startsWith("/progress") },
+  { label: "Food", to: "/nutrition", icon: Apple, match: (p) => p.startsWith("/nutrition") },
+  { label: "Coach", to: "/coach", icon: Sparkles, match: (p) => p.startsWith("/coach") },
+];
 
 export function BottomNav() {
   const { pathname } = useLocation();
 
-  const items: NavItem[] = [
-    {
-      label: "Home",
-      icon: Home,
-      link: null,
-      match: (p) => p === "/",
-    },
-    {
-      label: "History",
-      icon: History,
-      link: null,
-      match: (p) => p.startsWith("/history"),
-    },
-    {
-      label: "Progress",
-      icon: LineChart,
-      link: null,
-      match: (p) => p.startsWith("/progress"),
-    },
-    {
-      label: "Nutrition",
-      icon: Apple,
-      link: null,
-      match: (p) => p.startsWith("/nutrition"),
-    },
-    {
-      label: "Coach",
-      icon: Bot,
-      link: null,
-      match: (p) => p.startsWith("/coach"),
-    },
-    {
-      label: "Settings",
-      icon: Settings,
-      link: null,
-      match: (p) => p.startsWith("/settings"),
-    },
-  ];
-
-  const tos: Array<"/" | "/history" | "/progress" | "/nutrition" | "/coach" | "/settings"> = [
-    "/",
-    "/history",
-    "/progress",
-    "/nutrition",
-    "/coach",
-    "/settings",
-  ];
-
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 px-4"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)" }}
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
       aria-label="Primary"
     >
-      <ul className="glass-strong mx-auto flex max-w-md items-stretch justify-around rounded-2xl px-2 py-1.5 shadow-lg">
-        {items.map((it, idx) => {
+      <ul className="dock mx-auto flex max-w-md items-stretch justify-between rounded-full p-1.5">
+        {ITEMS.map((it) => {
           const active = it.match(pathname);
           const Icon = it.icon;
           return (
-            <li key={it.label} className="flex-1">
-              <NavLink to={tos[idx]} active={active}>
-                  <span
-                    className={cn(
-                      "flex h-9 w-10 items-center justify-center rounded-xl transition-colors",
-                      active && "bg-primary/15",
-                    )}
-                  >
-                  <Icon className="h-5 w-5" />
-                </span>
-                {it.label}
-              </NavLink>
+            <li key={it.to} className="flex-1">
+              <Link
+                to={it.to}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "tap flex h-12 flex-col items-center justify-center gap-0.5 rounded-full text-[10.5px] font-semibold",
+                  active
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="h-[19px] w-[19px]" />
+                <span>{it.label}</span>
+              </Link>
             </li>
           );
         })}
@@ -113,4 +47,3 @@ export function BottomNav() {
     </nav>
   );
 }
-
