@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, ChevronRight, Plus, Flame, Zap, Play } from "lucide-react";
+import { Dumbbell, ChevronRight, Plus, Flame, Zap, Play, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
@@ -304,7 +304,7 @@ function Index() {
                   aria-label={`Edit ${upNext.name}`}
                   className="tap icon-well h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
                 >
-                  <ChevronRight className="h-4 w-4 rotate-90" />
+                  <Pencil className="h-4 w-4" />
                 </Link>
               </div>
               <Link
