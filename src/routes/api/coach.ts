@@ -81,8 +81,8 @@ export const Route = createFileRoute("/api/coach")({
     handlers: {
       POST: async ({ request }) => {
         const key = process.env["LOVABLE_API_KEY"];
-        const supabaseUrl = process.env["SUPABASE_URL"];
-        const publishableKey = process.env["SUPABASE_PUBLISHABLE_KEY"];
+        const supabaseUrl = process.env["SUPABASE_URL"] || import.meta.env.VITE_SUPABASE_URL || "https://oeqwcpnfndatxrmmemyw.supabase.co";
+        const publishableKey = process.env["SUPABASE_PUBLISHABLE_KEY"] || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lcXdjcG5mbmRhdHhybW1lbXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNzM2NzgsImV4cCI6MjA5Mzc0OTY3OH0.YVCEpk4xs6lrbwDURZsx_IgFUchpLGesCaiQm3GPkeY";
         if (!key || !supabaseUrl || !publishableKey)
           return new Response("AI is not configured", { status: 500 });
 
