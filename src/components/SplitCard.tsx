@@ -2,8 +2,6 @@ import { Link } from "@tanstack/react-router";
 import { ChevronRight, Dumbbell, Pencil, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { getSplitAccent } from "@/lib/split-accent";
 import { sharePlan } from "@/lib/share-plan";
 
@@ -16,6 +14,9 @@ type SplitLike = {
   muscle_groups: string[] | null;
 };
 
+const iconBtn =
+  "tap flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground";
+
 export function SplitCard({
   split,
   onDelete,
@@ -27,138 +28,56 @@ export function SplitCard({
   const exCount = Array.isArray(split.exercises) ? (split.exercises as unknown[]).length : 0;
   const muscles = Array.isArray(split.muscle_groups) ? split.muscle_groups : [];
 
-  return (
-    <div
-      className={cn("group relative overflow-hidden rounded-2xl")}
-      style={{
-        border: "1px solid rgba(255,255,255,0.06)",
-        backgroundImage: "linear-gradient(135deg, #161618 0%, #0B0B0C 100%)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      {/* Accent hairline — a thin editorial rule, not a glow */}
-      <div
-        className="absolute inset-y-0 left-0 w-px"
-        style={{ backgroundColor: `color-mix(in oklab, var(--${accent}) 60%, transparent)` }}
-      />
+  const share = () => {
+    const exList = Array.isArray(split.exercises)
+      ? (split.exercises as string[]).map((name) => ({ name, sets: 3 }))
+      : [];
+    sharePlan(
+      { routineName: split.name, exercises: exList },
+      {
+        onCopied: () => toast.success("Plan copied — share it with a friend"),
+        onShared: () => toast.success("Plan shared"),
+        onError: () => toast.error("Couldn't share plan"),
+      },
+    );
+  };
 
-      {/* Top-right actions */}
-      <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+  return (
+    <div className="surface-card overflow-hidden">
+      <Link to="/day/$day" params={{ day: split.id }} className="tap flex items-center gap-3.5 p-4">
+        <div
+          className="icon-well h-11 w-11 shrink-0"
+          style={{
+            backgroundColor: `color-mix(in oklab, var(--${accent}) 14%, transparent)`,
+            color: `var(--${accent})`,
+          }}
+        >
+          <Dumbbell className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h4 className="truncate text-[16px] font-semibold tracking-tight">{split.name}</h4>
+          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+            {exCount} exercises
+            {muscles.length > 0 ? ` · ${muscles.slice(0, 3).join(", ")}` : split.subtitle ? ` · ${split.subtitle}` : ""}
+          </p>
+        </div>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+      </Link>
+      <div className="flex items-center justify-end gap-0.5 border-t border-border px-2 py-1">
+        <button type="button" onClick={share} className={iconBtn} aria-label="Share plan">
+          <Share2 className="h-4 w-4" />
+        </button>
+        <Link to="/custom/$id/edit" params={{ id: split.id }} className={iconBtn} aria-label="Edit">
+          <Pencil className="h-4 w-4" />
+        </Link>
         <button
           type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            onDelete(split.id, split.name);
-          }}
-          className="flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-colors hover:bg-destructive/80"
-          style={{ backgroundColor: "rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.9)" }}
+          onClick={() => onDelete(split.id, split.name)}
+          className={`${iconBtn} hover:text-destructive`}
           aria-label={`Delete ${split.name}`}
         >
           <Trash2 className="h-4 w-4" />
         </button>
-      </div>
-
-      <Link
-        to="/day/$day"
-        params={{ day: split.id }}
-        className="block p-6 pr-14 min-h-[172px]"
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            <Dumbbell
-              className="h-4 w-4"
-              style={{ color: `color-mix(in oklab, var(--${accent}) 80%, #ffffff)` }}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Split
-            </div>
-            <h4 className="mt-1 truncate text-xl font-semibold tracking-tight text-white">
-              {split.name}
-            </h4>
-          </div>
-        </div>
-
-        {/* Muscle pills — flat glass, desaturated, editorial */}
-        {muscles.length > 0 ? (
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {muscles.slice(0, 4).map((m) => (
-              <span
-                key={m}
-                className="flat-glass px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white/80"
-              >
-                {m}
-              </span>
-            ))}
-            {muscles.length > 4 && (
-              <span className="flat-glass px-2 py-0.5 text-[10px] font-medium text-white/60">
-                +{muscles.length - 4}
-              </span>
-            )}
-          </div>
-        ) : split.subtitle ? (
-          <p className="mt-3 truncate text-xs text-muted-foreground">{split.subtitle}</p>
-        ) : null}
-
-        <div className="mt-8 flex items-end justify-between">
-          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            {exCount} exercises
-          </span>
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold text-white",
-              "flat-glass transition-transform active:scale-95 group-hover:translate-x-0.5",
-            )}
-          >
-            Start <ChevronRight className="h-3.5 w-3.5" />
-          </span>
-        </div>
-      </Link>
-
-      {/* Hover-only management actions */}
-      <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7 text-white/70 hover:text-white"
-          onClick={(e) => {
-            e.preventDefault();
-            const exList = Array.isArray(split.exercises)
-              ? (split.exercises as string[]).map((name) => ({ name, sets: 3 }))
-              : [];
-            sharePlan(
-              { routineName: split.name, exercises: exList },
-              {
-                onCopied: () =>
-                  toast.success("Workout Plan copied! Share it with your friends. 🚀"),
-                onShared: () => toast.success("Workout Plan shared! 🚀"),
-                onError: () => toast.error("Couldn't share workout plan"),
-              },
-            );
-          }}
-          aria-label="Share plan"
-        >
-          <Share2 className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          asChild
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7 text-white/70 hover:text-white"
-          aria-label="Edit"
-        >
-          <Link to="/custom/$id/edit" params={{ id: split.id }}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Link>
-        </Button>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, ChevronRight, Plus, Flame, Trash2, Zap } from "lucide-react";
+import { Dumbbell, ChevronRight, Plus, Flame, Zap, Play, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
@@ -265,149 +265,121 @@ function Index() {
     );
   }
 
+  const week = days.slice(-7);
+  const weekCount = week.filter((d) => d.active).length;
+
   return (
     <main className="pb-4">
-      <header className="mx-auto max-w-3xl px-5 pb-5 pt-6">
-        <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMM d")}</p>
-        <h1 className="mt-1 text-3xl">Hi, {firstName}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {streak > 0 ? `${streak}-day streak` : "Ready to train?"}
-          {upNext ? ` · Next up: ${upNext.name}` : ""}
-        </p>
+      <header className="mx-auto max-w-3xl px-5 pb-5 pt-6 animate-fade-in">
+        <p className="text-[13px] font-medium text-muted-foreground">{format(new Date(), "EEEE, MMM d")}</p>
+        <h1 className="mt-1 text-[28px] leading-tight">Hi, {firstName}</h1>
       </header>
 
-      <div className="mx-auto max-w-3xl px-5">
-        {/* Activity strip */}
-        <section className="animate-fade-in-up">
-          <div className="mb-2 flex items-end justify-between">
-            <p className="text-sm font-semibold text-foreground">
-              This week
-            </p>
-            <p className="text-sm text-muted-foreground tabular-nums">
-              {days.filter((d) => d.active).length} sessions
-            </p>
-          </div>
-          <div
-            ref={scrollerRef}
-            onScroll={onScrollerScroll}
-            className="no-scrollbar scroll-gpu -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
-            style={{ scrollPaddingInline: 8 }}
-          >
-            {days.map((d, i) => {
-              const isToday = i === days.length - 1;
-              const split = d.splitId ? (splits ?? []).find((s) => s.id === d.splitId) : null;
-              return (
-                <div
-                  key={d.date.toISOString()}
-                  className="flex w-11 shrink-0 snap-end flex-col items-center gap-1.5"
-                  title={`${format(d.date, "EEE, MMM d")}${split ? ` — ${split.name}` : ""}`}
+      <div className="mx-auto max-w-3xl space-y-4 px-5">
+        {/* Next session hero */}
+        {upNext && (
+          <section className="animate-fade-in-up">
+            <div
+              className="surface-card relative overflow-hidden p-5"
+              style={{ backgroundImage: "var(--gradient-hero)" }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                    <Zap className="h-3 w-3" /> Up next
+                  </span>
+                  <h2 className="mt-3 truncate text-2xl">{upNext.name}</h2>
+                  <p className="mt-1 truncate text-sm text-muted-foreground">
+                    {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
+                    {Array.isArray(upNext.muscle_groups) && upNext.muscle_groups.length > 0
+                      ? ` · ${upNext.muscle_groups.slice(0, 3).join(" · ")}`
+                      : upNext.subtitle
+                        ? ` · ${upNext.subtitle}`
+                        : ""}
+                  </p>
+                </div>
+                <Link
+                  to="/custom/$id/edit"
+                  params={{ id: upNext.id }}
+                  aria-label={`Edit ${upNext.name}`}
+                  className="tap icon-well h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
                 >
-                  <div className="flex h-10 w-full items-end justify-center">
-                    <div
-                      className={cn(
-                        "w-2 rounded-full transition-all",
-                        d.active ? "bg-primary" : "bg-secondary",
-                      )}
-                      style={{ height: d.active ? "100%" : isToday ? "40%" : "28%" }}
-                    />
-                  </div>
-                  <span
+                  <Pencil className="h-4 w-4" />
+                </Link>
+              </div>
+              <Link
+                to="/day/$day"
+                params={{ day: upNext.id }}
+                className="tap mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground"
+              >
+                <Play className="h-4 w-4 fill-current" /> Start workout
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {/* This week */}
+        <section className="surface-card animate-fade-in-up stagger-1 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-semibold">This week</p>
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground tabular-nums">
+              {streak > 0 && <Flame className="h-3.5 w-3.5 text-carbs" />}
+              {streak > 0 ? `${streak}-day streak · ` : ""}
+              {weekCount}/7
+            </span>
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {week.map((d, i) => {
+              const isToday = i === week.length - 1;
+              return (
+                <div key={d.date.toISOString()} className="flex flex-col items-center gap-1.5">
+                  <span className={cn("text-[11px] font-medium", isToday ? "text-foreground" : "text-muted-foreground")}>
+                    {format(d.date, "EEEEE")}
+                  </span>
+                  <div
                     className={cn(
-                      "text-[9px] font-bold uppercase",
-                      isToday ? "text-primary" : "text-muted-foreground",
+                      "flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold tabular-nums transition-colors",
+                      d.active
+                        ? "bg-primary text-primary-foreground"
+                        : isToday
+                          ? "border border-primary/60 text-foreground"
+                          : "bg-secondary text-muted-foreground",
                     )}
                   >
-                    {d.label}
-                  </span>
+                    {format(d.date, "d")}
+                  </div>
                 </div>
               );
             })}
           </div>
         </section>
 
-        {/* Quick actions */}
-        <section className="mt-5 animate-fade-in-up">
-          <Button
-            size="lg"
-            variant="outline"
-            className="w-full font-semibold"
-            onClick={() => setImportOpen(true)}
-          >
-            <Zap className="mr-2 h-4 w-4 text-primary" /> Import a routine
-          </Button>
-        </section>
-
-
-        {/* Up Next — featured session */}
-        {upNext && (
-          <section className="relative mt-5 animate-fade-in-up stagger-1">
-            <button
-              type="button"
-              onClick={() => deleteSplit(upNext.id, upNext.name)}
-              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground transition-colors hover:text-destructive"
-              aria-label={`Delete ${upNext.name}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-            <div className="relative overflow-hidden rounded-xl border border-border bg-card p-5">
-              <div className="relative">
-                <span className="text-xs font-semibold text-primary">
-                  Next session
-                </span>
-                <h2 className="mt-1 text-2xl">
-                  {upNext.name}
-                </h2>
-                <p className="mt-1.5 text-sm text-muted-foreground">
-                  {upNext.subtitle ||
-                    (Array.isArray(upNext.muscle_groups) && upNext.muscle_groups.length > 0
-                      ? upNext.muscle_groups.join(" · ")
-                      : "Your next session in the rotation")}
-                  {" · "}
-                  {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
-                </p>
-
-                <Link
-                  to="/day/$day"
-                  params={{ day: upNext.id }}
-                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3.5 text-primary-foreground transition-transform active:scale-[0.98]"
-                >
-                  <span className="text-base font-semibold">Start workout</span>
-                  <ChevronRight className="h-5 w-5" />
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* My Programs */}
-        <section className="mt-7 animate-fade-in-up stagger-2">
-          <div className="mb-3 flex items-end justify-between">
+        <section className="animate-fade-in-up stagger-2 pt-3">
+          <div className="mb-3 flex items-center justify-between">
             <h3 className="text-lg">My programs</h3>
-            <Link
-              to="/custom/new"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
-            >
-              <Plus className="h-3.5 w-3.5" /> New split
-            </Link>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                className="tap icon-well h-9 w-9 text-muted-foreground hover:text-foreground"
+                aria-label="Import a routine"
+              >
+                <Zap className="h-4 w-4" />
+              </button>
+              <Link
+                to="/custom/new"
+                className="tap inline-flex h-9 items-center gap-1 rounded-xl bg-secondary px-3 text-sm font-semibold text-foreground"
+              >
+                <Plus className="h-4 w-4" /> New
+              </Link>
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             {(splits ?? []).map((s) => (
               <SplitCard key={s.id} split={s} onDelete={deleteSplit} />
             ))}
-
-            <Link
-              to="/custom/new"
-              className="group flex min-h-[172px] items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 p-5 text-center transition-colors hover:border-primary/50"
-            >
-              <div>
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
-                  <Plus className="h-5 w-5 text-primary" />
-                </div>
-                <div className="mt-2 text-sm font-semibold">New split</div>
-                <div className="text-[11px] text-muted-foreground">Build your own day</div>
-              </div>
-            </Link>
           </div>
         </section>
       </div>
