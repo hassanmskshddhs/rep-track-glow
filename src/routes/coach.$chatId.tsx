@@ -404,7 +404,7 @@ function CoachChat({ chatId }: { chatId: string }) {
 
       <div
         className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95"
-        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
+        style={{ bottom: "calc(90px + env(safe-area-inset-bottom))" }}
       >
         <div className="mx-auto max-w-3xl px-4 py-3">
           <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1">

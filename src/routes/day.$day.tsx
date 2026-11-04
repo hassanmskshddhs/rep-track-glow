@@ -542,19 +542,20 @@ function DayPage({ day }: { day: string }) {
           </div>
           <p className="text-sm text-muted-foreground">{config.subtitle}</p>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:max-w-md md:px-0">
           {tabs.map((t) => (
             <Link
               key={t.key}
               to="/day/$day"
               params={{ day: t.key }}
-              className="rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wider spring-transition"
+              className="shrink-0 whitespace-nowrap rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold spring-transition"
               style={{
-                backgroundColor: t.key === day ? `color-mix(in oklab, var(--${t.accent}) 25%, transparent)` : "transparent",
+                backgroundColor: t.key === day ? `color-mix(in oklab, var(--${t.accent}) 18%, transparent)` : "transparent",
+                borderColor: t.key === day ? `color-mix(in oklab, var(--${t.accent}) 45%, transparent)` : undefined,
                 color: t.key === day ? `var(--${t.accent})` : "var(--muted-foreground)",
               }}
             >
-              {t.label}
+              {t.label.length > 22 ? `${t.label.slice(0, 22)}…` : t.label}
             </Link>
           ))}
         </div>
