@@ -27,7 +27,6 @@ const QUICK_PROMPTS = [
   "Supplements actually worth it?",
 ];
 
-const MAX_VIDEO_BYTES = 18 * 1024 * 1024;
 
 async function imageToDataUrl(file: File): Promise<string> {
   const objectUrl = URL.createObjectURL(file);
@@ -170,16 +169,19 @@ function CoachChat({ chatId }: { chatId: string }) {
   const pickVideo = async (files: FileList | null) => {
     const f = files?.[0];
     if (!f) return;
-    if (f.size > MAX_VIDEO_BYTES) {
-      toast.error("Video too large — keep form clips under ~18MB (5-10 seconds).");
-      return;
-    }
+    const id = toast.loading("Reading your set — pulling key frames…");
     try {
-      const url = await fileToDataUrl(f);
-      const att: CoachAttachment = { kind: "video", url, name: f.name };
+      const { videoToContactSheet, FORM_CHECK_PREFIX } = await import("@/lib/video-frames");
+      const sheet = await videoToContactSheet(f);
+      const att: CoachAttachment = {
+        kind: "image",
+        url: sheet.url,
+        name: `${FORM_CHECK_PREFIX} · ${sheet.frames} frames · ${sheet.duration.toFixed(1)}s`,
+      };
       setAttachments((cur) => [...cur, att].slice(0, 4));
+      toast.success("Video ready for form check", { id });
     } catch {
-      toast.error("Couldn't read that video");
+      toast.error("Couldn't read that video — try an MP4 from your camera.", { id });
     }
   };
 
