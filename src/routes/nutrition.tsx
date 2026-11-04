@@ -364,7 +364,7 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
       {/* HEADER */}
-      <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border pb-4 pt-12 px-4">
+      <header className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border pb-4 pt-4 px-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-foreground">
             <ArrowLeft className="h-6 w-6" />
