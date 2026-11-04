@@ -56,7 +56,7 @@ function ProgressApp() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24 font-sans">
-      <header className="px-5 pt-12 pb-4">
+      <header className="px-5 pt-4 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
@@ -406,7 +406,7 @@ function SubViewRouter({ view, onBack, data }: { view: SubView; onBack: () => vo
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24 font-sans animate-in slide-in-from-right-8 duration-300">
-      <header className="px-5 pt-12 pb-4 flex items-center justify-between sticky top-0 bg-background/90 backdrop-blur-md z-10 border-b border-border">
+      <header className="px-5 pt-4 pb-4 flex items-center justify-between sticky top-0 bg-background/90 backdrop-blur-md z-10 border-b border-border">
         <button onClick={onBack} className="flex items-center gap-2 text-foreground">
           <ArrowLeft className="h-6 w-6" />
         </button>

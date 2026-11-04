@@ -312,30 +312,24 @@ function CoachChat({ chatId }: { chatId: string }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col pb-[calc(160px+env(safe-area-inset-bottom))]">
-      <header className="flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-card">
-          <Bot className="h-5 w-5 text-primary" />
+    <div className="flex min-h-[100dvh] flex-col pb-[calc(260px+env(safe-area-inset-bottom))]">
+      <header className="flex min-w-0 items-center gap-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card">
+          <Bot className="h-4 w-4 text-primary" />
         </span>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">IronCoach</h1>
-          <p className="text-xs text-muted-foreground">
-            Training · nutrition · rehab · form checks — بالعربي أو English
-          </p>
+        <div className="min-w-0">
+          <h1 className="text-base font-bold tracking-tight">IronCoach</h1>
+          <p className="truncate text-xs text-muted-foreground">Training · nutrition · form checks</p>
         </div>
       </header>
 
-      <div className="mt-5 flex-1 space-y-4">
+      <div className="mt-4 flex-1 space-y-4">
         {hydrated && messages.length === 0 && (
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Let's get to work
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Ask me anything about lifting, sport performance, nutrition, mobility or injuries.
-              Upload progress photos for a physique breakdown, or a short clip of your squat,
-              deadlift or sprint for a frame-by-frame form and biomechanics check.
+          <div className="flex flex-col items-center px-6 pt-10 text-center">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <p className="mt-3 text-base font-semibold">Let's get to work</p>
+            <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+              Ask anything, or upload a photo or video for a form check.
             </p>
           </div>
         )}
