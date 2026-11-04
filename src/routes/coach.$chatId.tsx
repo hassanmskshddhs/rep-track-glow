@@ -234,11 +234,18 @@ function CoachChat({ chatId }: { chatId: string }) {
                 ? [
                     {
                       type: "text",
-                      text:
-                        m.text ||
-                        (m.attachments.some((a) => a.kind === "video")
-                          ? "Do a frame-by-frame form check on this clip."
-                          : "Analyze these progress photos."),
+                      text: (() => {
+                        const sheets = m.attachments.filter((a) => a.name?.startsWith("Form check"));
+                        const note = sheets.length
+                          ? `\n\n[Attached: ${sheets.map((s) => s.name).join("; ")}. Each image is a contact sheet of evenly spaced keyframes from one workout video, read left-to-right, top-to-bottom; each frame is labeled with its number and timestamp. Treat it as the full video and do a frame-by-frame biomechanics form check, referencing frame numbers.]`
+                          : "";
+                        const base =
+                          m.text ||
+                          (sheets.length || m.attachments.some((a) => a.kind === "video")
+                            ? "Do a frame-by-frame form check on this set."
+                            : "Analyze these progress photos.");
+                        return base + note;
+                      })(),
                     },
                     ...m.attachments
                       .filter((a) => a.url)
