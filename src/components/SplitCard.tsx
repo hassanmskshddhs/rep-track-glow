@@ -1,7 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Dumbbell, Pencil, Share2, Trash2 } from "lucide-react";
+import { Dumbbell, MoreHorizontal, Pencil, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getSplitAccent } from "@/lib/split-accent";
 import { sharePlan } from "@/lib/share-plan";
 
@@ -13,9 +20,6 @@ type SplitLike = {
   exercises: unknown;
   muscle_groups: string[] | null;
 };
-
-const iconBtn =
-  "tap flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground";
 
 export function SplitCard({
   split,
@@ -43,8 +47,12 @@ export function SplitCard({
   };
 
   return (
-    <div className="surface-card overflow-hidden">
-      <Link to="/day/$day" params={{ day: split.id }} className="tap flex items-center gap-3.5 p-4">
+    <div className="surface-card group relative">
+      <Link
+        to="/day/$day"
+        params={{ day: split.id }}
+        className="tap flex items-center gap-3.5 p-4"
+      >
         <div
           className="icon-well h-11 w-11 shrink-0"
           style={{
@@ -58,27 +66,43 @@ export function SplitCard({
           <h4 className="truncate text-[16px] font-semibold tracking-tight">{split.name}</h4>
           <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
             {exCount} exercises
-            {muscles.length > 0 ? ` · ${muscles.slice(0, 3).join(", ")}` : split.subtitle ? ` · ${split.subtitle}` : ""}
+            {muscles.length > 0
+              ? ` · ${muscles.slice(0, 3).join(", ")}`
+              : split.subtitle
+                ? ` · ${split.subtitle}`
+                : ""}
           </p>
         </div>
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="tap flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label={`More options for ${split.name}`}
+              onClick={(e) => e.preventDefault()}
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={share}>
+              <Share2 className="h-4 w-4" /> Share plan
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/custom/$id/edit" params={{ id: split.id }}>
+                <Pencil className="h-4 w-4" /> Edit
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(split.id, split.name)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </Link>
-      <div className="flex items-center justify-end gap-0.5 border-t border-border px-2 py-1">
-        <button type="button" onClick={share} className={iconBtn} aria-label="Share plan">
-          <Share2 className="h-4 w-4" />
-        </button>
-        <Link to="/custom/$id/edit" params={{ id: split.id }} className={iconBtn} aria-label="Edit">
-          <Pencil className="h-4 w-4" />
-        </Link>
-        <button
-          type="button"
-          onClick={() => onDelete(split.id, split.name)}
-          className={`${iconBtn} hover:text-destructive`}
-          aria-label={`Delete ${split.name}`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
     </div>
   );
 }

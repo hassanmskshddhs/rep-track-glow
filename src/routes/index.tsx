@@ -322,18 +322,18 @@ function Index() {
             {week.map((d, i) => {
               const isToday = i === week.length - 1;
               return (
-                <div key={d.date.toISOString()} className="flex flex-col items-center gap-1.5">
+                <div key={d.date.toISOString()} className="flex flex-col items-center gap-2">
                   <span className={cn("text-[11px] font-medium", isToday ? "text-foreground" : "text-muted-foreground")}>
                     {format(d.date, "EEEEE")}
                   </span>
                   <div
                     className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold tabular-nums transition-colors",
+                      "flex h-10 w-full items-center justify-center rounded-xl text-[13px] font-semibold tabular-nums transition-colors",
                       d.active
                         ? "bg-primary text-primary-foreground"
                         : isToday
-                          ? "border border-primary/60 text-foreground"
-                          : "bg-secondary text-muted-foreground",
+                          ? "border border-primary/50 text-foreground"
+                          : "text-muted-foreground",
                     )}
                   >
                     {format(d.date, "d")}
