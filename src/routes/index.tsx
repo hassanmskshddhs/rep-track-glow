@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, ChevronRight, Plus, Flame, Zap, Play, Pencil } from "lucide-react";
+import { Dumbbell, Plus, Flame, Zap, Play, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
@@ -228,14 +228,9 @@ function Index() {
   // Empty state
   if (!splitsLoading && (splits?.length ?? 0) === 0) {
 
-    return (
-      <main className="mx-auto max-w-3xl px-5 py-12 animate-fade-in-up">
-        <div className="glass relative overflow-hidden rounded-3xl p-10 text-center">
-          <div
-            aria-hidden
-            className="absolute -inset-1 -z-10 opacity-60"
-            style={{ background: "var(--gradient-hero)" }}
-          />
+  return (
+    <main className="mx-auto max-w-3xl px-5 py-12 animate-fade-in-up">
+      <div className="glass relative overflow-hidden rounded-3xl p-10 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15 text-primary">
             <Dumbbell className="h-8 w-8" />
           </div>
@@ -279,17 +274,12 @@ function Index() {
         {/* Next session hero */}
         {upNext && (
           <section className="animate-fade-in-up">
-            <div
-              className="surface-card relative overflow-hidden p-5"
-              style={{ backgroundImage: "var(--gradient-hero)" }}
-            >
+            <div className="surface-card p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                    <Zap className="h-3 w-3" /> Up next
-                  </span>
-                  <h2 className="mt-3 truncate text-2xl">{upNext.name}</h2>
-                  <p className="mt-1 truncate text-sm text-muted-foreground">
+                  <p className="text-[12px] font-semibold text-muted-foreground">Up next</p>
+                  <h2 className="mt-2 truncate text-[26px] font-bold tracking-tight">{upNext.name}</h2>
+                  <p className="mt-1.5 truncate text-sm text-muted-foreground">
                     {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
                     {Array.isArray(upNext.muscle_groups) && upNext.muscle_groups.length > 0
                       ? ` · ${upNext.muscle_groups.slice(0, 3).join(" · ")}`
@@ -332,18 +322,18 @@ function Index() {
             {week.map((d, i) => {
               const isToday = i === week.length - 1;
               return (
-                <div key={d.date.toISOString()} className="flex flex-col items-center gap-1.5">
+                <div key={d.date.toISOString()} className="flex flex-col items-center gap-2">
                   <span className={cn("text-[11px] font-medium", isToday ? "text-foreground" : "text-muted-foreground")}>
                     {format(d.date, "EEEEE")}
                   </span>
                   <div
                     className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold tabular-nums transition-colors",
+                      "flex h-10 w-full items-center justify-center rounded-xl text-[13px] font-semibold tabular-nums transition-colors",
                       d.active
                         ? "bg-primary text-primary-foreground"
                         : isToday
-                          ? "border border-primary/60 text-foreground"
-                          : "bg-secondary text-muted-foreground",
+                          ? "border border-primary/50 text-foreground"
+                          : "text-muted-foreground",
                     )}
                   >
                     {format(d.date, "d")}
