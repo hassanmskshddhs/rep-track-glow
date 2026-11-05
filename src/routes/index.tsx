@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, Plus, Flame, Zap, Play, Pencil } from "lucide-react";
+import { Dumbbell, Plus, Flame, Zap, Play, Pencil, History, TrendingUp, Apple, Sparkles } from "lucide-react";
+import heroImg from "@/assets/hero-lift.jpg";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
@@ -270,41 +271,78 @@ function Index() {
         <h1 className="mt-1 text-[28px] leading-tight">Hi, {firstName}</h1>
       </header>
 
-      <div className="mx-auto max-w-3xl space-y-4 px-5">
+      <div className="mx-auto max-w-3xl space-y-6 px-5">
+        {/* Quick categories */}
+        <nav className="grid grid-cols-4 animate-fade-in" aria-label="Quick links">
+          {[
+            { to: "/history", label: "History", Icon: History },
+            { to: "/progress", label: "Progress", Icon: TrendingUp },
+            { to: "/nutrition", label: "Nutrition", Icon: Apple },
+            { to: "/coach", label: "Coach", Icon: Sparkles },
+          ].map(({ to, label, Icon }, i) => (
+            <Link
+              key={to}
+              to={to}
+              className={cn(
+                "tap flex flex-col items-center gap-2 py-1",
+                i > 0 && "border-l border-border",
+              )}
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/12 text-primary">
+                <Icon className="h-[22px] w-[22px]" />
+              </span>
+              <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
+            </Link>
+          ))}
+        </nav>
+
         {/* Next session hero */}
         {upNext && (
           <section className="animate-fade-in-up">
-            <div className="surface-card p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[12px] font-semibold text-muted-foreground">Up next</p>
-                  <h2 className="mt-2 truncate text-[26px] font-bold tracking-tight">{upNext.name}</h2>
-                  <p className="mt-1.5 truncate text-sm text-muted-foreground">
-                    {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
-                    {Array.isArray(upNext.muscle_groups) && upNext.muscle_groups.length > 0
-                      ? ` · ${upNext.muscle_groups.slice(0, 3).join(" · ")}`
-                      : upNext.subtitle
-                        ? ` · ${upNext.subtitle}`
-                        : ""}
-                  </p>
-                </div>
-                <Link
-                  to="/custom/$id/edit"
-                  params={{ id: upNext.id }}
-                  aria-label={`Edit ${upNext.name}`}
-                  className="tap icon-well h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Link>
-              </div>
+            <div className="flex items-center justify-between pb-3">
+              <h2 className="text-lg font-semibold">Up next</h2>
               <Link
-                to="/day/$day"
-                params={{ day: upNext.id }}
-                className="tap mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground"
+                to="/custom/$id/edit"
+                params={{ id: upNext.id }}
+                className="inline-flex items-center gap-1 text-[13px] font-medium text-primary"
               >
-                <Play className="h-4 w-4 fill-current" /> Start workout
+                <Pencil className="h-3.5 w-3.5" /> Edit
               </Link>
             </div>
+            <Link
+              to="/day/$day"
+              params={{ day: upNext.id }}
+              className="tap relative block h-52 overflow-hidden rounded-3xl"
+            >
+              <img
+                src={heroImg}
+                alt=""
+                loading="eager"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+              <span className="absolute right-4 top-4 rounded-full bg-primary px-3 py-1 text-[12px] font-semibold text-primary-foreground">
+                Today
+              </span>
+              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
+                <div className="min-w-0">
+                  <h3 className="truncate text-[26px] font-bold leading-tight tracking-tight">{upNext.name}</h3>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="rounded-full bg-foreground/10 px-2.5 py-1 text-[12px] font-medium backdrop-blur">
+                      {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
+                    </span>
+                    {(upNext.muscle_groups ?? []).slice(0, 2).map((m) => (
+                      <span key={m} className="rounded-full bg-foreground/10 px-2.5 py-1 text-[12px] font-medium capitalize backdrop-blur">
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-label="Start workout">
+                  <Play className="ml-0.5 h-5 w-5 fill-current" />
+                </span>
+              </div>
+            </Link>
           </section>
         )}
 
