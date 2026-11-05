@@ -64,14 +64,16 @@ export function SplitCard({
         </div>
         <div className="min-w-0 flex-1">
           <h4 className="truncate text-[16px] font-semibold tracking-tight">{split.name}</h4>
-          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-            {exCount} exercises
-            {muscles.length > 0
-              ? ` · ${muscles.slice(0, 3).join(", ")}`
-              : split.subtitle
-                ? ` · ${split.subtitle}`
-                : ""}
-          </p>
+          <div className="mt-1.5 flex gap-1.5 overflow-hidden">
+            <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              {exCount} exercises
+            </span>
+            {muscles.slice(0, 2).map((m) => (
+              <span key={m} className="truncate rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium capitalize text-muted-foreground">
+                {m}
+              </span>
+            ))}
+          </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
