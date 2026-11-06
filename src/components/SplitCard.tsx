@@ -71,8 +71,8 @@ export function SplitCard({
               </span>
             )}
           </div>
-          <p className="mt-0.5 truncate text-[13px] capitalize text-muted-foreground">
-            {exCount} exercises{muscles.length ? ` · ${muscles.slice(0, 3).join(", ")}` : ""}
+          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+            {exCount} exercises{muscles.length ? ` · ${muscles.slice(0, 3).map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(", ")}` : ""}
           </p>
         </div>
       </Link>

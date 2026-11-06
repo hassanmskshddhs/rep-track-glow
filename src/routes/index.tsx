@@ -276,7 +276,7 @@ function Index() {
     (s) => new Date(s.performed_at) >= subDays(new Date(), 30),
   ).length;
   const upNextCount = upNext && Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0;
-  const upNextMuscles = (upNext?.muscle_groups ?? []).slice(0, 3).join(" · ");
+  const upNextMuscles = (upNext?.muscle_groups ?? []).slice(0, 3).map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(" · ");
 
   return (
     <main className="mx-auto max-w-3xl px-5 pb-6">
@@ -301,7 +301,7 @@ function Index() {
             </Link>
           </div>
           <h2 className="mt-2 text-[32px] font-extrabold leading-[1.05] tracking-tight">{upNext.name}</h2>
-          <p className="mt-2 text-[14px] capitalize text-muted-foreground">
+          <p className="mt-2 text-[14px] text-muted-foreground">
             {upNextCount} exercises{upNextMuscles ? ` · ${upNextMuscles}` : ""}
           </p>
           <Link
