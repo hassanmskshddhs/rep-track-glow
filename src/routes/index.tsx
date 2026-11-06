@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dumbbell, Plus, Flame, Zap, Play, Pencil, History, TrendingUp, Apple, Sparkles } from "lucide-react";
-import heroImg from "@/assets/hero-lift.jpg";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
@@ -33,6 +32,16 @@ import { resolveDisplayName, useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/")({
   component: Index,
+  head: () => ({
+    meta: [
+      { title: "IronLog | Home" },
+      { name: "description", content: "Your IronLog workout dashboard and training activity." },
+      { property: "og:title", content: "IronLog | Home" },
+      { property: "og:description", content: "Your IronLog workout dashboard and training activity." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
 });
 
 type CustomDay = {
@@ -312,36 +321,27 @@ function Index() {
             <Link
               to="/day/$day"
               params={{ day: upNext.id }}
-              className="tap relative block h-52 overflow-hidden rounded-3xl"
+              className="tap surface-card flex min-h-36 items-center justify-between gap-4 p-5"
             >
-              <img
-                src={heroImg}
-                alt=""
-                loading="eager"
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-              <span className="absolute right-4 top-4 rounded-full bg-primary px-3 py-1 text-[12px] font-semibold text-primary-foreground">
-                Today
-              </span>
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
-                <div className="min-w-0">
-                  <h3 className="truncate text-[26px] font-bold leading-tight tracking-tight">{upNext.name}</h3>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <span className="rounded-full bg-foreground/10 px-2.5 py-1 text-[12px] font-medium backdrop-blur">
-                      {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
-                    </span>
-                    {(upNext.muscle_groups ?? []).slice(0, 2).map((m) => (
-                      <span key={m} className="rounded-full bg-foreground/10 px-2.5 py-1 text-[12px] font-medium capitalize backdrop-blur">
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-label="Start workout">
-                  <Play className="ml-0.5 h-5 w-5 fill-current" />
+              <div className="min-w-0 flex-1">
+                <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                  Today
                 </span>
+                <h3 className="mt-2 truncate text-xl font-semibold">{upNext.name}</h3>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-muted-foreground">
+                    {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
+                  </span>
+                  {(upNext.muscle_groups ?? []).slice(0, 2).map((m) => (
+                    <span key={m} className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium capitalize text-muted-foreground">
+                      {m}
+                    </span>
+                  ))}
+                </div>
               </div>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-label="Start workout">
+                  <Play className="ml-0.5 h-5 w-5 fill-current" />
+              </span>
             </Link>
           </section>
         )}
