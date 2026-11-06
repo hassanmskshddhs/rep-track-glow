@@ -32,6 +32,16 @@ import { resolveDisplayName, useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/")({
   component: Index,
+  head: () => ({
+    meta: [
+      { title: "IronLog | Home" },
+      { name: "description", content: "Your IronLog workout dashboard and training activity." },
+      { property: "og:title", content: "IronLog | Home" },
+      { property: "og:description", content: "Your IronLog workout dashboard and training activity." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
 });
 
 type CustomDay = {
