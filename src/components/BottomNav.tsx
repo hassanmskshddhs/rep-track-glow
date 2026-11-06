@@ -17,11 +17,11 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 px-4"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-xl"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Primary"
     >
-      <ul className="dock mx-auto flex max-w-md items-stretch justify-between rounded-full p-1.5">
+      <ul className="mx-auto flex h-16 max-w-md items-stretch">
         {ITEMS.map((it) => {
           const active = it.match(pathname);
           const Icon = it.icon;
@@ -31,13 +31,12 @@ export function BottomNav() {
                 to={it.to}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "tap flex h-12 flex-col items-center justify-center gap-0.5 rounded-full text-[10.5px] font-semibold",
-                  active
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground",
+                  "tap relative flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold",
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className="h-[19px] w-[19px]" />
+                {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />}
+                <Icon className={cn("h-[22px] w-[22px]", active && "text-primary")} strokeWidth={active ? 2.3 : 1.8} />
                 <span>{it.label}</span>
               </Link>
             </li>

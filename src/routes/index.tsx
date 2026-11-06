@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, Plus, Flame, Zap, Play, Pencil, History, TrendingUp, Apple, Sparkles } from "lucide-react";
+import { Dumbbell, Plus, Zap, Play, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfDay, subDays } from "date-fns";
 import { SplitCard } from "@/components/SplitCard";
@@ -272,147 +272,119 @@ function Index() {
 
   const week = days.slice(-7);
   const weekCount = week.filter((d) => d.active).length;
+  const monthCount = (recent ?? []).filter(
+    (s) => new Date(s.performed_at) >= subDays(new Date(), 30),
+  ).length;
+  const upNextCount = upNext && Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0;
+  const upNextMuscles = (upNext?.muscle_groups ?? []).slice(0, 3).map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(" · ");
 
   return (
-    <main className="pb-4">
-      <header className="mx-auto max-w-3xl px-5 pb-5 pt-6 animate-fade-in">
-        <p className="text-[13px] font-medium text-muted-foreground">{format(new Date(), "EEEE, MMM d")}</p>
-        <h1 className="mt-1 text-[28px] leading-tight">Hi, {firstName}</h1>
+    <main className="mx-auto max-w-3xl px-5 pb-6">
+      {/* Greeting */}
+      <header className="pt-5 animate-fade-in">
+        <p className="text-[13px] font-medium text-muted-foreground">{format(new Date(), "EEEE, d MMMM")}</p>
+        <h1 className="mt-1 text-[26px] font-bold leading-tight tracking-tight">Hi, {firstName}</h1>
       </header>
 
-      <div className="mx-auto max-w-3xl space-y-6 px-5">
-        {/* Quick categories */}
-        <nav className="grid grid-cols-4 animate-fade-in" aria-label="Quick links">
-          {[
-            { to: "/history", label: "History", Icon: History },
-            { to: "/progress", label: "Progress", Icon: TrendingUp },
-            { to: "/nutrition", label: "Nutrition", Icon: Apple },
-            { to: "/coach", label: "Coach", Icon: Sparkles },
-          ].map(({ to, label, Icon }, i) => (
+      {/* Today */}
+      {upNext && (
+        <section className="mt-6 rounded-[28px] border border-border bg-card p-6 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-primary">Today</span>
             <Link
-              key={to}
-              to={to}
-              className={cn(
-                "tap flex flex-col items-center gap-2 py-1",
-                i > 0 && "border-l border-border",
-              )}
+              to="/custom/$id/edit"
+              params={{ id: upNext.id }}
+              className="tap flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="Edit workout"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/12 text-primary">
-                <Icon className="h-[22px] w-[22px]" />
-              </span>
-              <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
+              <Pencil className="h-4 w-4" />
             </Link>
+          </div>
+          <h2 className="mt-2 text-[32px] font-extrabold leading-[1.05] tracking-tight">{upNext.name}</h2>
+          <p className="mt-2 text-[14px] text-muted-foreground">
+            {upNextCount} exercises{upNextMuscles ? ` · ${upNextMuscles}` : ""}
+          </p>
+          <Link
+            to="/day/$day"
+            params={{ day: upNext.id }}
+            className="tap mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[16px] font-bold text-primary-foreground"
+          >
+            <Play className="h-4 w-4 fill-current" /> Start workout
+          </Link>
+        </section>
+      )}
+
+      {/* Stats */}
+      <section className="mt-4 grid grid-cols-3 divide-x divide-border rounded-[24px] border border-border bg-card py-4 animate-fade-in">
+        {[
+          { v: `${weekCount}`, suffix: "/7", l: "This week" },
+          { v: `${streak}`, suffix: streak === 1 ? " day" : " days", l: "Streak" },
+          { v: `${monthCount}`, suffix: "", l: "Last 30 days" },
+        ].map((x) => (
+          <div key={x.l} className="px-3 text-center">
+            <p className="text-[24px] font-extrabold tabular-nums leading-none">
+              {x.v}
+              <span className="text-[13px] font-semibold text-muted-foreground">{x.suffix}</span>
+            </p>
+            <p className="mt-1.5 text-[12px] font-medium text-muted-foreground">{x.l}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* Week strip */}
+      <section className="mt-4 flex justify-between px-1 animate-fade-in" aria-label="This week">
+        {week.map((d, i) => {
+          const isToday = i === week.length - 1;
+          return (
+            <div key={d.date.toISOString()} className="flex flex-col items-center gap-2">
+              <span className={cn("text-[11px] font-semibold", isToday ? "text-foreground" : "text-muted-foreground")}>
+                {format(d.date, "EEEEE")}
+              </span>
+              <span
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums",
+                  d.active
+                    ? "bg-primary text-primary-foreground"
+                    : isToday
+                      ? "ring-1 ring-foreground/40 text-foreground"
+                      : "text-muted-foreground",
+                )}
+              >
+                {format(d.date, "d")}
+              </span>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* Programs */}
+      <section className="mt-9 animate-fade-in">
+        <div className="mb-3 flex items-end justify-between">
+          <h3 className="text-[20px] font-bold tracking-tight">My programs</h3>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="tap flex h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <Zap className="h-4 w-4" /> Import
+            </button>
+            <Link
+              to="/custom/new"
+              className="tap flex h-10 items-center gap-1 rounded-full bg-secondary px-4 text-[13px] font-semibold text-foreground"
+            >
+              <Plus className="h-4 w-4" /> New
+            </Link>
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-[24px] border border-border bg-card divide-y divide-border">
+          {(splits ?? []).map((s, i) => (
+            <SplitCard key={s.id} split={s} index={i} isNext={s.id === upNext?.id} onDelete={deleteSplit} />
           ))}
-        </nav>
+        </div>
+      </section>
 
-        {/* Next session hero */}
-        {upNext && (
-          <section className="animate-fade-in-up">
-            <div className="flex items-center justify-between pb-3">
-              <h2 className="text-lg font-semibold">Up next</h2>
-              <Link
-                to="/custom/$id/edit"
-                params={{ id: upNext.id }}
-                className="inline-flex items-center gap-1 text-[13px] font-medium text-primary"
-              >
-                <Pencil className="h-3.5 w-3.5" /> Edit
-              </Link>
-            </div>
-            <Link
-              to="/day/$day"
-              params={{ day: upNext.id }}
-              className="tap surface-card flex min-h-36 items-center justify-between gap-4 p-5"
-            >
-              <div className="min-w-0 flex-1">
-                <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                  Today
-                </span>
-                <h3 className="mt-2 truncate text-xl font-semibold">{upNext.name}</h3>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium text-muted-foreground">
-                    {Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0} exercises
-                  </span>
-                  {(upNext.muscle_groups ?? []).slice(0, 2).map((m) => (
-                    <span key={m} className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-medium capitalize text-muted-foreground">
-                      {m}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-label="Start workout">
-                  <Play className="ml-0.5 h-5 w-5 fill-current" />
-              </span>
-            </Link>
-          </section>
-        )}
-
-        {/* This week */}
-        <section className="surface-card animate-fade-in-up stagger-1 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-semibold">This week</p>
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground tabular-nums">
-              {streak > 0 && <Flame className="h-3.5 w-3.5 text-carbs" />}
-              {streak > 0 ? `${streak}-day streak · ` : ""}
-              {weekCount}/7
-            </span>
-          </div>
-          <div className="grid grid-cols-7 gap-1.5">
-            {week.map((d, i) => {
-              const isToday = i === week.length - 1;
-              return (
-                <div key={d.date.toISOString()} className="flex flex-col items-center gap-2">
-                  <span className={cn("text-[11px] font-medium", isToday ? "text-foreground" : "text-muted-foreground")}>
-                    {format(d.date, "EEEEE")}
-                  </span>
-                  <div
-                    className={cn(
-                      "flex h-10 w-full items-center justify-center rounded-xl text-[13px] font-semibold tabular-nums transition-colors",
-                      d.active
-                        ? "bg-primary text-primary-foreground"
-                        : isToday
-                          ? "border border-primary/50 text-foreground"
-                          : "text-muted-foreground",
-                    )}
-                  >
-                    {format(d.date, "d")}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* My Programs */}
-        <section className="animate-fade-in-up stagger-2 pt-3">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-lg">My programs</h3>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setImportOpen(true)}
-                className="tap icon-well h-9 w-9 text-muted-foreground hover:text-foreground"
-                aria-label="Import a routine"
-              >
-                <Zap className="h-4 w-4" />
-              </button>
-              <Link
-                to="/custom/new"
-                className="tap inline-flex h-9 items-center gap-1 rounded-xl bg-secondary px-3 text-sm font-semibold text-foreground"
-              >
-                <Plus className="h-4 w-4" /> New
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(splits ?? []).map((s) => (
-              <SplitCard key={s.id} split={s} onDelete={deleteSplit} />
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <footer className="mt-10 border-t border-border/60 px-5 py-6 text-center text-xs text-muted-foreground">
+      <footer className="mt-10 text-center text-xs text-muted-foreground">
         <Link to="/progressive-overload-tracker" className="hover:text-foreground">
           How IronLog tracks progressive overload
         </Link>
@@ -421,4 +393,3 @@ function Index() {
     </main>
   );
 }
-
