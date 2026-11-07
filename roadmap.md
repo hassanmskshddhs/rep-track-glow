@@ -8,3 +8,4 @@
 - [x] Dashboard: QuickImportDialog lazy-loaded
 - [x] Missing animation utilities added (spring-transition, press-on-tap, animate-check-pop, animate-pr-pulse); --success/macro tokens added
 - [x] Dialog a11y warning fixed; console sweep across all routes = zero errors/warnings
+- [ ] Rebuild Progress, Nutrition, and Coach screens to match the new Home structure; verify mobile layouts and visual consistency
