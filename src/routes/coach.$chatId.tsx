@@ -10,7 +10,12 @@ import { useProfile } from "@/lib/profile";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { getThread, saveMessages, type CoachAttachment, type CoachMessage } from "@/lib/coach-chats";
+import {
+  getThread,
+  saveMessages,
+  type CoachAttachment,
+  type CoachMessage,
+} from "@/lib/coach-chats";
 import { sanitizeText } from "@/lib/sanitize";
 
 export const Route = createFileRoute("/coach/$chatId")({
@@ -26,7 +31,6 @@ const QUICK_PROMPTS = [
   "My shoulder hurts — what now?",
   "Supplements actually worth it?",
 ];
-
 
 async function imageToDataUrl(file: File): Promise<string> {
   const objectUrl = URL.createObjectURL(file);
@@ -235,7 +239,9 @@ function CoachChat({ chatId }: { chatId: string }) {
                     {
                       type: "text",
                       text: (() => {
-                        const sheets = m.attachments.filter((a) => a.name?.startsWith("Form check"));
+                        const sheets = m.attachments.filter((a) =>
+                          a.name?.startsWith("Form check"),
+                        );
                         const note = sheets.length
                           ? `\n\n[Attached: ${sheets.map((s) => s.name).join("; ")}. Each image is a contact sheet of evenly spaced keyframes from one workout video, read left-to-right, top-to-bottom; each frame is labeled with its number and timestamp. Treat it as the full video and do a frame-by-frame biomechanics form check, referencing frame numbers.]`
                           : "";
@@ -321,14 +327,16 @@ function CoachChat({ chatId }: { chatId: string }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col pb-[calc(260px+env(safe-area-inset-bottom))]">
-      <header className="flex min-w-0 items-center gap-2.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card">
-          <Bot className="h-4 w-4 text-primary" />
+    <div className="flex min-h-[100dvh] flex-col pb-[calc(260px+env(safe-area-inset-bottom))] animate-fade-in">
+      <header className="flex min-w-0 items-center gap-2.5 pt-1">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[24px] border border-border bg-card">
+          <Bot className="h-5 w-5 text-primary" />
         </span>
         <div className="min-w-0">
-          <h1 className="text-base font-bold tracking-tight">IronCoach</h1>
-          <p className="truncate text-xs text-muted-foreground">Training · nutrition · form checks</p>
+          <h1 className="text-[20px] font-bold tracking-tight">IronCoach</h1>
+          <p className="truncate text-[13px] text-muted-foreground">
+            Training · nutrition · form checks
+          </p>
         </div>
       </header>
 
@@ -429,9 +437,17 @@ function CoachChat({ chatId }: { chatId: string }) {
               {attachments.map((a, i) => (
                 <div key={i} className="relative">
                   {a.kind === "video" ? (
-                    <video src={a.url} className="h-14 w-20 rounded-lg bg-black object-cover" muted />
+                    <video
+                      src={a.url}
+                      className="h-14 w-20 rounded-lg bg-black object-cover"
+                      muted
+                    />
                   ) : (
-                    <img src={a.url} alt="Upload preview" className="h-14 w-12 rounded-lg object-cover" />
+                    <img
+                      src={a.url}
+                      alt="Upload preview"
+                      className="h-14 w-12 rounded-lg object-cover"
+                    />
                   )}
                   <button
                     type="button"

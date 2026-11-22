@@ -30,7 +30,8 @@ export const Route = createFileRoute("/coach")({
       { property: "og:title", content: "IronCoach — AI Fitness & Performance Coach" },
       {
         property: "og:description",
-        content: "Video form checks, physique analysis and elite coaching built on your own workout history.",
+        content:
+          "Video form checks, physique analysis and elite coaching built on your own workout history.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -142,8 +143,8 @@ function CoachLayout() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 pt-6">
-      <aside className="sticky top-6 hidden h-[calc(100dvh-9rem)] w-64 shrink-0 rounded-2xl border border-border bg-background/40 py-3 lg:flex lg:flex-col">
+    <div className="mx-auto flex w-full max-w-3xl gap-6 px-5 pt-5 animate-fade-in">
+      <aside className="sticky top-6 hidden h-[calc(100dvh-9rem)] w-64 shrink-0 rounded-[24px] border border-border bg-card py-3 lg:flex lg:flex-col">
         <div className="flex items-center gap-2 px-4 pb-3">
           <Bot className="h-4 w-4 text-primary" />
           <span className="text-sm font-bold tracking-tight">Chat history</span>
