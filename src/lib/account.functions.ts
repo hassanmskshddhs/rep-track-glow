@@ -14,6 +14,7 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
       "workout_sessions",
       "exercise_notes",
       "custom_workout_days",
+      "body_measurements",
       "ai_usage_events",
     ] as const) {
       const { error } = await supabaseAdmin.from(table).delete().eq("user_id", userId);
