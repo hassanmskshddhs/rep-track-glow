@@ -44,7 +44,11 @@ export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
       { title: "Settings — IronLog" },
-      { name: "description", content: "Manage your IronLog profile, body metrics, theme preferences, and account options." },
+      {
+        name: "description",
+        content:
+          "Manage your IronLog profile, body metrics, theme preferences, and account options.",
+      },
     ],
   }),
 });
@@ -163,6 +167,12 @@ function SettingsPage() {
         <ArrowLeft className="mr-1 h-4 w-4" /> Home
       </Link>
       <h1 className="mt-3 text-3xl font-extrabold tracking-tight md:text-4xl">Settings</h1>
+      <Link
+        to="/coach"
+        className="mt-5 flex min-h-14 items-center justify-between rounded-xl border border-border bg-card px-4 text-sm text-primary"
+      >
+        Coach & saved conversations<span>→</span>
+      </Link>
 
       <section className="mt-5 glass rounded-2xl p-5">
         <div className="flex items-center gap-3">
@@ -179,7 +189,7 @@ function SettingsPage() {
       </section>
 
       <section className="mt-4 glass rounded-2xl p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-bold">Profile</h2>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Saved on device
@@ -253,11 +263,11 @@ function SettingsPage() {
       </section>
 
       <section className="mt-4 glass rounded-2xl p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-bold">Appearance</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Switch between Obsidian dark mode and Studio light mode.
+              Switch between FORGED dark and light mode.
             </p>
           </div>
         </div>
@@ -294,9 +304,8 @@ function SettingsPage() {
           <Shield className="h-3.5 w-3.5" /> Privacy
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your splits and logs are private to your account. Profile info is stored
-          only on this device. The app caches your data locally so it works
-          offline after first load.
+          Your splits and logs are private to your account. Profile info is stored only on this
+          device. The app caches your data locally so it works offline after first load.
         </p>
       </section>
 
@@ -311,7 +320,11 @@ function SettingsPage() {
           <Button variant="outline" className="flex-1 font-semibold" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" /> Export Backup
           </Button>
-          <Button variant="outline" className="flex-1 font-semibold" onClick={() => fileInputRef.current?.click()}>
+          <Button
+            variant="outline"
+            className="flex-1 font-semibold"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <Upload className="mr-2 h-4 w-4" /> Import Backup
           </Button>
           <input
@@ -323,8 +336,12 @@ function SettingsPage() {
           />
         </div>
         <div className="mt-3">
-          <Button variant="secondary" className="w-full font-semibold text-xs" onClick={handleResetDefaultRoutines}>
-            <RotateCcw className="mr-2 h-4 w-4" /> Restore Default Routines (Push · Pull · Legs · Upper)
+          <Button
+            variant="secondary"
+            className="h-auto min-h-11 w-full whitespace-normal font-semibold text-xs"
+            onClick={handleResetDefaultRoutines}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" /> Restore default routines
           </Button>
         </div>
       </section>
@@ -350,8 +367,8 @@ function SettingsPage() {
           <Trash2 className="h-3.5 w-3.5" /> Danger zone
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Permanently delete your account, every workout session, set log, note and
-          custom split. This cannot be undone.
+          Permanently delete your account, every workout session, set log, note and custom split.
+          This cannot be undone.
         </p>
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -363,8 +380,8 @@ function SettingsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete your account?</AlertDialogTitle>
               <AlertDialogDescription>
-                This permanently erases your account and all training data. There is no
-                way to recover it.
+                This permanently erases your account and all training data. There is no way to
+                recover it.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

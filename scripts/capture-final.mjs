@@ -1,0 +1,18 @@
+import { chromium } from 'playwright';
+const b=await chromium.launch({executablePath:'/usr/bin/google-chrome-stable',args:['--no-sandbox']});
+const c=await b.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});
+// All browser test writes are on this isolated localhost origin, with no account.
+const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
+for(const [route,name] of [['/','Train'],['/plan','Plan'],['/progress','Progress-signin'],['/nutrition','Fuel-setup']]){await p.goto('http://localhost:8081'+route);await p.waitForTimeout(1000);if(route==='/')await p.getByRole('heading',{name:'Your next rep.'}).waitFor();if(route==='/plan')await p.getByRole('heading',{name:'Your routines'}).waitFor();await p.screenshot({path:'/downloads/FORGED-built-'+name+'.png'});}
+await p.goto('http://localhost:8081/day/push');await p.getByLabel('Incline DB Press set 1 weight in kilograms').fill('22');await p.getByLabel('Incline DB Press set 1 repetitions').fill('10');await p.getByRole('button',{name:'Complete set and start rest'}).click();await p.getByRole('button',{name:'Start Workout',exact:true}).click();await p.waitForTimeout(500);await p.screenshot({path:'/downloads/FORGED-built-Logger.png'});
+await p.getByRole('button',{name:'Review session',exact:true}).click();await p.getByRole('heading',{name:'Session review'}).waitFor();await p.waitForTimeout(300);await p.screenshot({path:'/downloads/FORGED-built-Review.png'});await p.getByRole('button',{name:'Keep training'}).click();
+await p.getByLabel('Incline DB Press set 1 weight in kilograms').fill('9999');await p.getByRole('button',{name:'Review session',exact:true}).click();await p.getByRole('button',{name:'Save workout',exact:true}).click();await p.getByText('Invalid input for Incline DB Press').waitFor();await p.getByRole('button',{name:'Keep training'}).click();
+await p.getByLabel('Incline DB Press set 1 weight in kilograms').fill('22');
+// A different routine must not steal the active routine pointer.
+await p.goto('http://localhost:8081/day/pull');await p.waitForTimeout(500);const pointer=await p.evaluate(()=>localStorage.getItem('ironlog:active-day:local'));if(pointer!=='push')throw Error('Active pointer stolen');
+await p.goto('http://localhost:8081/');await p.getByRole('link',{name:'Resume Push'}).waitFor();await p.getByRole('link',{name:'Resume Push'}).click();await p.getByRole('button',{name:'Review session',exact:true}).click();await p.getByRole('button',{name:'Save workout',exact:true}).click();await p.waitForTimeout(500);
+const cleared=await p.evaluate(()=>({draft:JSON.parse(localStorage.getItem('ironlog:draft:local:push')||'{}'),pointer:localStorage.getItem('ironlog:active-day:local')}));if(cleared.pointer!==null||cleared.draft['Incline DB Press']?.some(s=>s.weight||s.reps))throw Error('Save did not clear draft');
+// Open meal diary using fixture targets on this browser only. Never call AI or send anything.
+await p.goto('http://localhost:8081/nutrition');await p.evaluate(()=>localStorage.setItem('ironlog_macro_targets',JSON.stringify({calories:2600,protein:160,carbs:310,fat:80,goal:'Gain'})));await p.reload();await p.getByRole('heading',{name:'Fuel',exact:true}).waitFor();await p.waitForTimeout(500);await p.screenshot({path:'/downloads/FORGED-built-Fuel-diary-fixture.png'});
+await p.setViewportSize({width:1280,height:900});await p.goto('http://localhost:8081/');await p.waitForTimeout(700);await p.screenshot({path:'/downloads/FORGED-built-Desktop.png'});
+console.log(JSON.stringify({passed:'Final viewport captures; invalid input retains draft; active-session routing; guest save clears draft; Fuel diary fixture renders',errors},null,2));await b.close();

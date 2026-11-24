@@ -8,6 +8,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useLocation,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -19,7 +20,12 @@ import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { registerServiceWorker } from "@/lib/pwa";
-import { SessionTimerProvider, useSessionTimer, useElapsedMs, formatElapsed } from "@/lib/session-timer";
+import {
+  SessionTimerProvider,
+  useSessionTimer,
+  useElapsedMs,
+  formatElapsed,
+} from "@/lib/session-timer";
 import { ThemeProvider } from "@/lib/theme";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 
@@ -43,7 +49,6 @@ function NotFoundComponent() {
   );
 }
 
-
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
@@ -51,7 +56,15 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold">Something broke</h1>
         <p className="mt-2 text-sm text-muted-foreground">{(error as Error)?.message}</p>
-        <Button className="mt-6" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+        <Button
+          className="mt-6"
+          onClick={() => {
+            router.invalidate();
+            reset();
+          }}
+        >
+          Try again
+        </Button>
       </div>
     </div>
   );
@@ -61,20 +74,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#000000" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "IronLog" },
       { title: "IronLog — Track. Lift. Repeat." },
-      { name: "description", content: "Personal gym progression tracker — log workouts, track PRs, train offline." },
+      {
+        name: "description",
+        content: "Personal gym progression tracker — log workouts, track PRs, train offline.",
+      },
       { property: "og:title", content: "IronLog — Track. Lift. Repeat." },
       { name: "twitter:title", content: "IronLog — Track. Lift. Repeat." },
-      { property: "og:description", content: "Personal gym progression tracker — log workouts, track PRs, train offline." },
-      { name: "twitter:description", content: "Personal gym progression tracker — log workouts, track PRs, train offline." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2c8bd909-908d-4ef1-b588-88da2e87cefe/id-preview-e83063b7--411e44eb-9d0b-4989-81b3-643f9652b1f4.lovable.app-1778184569735.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2c8bd909-908d-4ef1-b588-88da2e87cefe/id-preview-e83063b7--411e44eb-9d0b-4989-81b3-643f9652b1f4.lovable.app-1778184569735.png" },
+      {
+        property: "og:description",
+        content: "Personal gym progression tracker — log workouts, track PRs, train offline.",
+      },
+      {
+        name: "twitter:description",
+        content: "Personal gym progression tracker — log workouts, track PRs, train offline.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2c8bd909-908d-4ef1-b588-88da2e87cefe/id-preview-e83063b7--411e44eb-9d0b-4989-81b3-643f9652b1f4.lovable.app-1778184569735.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2c8bd909-908d-4ef1-b588-88da2e87cefe/id-preview-e83063b7--411e44eb-9d0b-4989-81b3-643f9652b1f4.lovable.app-1778184569735.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
       { name: "google-site-verification", content: "eCnczcLJTcrYxREd_llJRc2wo15WN-6T1FxVuUDhRDs" },
@@ -102,7 +132,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <head><HeadContent /></head>
+      <head>
+        <HeadContent />
+      </head>
       <body>
         {children}
         <Scripts />
@@ -152,7 +184,14 @@ function Header() {
     >
       <div className="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-5">
         <Link to="/" className="tap flex items-center gap-2">
-          <span className="text-[18px] font-extrabold tracking-tight">Iron<span className="text-primary">Log</span></span>
+          <span
+            aria-hidden="true"
+            style={{ color: "var(--brand)" }}
+            className="text-xl font-extrabold"
+          >
+            Ⅱ
+          </span>
+          <span className="text-[18px] font-extrabold tracking-tight">IRONLOG</span>
         </Link>
         <div className="flex items-center gap-2">
           <SessionTimerBadge />
@@ -173,9 +212,11 @@ function Header() {
 }
 
 function AppShell() {
+  const { pathname } = useLocation();
+  const focusMode = pathname.startsWith("/day/");
   const { user } = useAuth();
   const { online } = useOfflineSync();
-  
+
   useEffect(() => {
     if (user && online) {
       import("@/lib/db").then((db) => {
@@ -186,11 +227,11 @@ function AppShell() {
 
   return (
     <div className="bg-background text-foreground min-h-screen">
-      <div className="app-scroll-root animate-fade-in has-bottom-nav pb-24">
-        <Header />
+      <div className={focusMode ? "app-scroll-root" : "app-scroll-root has-bottom-nav"}>
+        {!focusMode && <Header />}
         {!online && (
           <div className="bg-muted px-4 py-1.5 text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Offline — your sets are saved on this device
+            Offline. Keep this device open until your workout is saved.
           </div>
         )}
         <Outlet />
@@ -202,9 +243,9 @@ function AppShell() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  useEffect(() => { registerServiceWorker(); }, []);
-
-
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   // Persist the React Query cache to localStorage so the app loads with
   // workouts, history, and progress immediately — even when offline.
@@ -231,7 +272,6 @@ function RootComponent() {
       </QueryClientProvider>
     );
   }
-
 
   return (
     <PersistQueryClientProvider

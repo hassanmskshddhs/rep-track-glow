@@ -45,97 +45,87 @@
   --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ============================================================
-   "Clean Utility" — calm slate surfaces, one blue action color
-   ============================================================ */
+/* FORGED: graphite, mineral mint, restrained ember. */
 :root,
 .dark {
   --radius: 0.75rem;
-
-  --background: #0a0b0f;
-  --foreground: #eef0f3;
-
-  --card: #12141a;
-  --card-foreground: #eef0f3;
-
-  --popover: #161921;
-  --popover-foreground: #eef0f3;
-
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-
-  --secondary: #1b1f27;
-  --secondary-foreground: #d7dbe2;
-
-  --muted: #171a21;
-  --muted-foreground: #8a93a3;
-
-  --accent: #232831;
-  --accent-foreground: #eef0f3;
-
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-
-  --border: rgba(255, 255, 255, 0.07);
-  --input: #2c323c;
-  --ring: #3b82f6;
-
-  --chart-1: #3b82f6;
-  --chart-2: #93c5fd;
-  --chart-3: #8a93a3;
-  --chart-4: #22c55e;
-  --chart-5: #2c323c;
-
-  --success: #10b981;
-  --protein: #60a5fa;
-  --carbs: #f59e0b;
-  --fat: #f87171;
-
-  --push: #3b82f6;
-  --pull: #22c55e;
-  --legs: #f59e0b;
-  --upper: #a78bfa;
-
-  --gradient-hero: linear-gradient(160deg, color-mix(in oklab, #3b82f6 14%, #12141a) 0%, #12141a 60%);
-  --hairline-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-  --shadow-card: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px -18px rgba(0, 0, 0, 0.8);
-  --icon-well: rgba(255, 255, 255, 0.04);
-  --dock: rgba(18, 20, 26, 0.82);
+  --background: #101411;
+  --foreground: #f0f2e9;
+  --card: #1b231e;
+  --card-foreground: #f0f2e9;
+  --popover: #202a23;
+  --popover-foreground: #f0f2e9;
+  --primary: #c8f2cb;
+  --primary-foreground: #101411;
+  --secondary: #29352d;
+  --secondary-foreground: #e2e9df;
+  --muted: #202a23;
+  --muted-foreground: #a5b2a8;
+  --accent: #303e34;
+  --accent-foreground: #f0f2e9;
+  --destructive: #f17d79;
+  --destructive-foreground: #101411;
+  --border: #303b33;
+  --input: #3a493e;
+  --ring: #c8f2cb;
+  --chart-1: #c8f2cb;
+  --chart-2: #ffb092;
+  --chart-3: #a5b2a8;
+  --chart-4: #d7d7aa;
+  --chart-5: #7f9a86;
+  --success: #c8f2cb;
+  --protein: #c8f2cb;
+  --carbs: #dfcca1;
+  --fat: #ffb092;
+  --push: #c8f2cb;
+  --pull: #aec7b4;
+  --legs: #dfcca1;
+  --upper: #ffb092;
+  --brand: #ff8459;
+  --gradient-hero: linear-gradient(#1b231e, #1b231e);
+  --hairline-top: none;
+  --shadow-card: none;
   --shadow-glow: none;
-  --surface-1: #12141a;
-  --surface-2: #12141a;
+  --icon-well: #29352d;
+  --dock: #101411;
+  --surface-1: #202a23;
+  --surface-2: #1b231e;
 }
-
+.light,
 .studio,
 :root.studio {
-  --background: #f6f5f3;
-  --foreground: #121212;
+  --background: #f2f2e9;
+  --foreground: #17231a;
   --card: #ffffff;
-  --card-foreground: #121212;
+  --card-foreground: #17231a;
   --popover: #ffffff;
-  --popover-foreground: #121212;
-  --primary: #2563eb;
+  --popover-foreground: #17231a;
+  --primary: #285d3b;
   --primary-foreground: #ffffff;
-  --secondary: #eef0f3;
-  --secondary-foreground: #1f2430;
-  --muted: #eef0f3;
-  --muted-foreground: #5f6878;
-  --accent: #eef0f3;
-  --accent-foreground: #1f2430;
-  --icon-well: rgba(15, 23, 42, 0.05);
-  --dock: rgba(255, 255, 255, 0.85);
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --hairline-top: none;
-  --border: #e3e6eb;
-  --input: #d9dde3;
-  --ring: #2563eb;
-  --success: #16a34a;
-  --protein: #3b82f6;
-  --carbs: #d97706;
-  --fat: #dc2626;
-  --gradient-hero: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
-  --surface-1: #ffffff;
-  --surface-2: #ffffff;
+  --secondary: #e2e8dd;
+  --secondary-foreground: #243c2a;
+  --muted: #e5eade;
+  --muted-foreground: #57685a;
+  --accent: #dce6d7;
+  --accent-foreground: #17231a;
+  --border: #ced8c9;
+  --input: #becdb8;
+  --ring: #285d3b;
+  --success: #285d3b;
+  --protein: #285d3b;
+  --carbs: #80662b;
+  --fat: #a34f2e;
+  --chart-1: #285d3b;
+  --chart-2: #a34f2e;
+  --chart-3: #57685a;
+  --push: #285d3b;
+  --pull: #466b51;
+  --legs: #80662b;
+  --upper: #a34f2e;
+  --icon-well: #e2e8dd;
+  --dock: #f2f2e9;
+  --surface-1: #fff;
+  --surface-2: #fff;
 }
 
 html {
@@ -255,11 +245,11 @@ h3,
 }
 
 @utility animate-fade-in-up {
-  animation: ilFadeInUp 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: ilFadeIn 0.2s ease-out;
 }
 
 @utility animate-fade-in {
-  animation: ilFadeIn 0.35s ease-out both;
+  animation: ilFadeIn 0.2s ease-out;
 }
 
 @utility stagger-1 {
@@ -371,7 +361,10 @@ h3,
 }
 
 @utility tap {
-  transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 160ms ease, color 160ms ease;
+  transition:
+    transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 160ms ease,
+    color 160ms ease;
   &:active {
     transform: scale(0.97);
   }
@@ -379,4 +372,67 @@ h3,
 
 svg.lucide {
   stroke-width: 1.75;
+}
+
+/* The active logger owns the screen; fixed controls are never nested in a transformed wrapper. */
+.forged-shell {
+  max-width: 1100px;
+  margin-inline: auto;
+}
+.forged-title {
+  font-size: clamp(1.9rem, 5vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+.forged-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.forged-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+}
+.forged-segments {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: var(--card);
+  border-radius: 12px;
+}
+.forged-segments > * {
+  flex: 1;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.forged-segments [aria-current="page"] {
+  background: var(--secondary);
+  color: var(--foreground);
+  font-weight: 700;
+}
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+button,
+a,
+input {
+  touch-action: manipulation;
+}
+@media (min-width: 900px) {
+  .forged-hub-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
 }

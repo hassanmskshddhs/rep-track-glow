@@ -1,7 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, Target, StickyNote, Share2, Trophy, GripVertical, Play, Pencil, Check, X, MoreVertical, Calculator } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Plus,
+  Trash2,
+  RotateCcw,
+  Target,
+  StickyNote,
+  Share2,
+  Trophy,
+  GripVertical,
+  Play,
+  Pencil,
+  Check,
+  X,
+  MoreVertical,
+  Calculator,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Reorder, useDragControls } from "framer-motion";
@@ -32,6 +49,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { platesPerSide, nextSetKind } from "@/lib/plates";
+import { hydrateDraft } from "@/lib/workout-draft";
 import { RestTimer } from "@/components/RestTimer";
 import type { WorkoutSummary } from "@/components/ShareWorkoutDialog";
 const ExerciseChart = lazy(() =>
@@ -57,10 +75,7 @@ import type { ExerciseInsight, SetInput } from "@/types/workout";
 export const Route = createFileRoute("/day/$day")({
   component: DayRoute,
   head: () => ({
-    meta: [
-      { title: "Workout — IronLog" },
-      { name: "description", content: "Log your workout." },
-    ],
+    meta: [{ title: "Workout — IronLog" }, { name: "description", content: "Log your workout." }],
   }),
 });
 
@@ -115,9 +130,7 @@ function buildTarget(
   const topWeight = Math.max(...valid.map((s) => s.weight as number));
   const topSets = valid.filter((s) => s.weight === topWeight);
   const allHit = topSets.every((s) => (s.reps as number) >= range.max);
-  const lastStr = valid
-    .map((s) => `${s.weight}kg × ${s.reps}`)
-    .join("  ·  ");
+  const lastStr = valid.map((s) => `${s.weight}kg × ${s.reps}`).join("  ·  ");
 
   if (allHit) {
     const next = +(topWeight + WEIGHT_INCREMENT).toFixed(2);
@@ -160,6 +173,8 @@ function DayPage({ day }: { day: string }) {
   const [state, setState] = useState<State>({});
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [activeExercise, setActiveExercise] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
   const [summary, setSummary] = useState<WorkoutSummary | null>(null);
   const [order, setOrder] = useState<string[]>([]);
@@ -175,27 +190,20 @@ function DayPage({ day }: { day: string }) {
   // only starts when the user explicitly taps "Start Workout" and stops on
   // "Log Workout" or "Reset".
 
-
   // Hydrate input drafts
   useEffect(() => {
     if (!config || hydrated || typeof window === "undefined" || !draftKey) return;
     let initial: State = Object.fromEntries(
-      config.exercises.map((e) => [e, [{ weight: "", reps: "" }]])
+      config.exercises.map((e) => [e, [{ weight: "", reps: "" }]]),
     );
     try {
       const raw = localStorage.getItem(draftKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as State;
-        initial = Object.fromEntries(
-          config.exercises.map((e) => [
-            e,
-            Array.isArray(parsed?.[e]) && parsed[e].length > 0
-              ? parsed[e].map((r) => ({ weight: String(r?.weight ?? ""), reps: String(r?.reps ?? "") }))
-              : [{ weight: "", reps: "" }],
-          ])
-        );
+        initial = hydrateDraft(config.exercises, JSON.parse(raw));
       }
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
     setState(initial);
     setHydrated(true);
   }, [config, hydrated, draftKey]);
@@ -204,7 +212,9 @@ function DayPage({ day }: { day: string }) {
     if (!hydrated || !draftKey || typeof window === "undefined") return;
     try {
       localStorage.setItem(draftKey, JSON.stringify(state));
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }, [state, hydrated, draftKey]);
 
   // Hydrate / sync local exercise order (user can drag to reorder).
@@ -214,7 +224,9 @@ function DayPage({ day }: { day: string }) {
     try {
       const raw = localStorage.getItem(orderKey);
       if (raw) saved = JSON.parse(raw) as string[];
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
     const valid = saved.filter((e) => config.exercises.includes(e));
     const missing = config.exercises.filter((e) => !valid.includes(e));
     setOrder([...valid, ...missing]);
@@ -222,9 +234,12 @@ function DayPage({ day }: { day: string }) {
 
   useEffect(() => {
     if (!orderKey || order.length === 0 || typeof window === "undefined") return;
-    try { localStorage.setItem(orderKey, JSON.stringify(order)); } catch { /* noop */ }
+    try {
+      localStorage.setItem(orderKey, JSON.stringify(order));
+    } catch {
+      /* noop */
+    }
   }, [order, orderKey]);
-
 
   const { data: customDays } = useSplitSummaries();
 
@@ -246,125 +261,164 @@ function DayPage({ day }: { day: string }) {
     setNotesHydrated(true);
   }, [remoteNotes, notesHydrated]);
 
-
   const resetInputs = () => {
-    if (!confirm("Clear all current inputs and stop the timer? This won't affect saved history.")) return;
+    if (!confirm("Clear all current inputs and stop the timer? This won't affect saved history."))
+      return;
     setState(Object.fromEntries(config!.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
     if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
     sessionTimer.stop();
+    try {
+      localStorage.removeItem(`ironlog:active-day:${user?.id || "local"}`);
+    } catch {
+      /* unavailable */
+    }
     toast.success("Session reset");
   };
 
+  const update = useCallback(
+    (ex: string, idx: number, field: keyof SetRow, value: string | boolean) =>
+      setState((s) => ({
+        ...s,
+        [ex]: (s[ex] ?? [{ weight: "", reps: "" }]).map((r, i) =>
+          i === idx ? { ...r, [field]: value } : r,
+        ),
+      })),
+    [],
+  );
 
-  const update = useCallback((ex: string, idx: number, field: keyof SetRow, value: string | boolean) =>
-    setState((s) => ({
-      ...s,
-      [ex]: (s[ex] ?? [{ weight: "", reps: "" }]).map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
-    })), []);
+  const addSet = useCallback(
+    (ex: string) => setState((s) => ({ ...s, [ex]: [...(s[ex] ?? []), { weight: "", reps: "" }] })),
+    [],
+  );
 
-  const addSet = useCallback((ex: string) =>
-    setState((s) => ({ ...s, [ex]: [...(s[ex] ?? []), { weight: "", reps: "" }] })), []);
-
-  const removeSet = useCallback((ex: string, idx: number) =>
-    setState((s) => ({
-      ...s,
-      [ex]: (s[ex] ?? []).length > 1 ? s[ex].filter((_, i) => i !== idx) : s[ex] ?? [{ weight: "", reps: "" }],
-    })), []);
+  const removeSet = useCallback(
+    (ex: string, idx: number) =>
+      setState((s) => ({
+        ...s,
+        [ex]:
+          (s[ex] ?? []).length > 1
+            ? s[ex].filter((_, i) => i !== idx)
+            : (s[ex] ?? [{ weight: "", reps: "" }]),
+      })),
+    [],
+  );
 
   const setNote = useCallback((ex: string, value: string) => {
     setNotes((n) => ({ ...n, [ex]: value }));
   }, []);
 
-  const renameExercise = useCallback(async (oldName: string, rawNew: string) => {
-    const newName = rawNew.trim();
-    if (!newName || newName === oldName) return;
-    if (!config) return;
-    if (config.exercises.includes(newName)) {
-      toast.error("That name is already in this workout.");
-      return;
-    }
-    // Persist to DB — update the custom routine so it sticks across sessions.
-    try {
-      const updated = config.exercises.map((e) => (e === oldName ? newName : e));
+  const renameExercise = useCallback(
+    async (oldName: string, rawNew: string) => {
+      const newName = rawNew.trim();
+      if (!newName || newName === oldName) return;
+      if (!config) return;
+      if (config.exercises.includes(newName)) {
+        toast.error("That name is already in this workout.");
+        return;
+      }
+      // Persist to DB — update the custom routine so it sticks across sessions.
+      try {
+        const updated = config.exercises.map((e) => (e === oldName ? newName : e));
+        await db.updateCustomDay(day, { exercises: updated }, user?.id);
+      } catch (e) {
+        console.warn("rename persist failed", e);
+        toast.error("Couldn't save the new name");
+        return;
+      }
+      // Update in-session caches keyed by exercise name
+      setState((s) => {
+        if (!(oldName in s)) return s;
+        const { [oldName]: v, ...rest } = s;
+        return { ...rest, [newName]: v };
+      });
+      setOrder((o) => o.map((e) => (e === oldName ? newName : e)));
+      setNotes((n) => {
+        if (!(oldName in n)) return n;
+        const { [oldName]: v, ...rest } = n;
+        return { ...rest, [newName]: v };
+      });
+      // Refresh caches that hold the old name
+      queryClient.invalidateQueries({ queryKey: qk.split(user?.id, day) });
+      queryClient.invalidateQueries({ queryKey: qk.historyWindow(user?.id, day) });
+      toast.success("Exercise renamed");
+    },
+    [config, day, queryClient],
+  );
+
+  const persistExercises = useCallback(
+    async (updated: string[]) => {
       await db.updateCustomDay(day, { exercises: updated }, user?.id);
-    } catch (e) {
-      console.warn("rename persist failed", e);
-      toast.error("Couldn't save the new name");
-      return;
-    }
-    // Update in-session caches keyed by exercise name
-    setState((s) => {
-      if (!(oldName in s)) return s;
-      const { [oldName]: v, ...rest } = s;
-      return { ...rest, [newName]: v };
-    });
-    setOrder((o) => o.map((e) => (e === oldName ? newName : e)));
-    setNotes((n) => {
-      if (!(oldName in n)) return n;
-      const { [oldName]: v, ...rest } = n;
-      return { ...rest, [newName]: v };
-    });
-    // Refresh caches that hold the old name
-    queryClient.invalidateQueries({ queryKey: qk.split(user?.id, day) });
-    queryClient.invalidateQueries({ queryKey: qk.historyWindow(user?.id, day) });
-    toast.success("Exercise renamed");
-  }, [config, day, queryClient]);
+      queryClient.invalidateQueries({ queryKey: qk.split(user?.id, day) });
+      queryClient.invalidateQueries({ queryKey: qk.historyWindow(user?.id, day) });
+    },
+    [day, queryClient],
+  );
 
-  const persistExercises = useCallback(async (updated: string[]) => {
-    await db.updateCustomDay(day, { exercises: updated }, user?.id);
-    queryClient.invalidateQueries({ queryKey: qk.split(user?.id, day) });
-    queryClient.invalidateQueries({ queryKey: qk.historyWindow(user?.id, day) });
-  }, [day, queryClient]);
+  const removeExercise = useCallback(
+    async (name: string) => {
+      if (!config) return;
+      const updated = config.exercises.filter((e) => e !== name);
+      try {
+        await persistExercises(updated);
+      } catch {
+        toast.error("Couldn't remove that exercise");
+        return;
+      }
+      setOrder((o) => o.filter((e) => e !== name));
+      setState((s) => {
+        const { [name]: _drop, ...rest } = s;
+        return rest;
+      });
+      setNotes((n) => {
+        const { [name]: _dropNote, ...rest } = n;
+        return rest;
+      });
+      toast.success(`Removed ${name}`);
+    },
+    [config, persistExercises],
+  );
 
-  const removeExercise = useCallback(async (name: string) => {
-    if (!config) return;
-    const updated = config.exercises.filter((e) => e !== name);
-    try {
-      await persistExercises(updated);
-    } catch {
-      toast.error("Couldn't remove that exercise");
-      return;
-    }
-    setOrder((o) => o.filter((e) => e !== name));
-    setState((s) => {
-      const { [name]: _drop, ...rest } = s;
-      return rest;
-    });
-    setNotes((n) => {
-      const { [name]: _dropNote, ...rest } = n;
-      return rest;
-    });
-    toast.success(`Removed ${name}`);
-  }, [config, persistExercises]);
-
-  const addExercises = useCallback(async (names: string[]) => {
-    if (!config) return;
-    const fresh = names.filter((n) => !config.exercises.includes(n));
-    if (fresh.length === 0) {
+  const addExercises = useCallback(
+    async (names: string[]) => {
+      if (!config) return;
+      const fresh = names.filter((n) => !config.exercises.includes(n));
+      if (fresh.length === 0) {
+        setAddOpen(false);
+        return;
+      }
+      const updated = [...config.exercises, ...fresh];
+      try {
+        await persistExercises(updated);
+      } catch {
+        toast.error("Couldn't add those exercises");
+        return;
+      }
+      setOrder((o) => [...o, ...fresh]);
+      setState((s) => ({
+        ...s,
+        ...Object.fromEntries(fresh.map((n) => [n, [{ weight: "", reps: "" }]])),
+      }));
+      setAddSelection([]);
       setAddOpen(false);
-      return;
-    }
-    const updated = [...config.exercises, ...fresh];
-    try {
-      await persistExercises(updated);
-    } catch {
-      toast.error("Couldn't add those exercises");
-      return;
-    }
-    setOrder((o) => [...o, ...fresh]);
-    setState((s) => ({
-      ...s,
-      ...Object.fromEntries(fresh.map((n) => [n, [{ weight: "", reps: "" }]])),
-    }));
-    setAddSelection([]);
-    setAddOpen(false);
-    toast.success(fresh.length === 1 ? `Added ${fresh[0]}` : `Added ${fresh.length} exercises`);
-  }, [config, persistExercises]);
+      toast.success(fresh.length === 1 ? `Added ${fresh[0]}` : `Added ${fresh.length} exercises`);
+    },
+    [config, persistExercises],
+  );
 
   const totalSets = Object.values(state).reduce(
     (a, sets) => a + (sets ?? []).filter((s) => s.weight || s.reps).length,
-    0
+    0,
   );
+
+  useEffect(() => {
+    if (!totalSets || saving) return;
+    const protect = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", protect);
+    return () => window.removeEventListener("beforeunload", protect);
+  }, [totalSets, saving]);
 
   const saveNote = async (ex: string, value: string) => {
     const trimmed = value.trim();
@@ -377,97 +431,110 @@ function DayPage({ day }: { day: string }) {
   };
 
   const logWorkout = async () => {
-    const rows: { exercise_name: string; set_number: number; weight: number | null; reps: number | null }[] = [];
-    for (const ex of config!.exercises) {
-      const sets = (state[ex] ?? []).filter((s) => s.kind !== "W");
-      sets.forEach((s, i) => {
-        const w = s.weight === "" ? null : Number(s.weight);
-        const r = s.reps === "" ? null : Number(s.reps);
-        if (w === null && r === null) return;
-        const parsed = setSchema.safeParse({ weight: w, reps: r });
-        if (!parsed.success) throw new Error(`Invalid input for ${ex}`);
-        rows.push({ exercise_name: ex, set_number: i + 1, weight: w, reps: r });
-      });
-    }
-    if (rows.length === 0) {
-      toast.error("Add at least one set with weight or reps.");
-      return;
-    }
-
-    setSaving(true);
     try {
-      // Never lose a session: if the network is down the payload is stored
-      // locally and replayed automatically once we're back online.
-      const { status } = await saveWorkout({
-        userId: user?.id,
-        day,
-        title: config!.name,
-        performedAt: new Date().toISOString(),
-        rows,
-      });
-      if (status === "queued") {
-        toast.success("Saved offline — will sync automatically");
+      const rows: {
+        exercise_name: string;
+        set_number: number;
+        weight: number | null;
+        reps: number | null;
+      }[] = [];
+      for (const ex of config!.exercises) {
+        const sets = (state[ex] ?? []).filter((s) => s.kind !== "W");
+        sets.forEach((s, i) => {
+          const w = s.weight === "" ? null : Number(s.weight);
+          const r = s.reps === "" ? null : Number(s.reps);
+          if (w === null && r === null) return;
+          const parsed = setSchema.safeParse({ weight: w, reps: r });
+          if (!parsed.success) throw new Error(`Invalid input for ${ex}`);
+          rows.push({ exercise_name: ex, set_number: i + 1, weight: w, reps: r });
+        });
+      }
+      if (rows.length === 0) {
+        toast.error("Add at least one set with weight or reps.");
+        return;
       }
 
-      // Compute summary
-      const totalVolume = rows.reduce(
-        (a, r) => a + (r.weight ?? 0) * (r.reps ?? 0),
-        0,
-      );
-      const totalReps = rows.reduce((a, r) => a + (r.reps ?? 0), 0);
-
-      // Highlights: PRs vs best-known weight
-      const highlights: string[] = [];
-      const exerciseTopThisSession: Record<string, { weight: number; reps: number }> = {};
-      for (const r of rows) {
-        if (r.weight == null || r.reps == null) continue;
-        const cur = exerciseTopThisSession[r.exercise_name];
-        if (!cur || r.weight > cur.weight || (r.weight === cur.weight && r.reps > cur.reps)) {
-          exerciseTopThisSession[r.exercise_name] = { weight: r.weight, reps: r.reps };
+      setSaving(true);
+      try {
+        // Never lose a session: if the network is down the payload is stored
+        // locally and replayed automatically once we're back online.
+        const { status } = await saveWorkout({
+          userId: user?.id,
+          day,
+          title: config!.name,
+          performedAt: new Date().toISOString(),
+          rows,
+        });
+        if (status === "queued") {
+          toast.success("Saved offline — will sync automatically");
         }
-      }
-      for (const [ex, top] of Object.entries(exerciseTopThisSession)) {
-        const prev = insights[ex]?.bestWeight ?? null;
-        if (prev == null || top.weight > prev) {
-          highlights.push(`New weight PR — ${ex}: ${top.weight}kg`);
+
+        // Compute summary
+        const totalVolume = rows.reduce((a, r) => a + (r.weight ?? 0) * (r.reps ?? 0), 0);
+        const totalReps = rows.reduce((a, r) => a + (r.reps ?? 0), 0);
+
+        // Highlights: PRs vs best-known weight
+        const highlights: string[] = [];
+        const exerciseTopThisSession: Record<string, { weight: number; reps: number }> = {};
+        for (const r of rows) {
+          if (r.weight == null || r.reps == null) continue;
+          const cur = exerciseTopThisSession[r.exercise_name];
+          if (!cur || r.weight > cur.weight || (r.weight === cur.weight && r.reps > cur.reps)) {
+            exerciseTopThisSession[r.exercise_name] = { weight: r.weight, reps: r.reps };
+          }
         }
+        for (const [ex, top] of Object.entries(exerciseTopThisSession)) {
+          const prev = insights[ex]?.bestWeight ?? null;
+          if (prev == null || top.weight > prev) {
+            highlights.push(`New weight PR — ${ex}: ${top.weight}kg`);
+          }
+        }
+        const topLifts = Object.entries(exerciseTopThisSession)
+          .map(([exercise, t]) => ({ exercise, weight: t.weight, reps: t.reps }))
+          .sort((a, b) => b.weight - a.weight);
+
+        setSummary({
+          workoutName: config!.name,
+          performedAt: new Date(),
+          totalVolume,
+          totalSets: rows.length,
+          totalReps,
+          highlights: highlights.slice(0, 3),
+          topLifts,
+        });
+        setShareOpen(true);
+        setReviewOpen(false);
+        try {
+          localStorage.removeItem(`ironlog:active-day:${user?.id || "local"}`);
+        } catch {
+          /* unavailable */
+        }
+
+        setState(
+          Object.fromEntries(config!.exercises.map((ex) => [ex, [{ weight: "", reps: "" }]])),
+        );
+        if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
+        // Capture elapsed time, then freeze + reset the stopwatch to 00:00:00.
+        const elapsedMs = sessionTimer.getElapsedMs();
+        sessionTimer.stop();
+        const mins = Math.floor(elapsedMs / 60000);
+        const secs = Math.floor((elapsedMs % 60000) / 1000);
+        const durationLabel = elapsedMs > 0 ? ` · ${mins}m ${String(secs).padStart(2, "0")}s` : "";
+        toast.success(`Logged ${rows.length} sets · ${config!.name}${durationLabel}`);
+
+        // Invalidate relevant caches
+        queryClient.invalidateQueries({ queryKey: ["recent-sessions"] });
+        queryClient.invalidateQueries({ queryKey: ["history"] });
+        queryClient.invalidateQueries({ queryKey: ["progress_data"] });
+        queryClient.invalidateQueries({ queryKey: ["custom-days-list"] });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Failed to log workout";
+        toast.error(msg);
+      } finally {
+        setSaving(false);
       }
-      const topLifts = Object.entries(exerciseTopThisSession)
-        .map(([exercise, t]) => ({ exercise, weight: t.weight, reps: t.reps }))
-        .sort((a, b) => b.weight - a.weight);
-
-      setSummary({
-        workoutName: config!.name,
-        performedAt: new Date(),
-        totalVolume,
-        totalSets: rows.length,
-        totalReps,
-        highlights: highlights.slice(0, 3),
-        topLifts,
-      });
-      setShareOpen(true);
-
-      if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
-      // Capture elapsed time, then freeze + reset the stopwatch to 00:00:00.
-      const elapsedMs = sessionTimer.getElapsedMs();
-      sessionTimer.stop();
-      const mins = Math.floor(elapsedMs / 60000);
-      const secs = Math.floor((elapsedMs % 60000) / 1000);
-      const durationLabel = elapsedMs > 0
-        ? ` · ${mins}m ${String(secs).padStart(2, "0")}s`
-        : "";
-      toast.success(`Logged ${rows.length} sets · ${config!.name}${durationLabel}`);
-
-      // Invalidate relevant caches
-      queryClient.invalidateQueries({ queryKey: ["recent-sessions"] });
-      queryClient.invalidateQueries({ queryKey: ["history"] });
-      queryClient.invalidateQueries({ queryKey: ["progress_data"] });
-      queryClient.invalidateQueries({ queryKey: ["custom-days-list"] });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to log workout";
-      toast.error(msg);
-    } finally {
-      setSaving(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Check your sets before saving");
     }
   };
 
@@ -479,14 +546,18 @@ function DayPage({ day }: { day: string }) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
         <p className="text-muted-foreground">This workout day couldn't be loaded.</p>
-        <Link to="/" className="mt-4 inline-block text-primary underline">Back home</Link>
+        <Link to="/" className="mt-4 inline-block text-primary underline">
+          Back home
+        </Link>
       </main>
     );
   }
   if (config.exercises.length === 0) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">← Home</Link>
+        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Home
+        </Link>
         <h1 className="mt-3 text-2xl font-bold">{config.name}</h1>
         <p className="mt-2 text-muted-foreground">No exercises in this workout yet.</p>
       </main>
@@ -496,203 +567,266 @@ function DayPage({ day }: { day: string }) {
   const tabs: { key: string; label: string; accent: string }[] = (customDays ?? []).map((c) => ({
     key: c.id,
     label: c.name,
-    accent: getSplitAccent(c.name, (c as { muscle_groups?: string[] | null }).muscle_groups, c.accent ?? "primary"),
+    accent: getSplitAccent(
+      c.name,
+      (c as { muscle_groups?: string[] | null }).muscle_groups,
+      c.accent ?? "primary",
+    ),
   }));
   const dayAccent = getSplitAccent(config.name, null, config.accent);
 
   return (
     <>
-    <main className="mx-auto max-w-3xl px-4 py-6" style={{ paddingBottom: "calc(90px + 80px + env(safe-area-inset-bottom))" }}>
-      <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="mr-1 h-4 w-4" /> All workouts
-      </Link>
+      <main
+        className="mx-auto max-w-3xl px-4 py-6"
+        style={{ paddingBottom: "calc(100px + env(safe-area-inset-bottom))" }}
+      >
+        <Link
+          to="/"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" /> All workouts
+        </Link>
 
-      <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: `var(--${dayAccent})` }}>
-            Custom Workout
+        <header className="mt-3 mb-4">
+          <p className="forged-eyebrow">Focus mode · Drafts stay on this device</p>
+          <h1 className="forged-title mt-3">{config.name}</h1>
+
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              aria-label="Previous exercise"
+              className="h-11 w-11 shrink-0 rounded-xl border border-border disabled:opacity-30"
+              disabled={activeExercise === 0}
+              onClick={() => setActiveExercise((i) => i - 1)}
+            >
+              ←
+            </button>
+            <label className="min-w-0 flex-1">
+              <span className="forged-eyebrow">
+                Exercise {Math.min(activeExercise + 1, order.length)} of {order.length}
+              </span>
+              <select
+                aria-label="Current exercise"
+                value={Math.min(activeExercise, Math.max(order.length - 1, 0))}
+                onChange={(e) => setActiveExercise(Number(e.target.value))}
+                className="mt-1 h-11 w-full rounded-lg border border-border bg-card px-2 text-sm"
+              >
+                {order.map((ex, i) => (
+                  <option value={i} key={ex}>
+                    {ex}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              aria-label="Next exercise"
+              className="h-11 w-11 shrink-0 rounded-xl border border-border disabled:opacity-30"
+              disabled={activeExercise >= order.length - 1}
+              onClick={() => setActiveExercise((i) => i + 1)}
+            >
+              →
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{config.name}</h1>
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-label="Share workout plan"
-              title="Share workout plan"
-              className="h-9 w-9 text-muted-foreground hover:text-primary spring-transition"
-              onClick={() =>
-                sharePlan(
-                  {
-                    routineName: config.name,
-                    exercises: order.map((ex) => ({
-                      name: ex,
-                      sets: (state[ex]?.length ?? 3),
-                    })),
-                  },
-                  {
-                    onCopied: () => toast.success("Workout Plan copied! Share it with your friends. 🚀"),
-                    onShared: () => toast.success("Workout Plan shared! 🚀"),
-                    onError: () => toast.error("Couldn't share workout plan"),
-                  },
-                )
+        </header>
+        <Reorder.Group
+          axis="y"
+          values={order}
+          onReorder={() => {
+            /* Focus mode shows one exercise; ordering remains in the routine editor. */
+          }}
+          className="mt-6 space-y-3"
+        >
+          {order
+            .slice(
+              Math.min(activeExercise, Math.max(order.length - 1, 0)),
+              Math.min(activeExercise, Math.max(order.length - 1, 0)) + 1,
+            )
+            .map((ex) => (
+              <ExerciseCard
+                key={ex}
+                ex={ex}
+                sets={state[ex] ?? EMPTY_SETS}
+                insight={insights[ex]}
+                note={notes[ex] ?? ""}
+                setNote={setNote}
+                saveNote={saveNote}
+                update={update}
+                addSet={addSet}
+                removeSet={removeSet}
+                onRename={renameExercise}
+                onRemove={removeExercise}
+                userId={user?.id || "guest"}
+              />
+            ))}
+        </Reorder.Group>
+
+        <div className="mt-4">
+          <RestTimer />
+        </div>
+        <Link
+          to="/coach"
+          className="mt-3 flex min-h-11 items-center justify-center text-xs text-primary"
+        >
+          Ask about this exercise →
+        </Link>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-4 w-full border-dashed"
+          onClick={() => {
+            setAddSelection([]);
+            setAddOpen(true);
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Exercise
+        </Button>
+
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogContent
+            aria-describedby={undefined}
+            className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
+          >
+            <DialogHeader>
+              <DialogTitle>Add exercises</DialogTitle>
+            </DialogHeader>
+            <Suspense
+              fallback={
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  Loading exercises…
+                </div>
               }
             >
-              <Share2 className="h-4 w-4" />
-            </Button>
+              <ExercisePicker selected={addSelection} onChange={setAddSelection} />
+            </Suspense>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void addExercises(addSelection)}
+                disabled={addSelection.length === 0}
+              >
+                Add {addSelection.length > 0 ? `(${addSelection.length})` : ""}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </main>
+
+      {/* Bottom session controls — sits above the bottom nav (90px). */}
+      <div
+        className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
+        style={{ bottom: 0, paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 text-sm">
+            <span className="font-semibold tabular-nums">
+              {totalSets} {totalSets === 1 ? "set" : "sets"} ready
+            </span>
+            <span className="text-muted-foreground"> • {config.name}</span>
           </div>
-          <p className="text-sm text-muted-foreground">{config.subtitle}</p>
-        </div>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:max-w-md md:px-0">
-          {tabs.map((t) => (
-            <Link
-              key={t.key}
-              to="/day/$day"
-              params={{ day: t.key }}
-              className="shrink-0 whitespace-nowrap rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold spring-transition"
-              style={{
-                backgroundColor: t.key === day ? `color-mix(in oklab, var(--${t.accent}) 18%, transparent)` : "transparent",
-                borderColor: t.key === day ? `color-mix(in oklab, var(--${t.accent}) 45%, transparent)` : undefined,
-                color: t.key === day ? `var(--${t.accent})` : "var(--muted-foreground)",
-              }}
-            >
-              {t.label.length > 22 ? `${t.label.slice(0, 22)}…` : t.label}
-            </Link>
-          ))}
+          <div className="flex shrink-0 items-center gap-2">
+            {sessionTimer.startedAt == null ? (
+              <Button
+                size="lg"
+                className="press-on-tap bg-primary font-bold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90"
+                onClick={() => {
+                  sessionTimer.start();
+                  try {
+                    localStorage.setItem(`ironlog:active-day:${user?.id || "local"}`, day);
+                  } catch {
+                    /* unavailable */
+                  }
+                }}
+                disabled={saving}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Start Workout
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={resetInputs}
+                  disabled={saving}
+                  className="border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset
+                </Button>
+                {summary && !shareOpen && (
+                  <Button size="lg" variant="secondary" onClick={() => setShareOpen(true)}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </Button>
+                )}
+                <Button
+                  size="lg"
+                  className="press-on-tap bg-primary font-bold text-primary-foreground hover:bg-primary/90"
+                  onClick={() => setReviewOpen(true)}
+                  disabled={saving || totalSets === 0}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving…" : "Review session"}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="mt-6">
-        <RestTimer />
-      </div>
-
-      <Reorder.Group
-        axis="y"
-        values={order}
-        onReorder={setOrder}
-        className="mt-6 space-y-3"
-      >
-        {order.map((ex) => (
-          <ExerciseCard
-            key={ex}
-            ex={ex}
-            sets={state[ex] ?? EMPTY_SETS}
-            insight={insights[ex]}
-            note={notes[ex] ?? ""}
-            setNote={setNote}
-            saveNote={saveNote}
-            update={update}
-            addSet={addSet}
-            removeSet={removeSet}
-            onRename={renameExercise}
-            onRemove={removeExercise}
-            userId={user?.id || "guest"}
-          />
-        ))}
-      </Reorder.Group>
-
-      <Button
-        type="button"
-        variant="outline"
-        className="mt-4 w-full border-dashed"
-        onClick={() => { setAddSelection([]); setAddOpen(true); }}
-      >
-        <Plus className="mr-2 h-4 w-4" />
-        Add Exercise
-      </Button>
-
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent aria-describedby={undefined} className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent aria-describedby={undefined} className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add exercises</DialogTitle>
+            <DialogTitle>Session review</DialogTitle>
           </DialogHeader>
-          <Suspense fallback={<div className="py-10 text-center text-sm text-muted-foreground">Loading exercises…</div>}>
-            <ExercisePicker selected={addSelection} onChange={setAddSelection} />
-          </Suspense>
+          <p className="text-sm text-muted-foreground">
+            Check your work before saving. Filled working sets are included, even if not ticked.
+            Warm-ups are not saved by the current log format.
+          </p>
+          <h2 className="text-2xl font-bold">{config.name}</h2>
+          <p className="text-primary">{totalSets} filled sets</p>
+          <div className="divide-y divide-border">
+            {config.exercises.map((ex) => {
+              const rows = (state[ex] ?? []).filter(
+                (r) => (r.weight !== "" || r.reps !== "") && r.kind !== "W",
+              );
+              return rows.length ? (
+                <div key={ex} className="py-3">
+                  <p className="text-sm font-semibold">{ex}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {rows.map((r) => `${r.weight || "—"} kg × ${r.reps || "—"}`).join(" · ")}
+                  </p>
+                </div>
+              ) : null;
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            This will be saved to your workout history. Sharing is optional after saving.
+          </p>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => void addExercises(addSelection)}
-              disabled={addSelection.length === 0}
-            >
-              Add {addSelection.length > 0 ? `(${addSelection.length})` : ""}
+            <Button variant="outline" onClick={() => setReviewOpen(false)} disabled={saving}>
+              Keep training
+            </Button>
+            <Button onClick={() => void logWorkout()} disabled={saving}>
+              {saving ? "Saving…" : "Save workout"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-    </main>
-
-    {/* Bottom session controls — sits above the bottom nav (90px). */}
-    <div
-      className="fixed inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl"
-      style={{ bottom: "calc(90px + env(safe-area-inset-bottom))" }}
-    >
-      <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 text-sm">
-          <span className="font-semibold tabular-nums">
-            {totalSets} {totalSets === 1 ? "set" : "sets"} ready
-          </span>
-          <span className="text-muted-foreground"> • {config.name}</span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {sessionTimer.startedAt == null ? (
-            <Button
-              size="lg"
-              className="press-on-tap bg-primary font-bold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90"
-              onClick={() => sessionTimer.start()}
-              disabled={saving}
-            >
-              <Play className="mr-2 h-4 w-4" />
-              Start Workout
-            </Button>
-          ) : (
-            <>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={resetInputs}
-                disabled={saving}
-                className="border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reset
-              </Button>
-              {summary && !shareOpen && (
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  onClick={() => setShareOpen(true)}
-                >
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share
-                </Button>
-              )}
-              <Button
-                size="lg"
-                className="press-on-tap bg-foreground font-bold text-background hover:bg-foreground/90"
-                onClick={logWorkout}
-                disabled={saving || totalSets === 0}
-              >
-                <Save className="mr-2 h-4 w-4" />
-                {saving ? "Saving…" : "Log Workout"}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-
-    <Suspense fallback={null}>
-    <ShareWorkoutDialog
-      open={shareOpen}
-      onOpenChange={setShareOpen}
-      summary={summary}
-      onClose={() => {
-        // After closing the share dialog go to history
-        navigate({ to: "/history" });
-      }}
-    />
-    </Suspense>
+      <Suspense fallback={null}>
+        <ShareWorkoutDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          summary={summary}
+          onClose={() => {
+            // After closing the share dialog go to history
+            navigate({ to: "/history" });
+          }}
+        />
+      </Suspense>
     </>
   );
 }
@@ -716,21 +850,26 @@ function PlateHelper({ sets }: { sets: SetRow[] }) {
       {open && (
         <div className="mt-1 rounded-lg border border-border bg-background/60 p-3 text-xs">
           {total <= 20 ? (
-            <span className="text-muted-foreground">Enter a weight above 20 kg to see the plates for a 20 kg bar.</span>
+            <span className="text-muted-foreground">
+              Enter a weight above 20 kg to see the plates for a 20 kg bar.
+            </span>
           ) : (
             <>
-              <div className="mb-2 text-muted-foreground">
-                {total} kg = 20 kg bar + each side:
-              </div>
+              <div className="mb-2 text-muted-foreground">{total} kg = 20 kg bar + each side:</div>
               <div className="flex flex-wrap gap-1.5">
                 {plates.map((p, i) => (
-                  <span key={i} className="rounded-md bg-primary/15 px-2 py-1 font-bold tabular-nums text-primary">
+                  <span
+                    key={i}
+                    className="rounded-md bg-primary/15 px-2 py-1 font-bold tabular-nums text-primary"
+                  >
                     {p}
                   </span>
                 ))}
               </div>
               {remainder > 0 && (
-                <div className="mt-2 text-muted-foreground">{remainder} kg can't be loaded with standard plates.</div>
+                <div className="mt-2 text-muted-foreground">
+                  {remainder} kg can't be loaded with standard plates.
+                </div>
               )}
             </>
           )}
@@ -775,7 +914,9 @@ const ExerciseCard = memo(function ExerciseCard({
 
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(ex);
-  useEffect(() => { setDraftName(ex); }, [ex]);
+  useEffect(() => {
+    setDraftName(ex);
+  }, [ex]);
 
   const commitRename = () => {
     setEditing(false);
@@ -789,7 +930,7 @@ const ExerciseCard = memo(function ExerciseCard({
     if (Number.isFinite(w) && Number.isFinite(reps) && reps > 0) return Math.max(m, w);
     return m;
   }, 0);
-  const isPR = currentTopWeight > 0 && (best == null || currentTopWeight > best);
+  const isPR = currentTopWeight > 0 && best != null && currentTopWeight > best;
 
   return (
     <Reorder.Item
@@ -804,8 +945,6 @@ const ExerciseCard = memo(function ExerciseCard({
       <div className="px-4 pt-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            {!editing && <ExerciseThumb name={ex} size={48} />}
-
             {editing ? (
               <div className="flex w-full items-center gap-1.5">
                 <Input
@@ -814,18 +953,29 @@ const ExerciseCard = memo(function ExerciseCard({
                   onChange={(e) => setDraftName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") commitRename();
-                    if (e.key === "Escape") { setEditing(false); setDraftName(ex); }
+                    if (e.key === "Escape") {
+                      setEditing(false);
+                      setDraftName(ex);
+                    }
                   }}
                   className="h-8 text-sm font-semibold"
                 />
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-primary" onClick={commitRename}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-primary"
+                  onClick={commitRename}
+                >
                   <Check className="h-4 w-4" />
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 text-muted-foreground"
-                  onClick={() => { setEditing(false); setDraftName(ex); }}
+                  onClick={() => {
+                    setEditing(false);
+                    setDraftName(ex);
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -835,7 +985,7 @@ const ExerciseCard = memo(function ExerciseCard({
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="font-semibold truncate text-left hover:text-primary transition-colors"
+                  className="font-semibold text-left hover:text-primary transition-colors break-words"
                   title="Tap to rename"
                 >
                   {ex}
@@ -856,20 +1006,6 @@ const ExerciseCard = memo(function ExerciseCard({
               </>
             )}
           </div>
-          {!editing && (
-            <button
-              type="button"
-              aria-label={`Drag to reorder ${ex}`}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                dragControls.start(e);
-              }}
-              className="shrink-0 -mr-1 -mt-1 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
-              style={{ touchAction: "none" }}
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
-          )}
           {!editing && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -914,13 +1050,28 @@ const ExerciseCard = memo(function ExerciseCard({
       </div>
 
       <div className="space-y-2 px-4 pb-4 pt-3">
+        <div
+          aria-hidden="true"
+          className="flex items-center gap-2 px-1 text-[9px] font-bold tracking-wider text-muted-foreground"
+        >
+          <span className="w-11 shrink-0">SET</span>
+          <span className="min-w-0 flex-1">KG</span>
+          <span className="min-w-0 flex-1">REPS</span>
+          <span className="w-11 shrink-0 text-center">DONE</span>
+          <span className="w-8 shrink-0" />
+        </div>
         {(() => {
           let working = 0;
           return sets.map((row, idx) => {
             const kind = row.kind ?? "N";
             if (kind !== "W") working += 1;
             const label = kind === "N" ? String(working) : kind;
-            const kindTitle = { N: "Normal set", W: "Warm-up (not saved)", D: "Drop set", F: "To failure" }[kind];
+            const kindTitle = {
+              N: "Normal set",
+              W: "Warm-up (not saved)",
+              D: "Drop set",
+              F: "To failure",
+            }[kind];
             const canComplete = row.weight !== "" || row.reps !== "";
             return (
               <div
@@ -949,20 +1100,22 @@ const ExerciseCard = memo(function ExerciseCard({
                   {label}
                 </button>
                 <Input
+                  aria-label={`${ex} set ${idx + 1} weight in kilograms`}
                   type="number"
                   inputMode="decimal"
                   placeholder="kg"
                   value={row.weight}
                   onChange={(e) => update(ex, idx, "weight", e.target.value)}
-                  className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
+                  className="h-12 min-w-0 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
                 />
                 <Input
+                  aria-label={`${ex} set ${idx + 1} repetitions`}
                   type="number"
                   inputMode="numeric"
                   placeholder="reps"
                   value={row.reps}
                   onChange={(e) => update(ex, idx, "reps", e.target.value)}
-                  className="h-12 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
+                  className="h-12 min-w-0 rounded-lg border-border bg-background/60 text-base font-semibold tabular-nums"
                 />
                 <button
                   type="button"
@@ -1003,31 +1156,36 @@ const ExerciseCard = memo(function ExerciseCard({
         <p className="text-[10px] text-muted-foreground">
           Tap the set number to tag it: W warm-up (not saved) · D drop set · F failure
         </p>
-        <PlateHelper sets={sets} />
+
         <Button variant="secondary" size="sm" className="w-full" onClick={() => addSet(ex)}>
           <Plus className="mr-1 h-4 w-4" /> Add set
         </Button>
 
-        <div className="pt-1">
-          <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            <StickyNote className="h-3 w-3" /> Training note
-          </label>
-          <Textarea
-            value={note}
-            onChange={(e) => setNote(ex, e.target.value)}
-            onBlur={(e) => saveNote(ex, e.target.value)}
-            placeholder="e.g. Seat height 3 · slow eccentric"
-            className="mt-1 min-h-[44px] text-sm"
-          />
-        </div>
+        <details className="pt-2">
+          <summary className="min-h-11 cursor-pointer py-3 text-xs text-muted-foreground">
+            Notes & exercise trend
+          </summary>
+          <PlateHelper sets={sets} />
+          <div className="pt-1">
+            <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <StickyNote className="h-3 w-3" /> Training note
+            </label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(ex, e.target.value)}
+              onBlur={(e) => saveNote(ex, e.target.value)}
+              placeholder="e.g. Seat height 3 · slow eccentric"
+              className="mt-1 min-h-[44px] text-sm"
+            />
+          </div>
 
-        <div className="pt-2">
-          <Suspense fallback={<div className="h-24 animate-pulse rounded-lg bg-muted/40" />}>
-            <ExerciseChart userId={userId} exercise={ex} />
-          </Suspense>
-        </div>
+          <div className="pt-2">
+            <Suspense fallback={<div className="h-24 animate-pulse rounded-lg bg-muted/40" />}>
+              <ExerciseChart userId={userId} exercise={ex} />
+            </Suspense>
+          </div>
+        </details>
       </div>
     </Reorder.Item>
   );
 });
-

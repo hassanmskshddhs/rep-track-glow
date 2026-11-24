@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -119,6 +119,9 @@ function ProgressApp() {
             Your saved sessions and progress are stored in your account.
           </p>
           <AuthScreen compact />
+          <Link to="/history" className="mt-5 flex min-h-11 items-center text-sm text-primary">
+            View on-device workout history →
+          </Link>
         </div>
       </main>
     );
@@ -140,10 +143,22 @@ function ProgressApp() {
           {format(new Date(), "EEEE, d MMMM")}
         </p>
         <h1 className="mt-1 text-[32px] font-extrabold leading-[1.05] tracking-tight">Progress</h1>
-        <p className="mt-2 text-[14px] text-muted-foreground">
-          Track your journey. See your results.
-        </p>
+        <p className="mt-2 text-[14px] text-muted-foreground">Proof of the work.</p>
 
+        <div className="mt-5 flex gap-3">
+          <Link
+            to="/history"
+            className="flex min-h-11 flex-1 items-center justify-center rounded-xl border border-border text-sm text-primary"
+          >
+            Workout history →
+          </Link>
+          <Link
+            to="/coach"
+            className="flex min-h-11 flex-1 items-center justify-center rounded-xl border border-border text-sm text-muted-foreground"
+          >
+            Ask about a trend
+          </Link>
+        </div>
         {/* Tab Navigation */}
         <div className="mt-6 flex items-center justify-between rounded-full border border-border bg-card p-1">
           {(["Overview", "Strength", "Body", "More"] as Tab[]).map((tab) => (

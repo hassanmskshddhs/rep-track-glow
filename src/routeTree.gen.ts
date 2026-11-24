@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as NutritionRouteImport } from './routes/nutrition'
+import { Route as PlanRouteImport } from './routes/plan'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProgressiveOverloadTrackerRouteImport } from './routes/progressive-overload-tracker'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -45,6 +46,11 @@ const HistoryRoute = HistoryRouteImport.update({
 const NutritionRoute = NutritionRouteImport.update({
   id: '/nutrition',
   path: '/nutrition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanRoute = PlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgressRoute = ProgressRouteImport.update({
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/coach': typeof CoachRouteWithChildren
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
+  '/plan': typeof PlanRoute
   '/progress': typeof ProgressRoute
   '/progressive-overload-tracker': typeof ProgressiveOverloadTrackerRoute
   '/settings': typeof SettingsRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
+  '/plan': typeof PlanRoute
   '/progress': typeof ProgressRoute
   '/progressive-overload-tracker': typeof ProgressiveOverloadTrackerRoute
   '/settings': typeof SettingsRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/coach': typeof CoachRouteWithChildren
   '/history': typeof HistoryRoute
   '/nutrition': typeof NutritionRoute
+  '/plan': typeof PlanRoute
   '/progress': typeof ProgressRoute
   '/progressive-overload-tracker': typeof ProgressiveOverloadTrackerRoute
   '/settings': typeof SettingsRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/history'
     | '/nutrition'
+    | '/plan'
     | '/progress'
     | '/progressive-overload-tracker'
     | '/settings'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/'
     | '/history'
     | '/nutrition'
+    | '/plan'
     | '/progress'
     | '/progressive-overload-tracker'
     | '/settings'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/history'
     | '/nutrition'
+    | '/plan'
     | '/progress'
     | '/progressive-overload-tracker'
     | '/settings'
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   CoachRoute: typeof CoachRouteWithChildren
   HistoryRoute: typeof HistoryRoute
   NutritionRoute: typeof NutritionRoute
+  PlanRoute: typeof PlanRoute
   ProgressRoute: typeof ProgressRoute
   ProgressiveOverloadTrackerRoute: typeof ProgressiveOverloadTrackerRoute
   SettingsRoute: typeof SettingsRoute
@@ -276,6 +289,13 @@ declare module '@tanstack/react-router' {
       path: '/nutrition'
       fullPath: '/nutrition'
       preLoaderRoute: typeof NutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plan': {
+      id: '/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof PlanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progress': {
@@ -389,6 +409,7 @@ const rootRouteChildren: RootRouteChildren = {
   CoachRoute: CoachRouteWithChildren,
   HistoryRoute: HistoryRoute,
   NutritionRoute: NutritionRoute,
+  PlanRoute: PlanRoute,
   ProgressRoute: ProgressRoute,
   ProgressiveOverloadTrackerRoute: ProgressiveOverloadTrackerRoute,
   SettingsRoute: SettingsRoute,

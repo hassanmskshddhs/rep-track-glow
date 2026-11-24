@@ -390,16 +390,16 @@ const FOOD_DB: FoodDBItem[] = [
 // LOCAL STORAGE HOOK
 // -----------------------------------------------------------------------------
 function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === "undefined") return initialValue;
+  const [storedValue, setStoredValue] = useState<T>(initialValue);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      setStoredValue(item ? JSON.parse(item) : initialValue);
     } catch (error) {
       console.error(error);
-      return initialValue;
     }
-  });
+  }, [key]);
 
   const setValue = (value: T | ((val: T) => T)) => {
     try {
@@ -499,7 +499,7 @@ function OnboardingWizard({ onComplete }: { onComplete: (t: MacroTargets) => voi
           {format(new Date(), "EEEE, d MMMM")}
         </p>
         <h1 className="mt-1 text-[32px] font-extrabold leading-[1.05] tracking-tight">
-          Nutrition setup
+          Fuel setup
         </h1>
         <p className="mt-2 text-[14px] text-muted-foreground">
           Set your calorie and macro targets from your body profile and goal.
@@ -720,7 +720,7 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
           {format(new Date(), "EEEE, d MMMM")}
         </p>
         <div className="mt-1 flex items-start justify-between gap-3">
-          <h1 className="text-[32px] font-extrabold leading-[1.05] tracking-tight">Nutrition</h1>
+          <h1 className="text-[32px] font-extrabold leading-[1.05] tracking-tight">Fuel</h1>
           <button
             onClick={() => setSettingsOpen(true)}
             aria-label="Nutrition settings"

@@ -1,116 +1,110 @@
-import { useEffect, useRef, useState } from "react";
-import { Timer, Play, Pause, RotateCcw, Plus, Minus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Play, Pause, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 const PRESETS = [60, 90, 120, 180];
-
 export function RestTimer() {
   const [target, setTarget] = useState(90);
+  const [deadline, setDeadline] = useState<number | null>(null);
   const [remaining, setRemaining] = useState(90);
-  const [running, setRunning] = useState(false);
-  const [flash, setFlash] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
-    if (!running) return;
-    intervalRef.current = setInterval(() => {
-      setRemaining((r) => {
-        if (r <= 1) {
-          setRunning(false);
-          setFlash((f) => f + 1);
-          if (typeof window !== "undefined" && "Audio" in window) {
-            try {
-              // Simple beep via WebAudio
-              const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-              const o = ctx.createOscillator();
-              const g = ctx.createGain();
-              o.frequency.value = 880;
-              o.connect(g); g.connect(ctx.destination);
-              g.gain.setValueAtTime(0.2, ctx.currentTime);
-              o.start();
-              o.stop(ctx.currentTime + 0.25);
-            } catch {}
-            try { navigator.vibrate?.([200, 100, 200]); } catch {}
-          }
-          return 0;
-        }
-        return r - 1;
-      });
-    }, 1000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [running]);
-
-  // Auto-start when a set is ticked as done.
-  useEffect(() => {
-    const onStart = () => {
-      setTarget((t) => {
-        setRemaining(t);
-        return t;
-      });
-      setRunning(true);
+    if (!deadline) return;
+    const tick = () => {
+      const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setRemaining(seconds);
+      if (!seconds) {
+        setDeadline(null);
+        navigator.vibrate?.([150, 100, 150]);
+      }
     };
-    window.addEventListener("ironlog:rest-start", onStart);
-    return () => window.removeEventListener("ironlog:rest-start", onStart);
-  }, []);
-
-  const setPreset = (s: number) => { setTarget(s); setRemaining(s); setRunning(false); };
-  const adjust = (delta: number) => {
-    setTarget((t) => Math.max(15, t + delta));
-    setRemaining((r) => Math.max(0, r + delta));
-  };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [deadline]);
+  useEffect(() => {
+    const start = () => {
+      setRemaining(target);
+      setDeadline(Date.now() + target * 1000);
+    };
+    window.addEventListener("ironlog:rest-start", start);
+    return () => window.removeEventListener("ironlog:rest-start", start);
+  }, [target]);
+  function addTime() {
+    setRemaining((r) => r + 30);
+    if (deadline) setDeadline(deadline + 30000);
+  }
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");
-  const pct = target ? (remaining / target) * 100 : 0;
-
   return (
-    <div
-      key={`flash-${flash}`}
-      className={
-        "rounded-2xl border border-border bg-[var(--gradient-card)] p-5 shadow-[var(--shadow-card)] " +
-        (flash > 0 ? "animate-timer-flash" : "")
-      }
-    >
-      <div className="mb-3 flex items-center gap-2">
-        <Timer className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold uppercase tracking-wider">Rest Timer</h3>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          <div className="text-5xl font-extrabold tabular-nums tracking-tight text-primary">
+    <section className="rounded-xl border border-border bg-card p-4" aria-label="Rest timer">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Rest
+          </p>
+          <p className="mt-1 text-3xl font-bold tabular-nums">
             {mm}:{ss}
-          </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full bg-primary transition-[width] duration-1000"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            aria-label={deadline ? "Pause rest timer" : "Start rest timer"}
+            variant="outline"
+            onClick={() =>
+              setDeadline(deadline ? null : Date.now() + Math.max(remaining, 1) * 1000)
+            }
+          >
+            {deadline ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </Button>
+          <Button variant="outline" onClick={addTime}>
+            +30s
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setRemaining(0);
+              setDeadline(null);
+            }}
+          >
+            Skip
+          </Button>
         </div>
       </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {PRESETS.map((p) => (
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full bg-primary transition-[width]"
+          style={{ width: `${Math.min((remaining / target) * 100, 100)}%` }}
+        />
+      </div>
+      <details className="mt-2">
+        <summary className="min-h-11 cursor-pointer py-3 text-xs text-muted-foreground">
+          Rest settings
+        </summary>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => (
+            <Button
+              key={p}
+              variant={target === p ? "default" : "secondary"}
+              onClick={() => {
+                setTarget(p);
+                setRemaining(p);
+                setDeadline(null);
+              }}
+            >
+              {p}s
+            </Button>
+          ))}
           <Button
-            key={p}
-            variant={target === p ? "default" : "secondary"}
-            size="sm"
-            onClick={() => setPreset(p)}
+            aria-label="Reset rest timer"
+            variant="outline"
+            onClick={() => {
+              setRemaining(target);
+              setDeadline(null);
+            }}
           >
-            {p}s
-          </Button>
-        ))}
-        <div className="ml-auto flex items-center gap-1">
-          <Button size="icon" variant="secondary" onClick={() => adjust(-15)}><Minus className="h-4 w-4" /></Button>
-          <Button size="icon" variant="secondary" onClick={() => adjust(15)}><Plus className="h-4 w-4" /></Button>
-          <Button size="icon" onClick={() => setRunning((r) => !r)}>
-            {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </Button>
-          <Button size="icon" variant="secondary" onClick={() => { setRemaining(target); setRunning(false); }}>
             <RotateCcw className="h-4 w-4" />
           </Button>
         </div>
-      </div>
-    </div>
+      </details>
+    </section>
   );
 }

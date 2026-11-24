@@ -1,395 +1,219 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dumbbell, Plus, Zap, Play, Pencil } from "lucide-react";
-import { toast } from "sonner";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { format, startOfDay, subDays } from "date-fns";
-import { SplitCard } from "@/components/SplitCard";
-const QuickImportDialog = lazy(() =>
-  import("@/components/QuickImportDialog").then((m) => ({ default: m.QuickImportDialog })),
-);
-import { type ImportedDraft } from "@/components/QuickImportDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-
+import { ArrowRight, Check, Dumbbell, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { AuthScreen } from "@/components/AuthScreen";
-import { supabase } from "@/integrations/supabase/client";
 import * as db from "@/lib/db";
-import { Button } from "@/components/ui/button";
+import { useSessionTimer } from "@/lib/session-timer";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { getSplitAccent } from "@/lib/split-accent";
-import { resolveDisplayName, useProfile } from "@/lib/profile";
-
 
 export const Route = createFileRoute("/")({
-  component: Index,
-  head: () => ({
-    meta: [
-      { title: "IronLog | Home" },
-      { name: "description", content: "Your IronLog workout dashboard and training activity." },
-      { property: "og:title", content: "IronLog | Home" },
-      { property: "og:description", content: "Your IronLog workout dashboard and training activity." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
+  component: Train,
+  head: () => ({ meta: [{ title: "Train — IronLog" }] }),
 });
-
-type CustomDay = {
-  id: string;
-  name: string;
-  subtitle: string | null;
-  accent: string | null;
-  exercises: unknown;
-  muscle_groups: string[] | null;
-  created_at: string;
-};
-
-function Index() {
-  const { user, loading } = useAuth();
-  const profile = useProfile();
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-
-  const { data: splits, isLoading: splitsLoading } = useQuery({
-    queryKey: ["custom-days-list", user?.id || "guest"],
-    queryFn: async (): Promise<CustomDay[]> => {
-      return await db.getCustomDays(user?.id);
-    },
-  });
-
-  // Pull a long window of sessions to power the infinite horizontal week
-  // scroller. 26 weeks (~6 months) is plenty for a streak view; we extend
-  // it client-side if the user scrolls further left.
-  const { data: recent } = useQuery({
-    queryKey: ["recent-sessions", user?.id || "guest"],
-    queryFn: async () => {
-      const since = subDays(new Date(), 26 * 7).toISOString();
-      return await db.getRecentSessions(user?.id, since);
-    },
-  });
-
-  const performedMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of recent ?? []) {
-      const key = startOfDay(new Date(s.performed_at)).toISOString();
-      if (!m.has(key)) m.set(key, s.day);
-    }
-    return m;
-  }, [recent]);
-
-  // Render N weeks ending today. Grows when user scrolls near the left edge.
-  const [weeksToShow, setWeeksToShow] = useState(8);
-  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
-  const [importing, setImporting] = useState(false);
-
-  const days = useMemo(() => {
-    const out: { date: Date; active: boolean; label: string; splitId: string | null }[] = [];
-    const total = weeksToShow * 7;
-    for (let i = total - 1; i >= 0; i--) {
-      const d = startOfDay(subDays(new Date(), i));
-      const key = d.toISOString();
-      out.push({
-        date: d,
-        active: performedMap.has(key),
-        label: format(d, "EEEEE"),
-        splitId: performedMap.get(key) ?? null,
-      });
-    }
-    return out;
-  }, [performedMap, weeksToShow]);
-
-  // Scroll to the today edge on first paint, and grow the window when the
-  // user scrolls near the start (infinite past-weeks scroll).
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
+function Train() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const { user } = useAuth();
+  const { startedAt } = useSessionTimer();
+  const [scheduledDay, setScheduledDay] = useState<string | null>(null);
+  const [activeDay, setActiveDay] = useState<string | null>(null);
   useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollLeft = el.scrollWidth;
-  }, [weeksToShow]);
-  const onScrollerScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (el.scrollLeft < 64) {
-      setWeeksToShow((w) => Math.min(w + 8, 52));
+    setActiveDay(localStorage.getItem(`ironlog:active-day:${user?.id || "local"}`));
+  }, [user?.id, startedAt]);
+  useEffect(() => {
+    try {
+      const schedule = JSON.parse(
+        localStorage.getItem(`ironlog:forged:schedule:${user?.id || "local"}`) || "{}",
+      );
+      setScheduledDay(schedule[format(new Date(), "EEE")] || null);
+    } catch {
+      setScheduledDay(null);
     }
-  };
-
-
-  const streak = useMemo(() => {
-    const set = new Set(
-      (recent ?? []).map((s) =>
-        startOfDay(new Date(s.performed_at)).toISOString(),
-      ),
-    );
-    let s = 0;
-    for (let i = 0; i < 30; i++) {
-      const d = startOfDay(subDays(new Date(), i));
-      if (set.has(d.toISOString())) s++;
-      else if (i > 0) break;
-    }
-    return s;
-  }, [recent]);
-
-  const upNext = useMemo(() => {
-    if (!splits || splits.length === 0) return null;
-    const lastSession = recent?.[0];
-    if (!lastSession) return splits[0];
-    const lastIdx = splits.findIndex((s) => s.id === lastSession.day);
-    if (lastIdx === -1) return splits[0];
-    return splits[(lastIdx + 1) % splits.length];
-  }, [splits, recent]);
-
-  if (loading) {
+  }, [user?.id]);
+  const routines = useQuery({
+    queryKey: ["custom-days-list", user?.id || "guest"],
+    queryFn: () => db.getCustomDays(user?.id),
+  });
+  const sessions = useQuery({
+    queryKey: ["recent-sessions", user?.id || "guest"],
+    queryFn: () => db.getRecentSessions(user?.id),
+  });
+  const list = routines.data ?? [];
+  const recent = sessions.data ?? [];
+  const last = recent[0];
+  const lastIndex = list.findIndex((r) => r.id === last?.day);
+  const planned = list.find((r) => r.id === scheduledDay);
+  const next = planned || (list.length ? list[(lastIndex + 1) % list.length] : null);
+  const active = list.find((r) => r.id === activeDay);
+  const days = Array.from({ length: 7 }, (_, i) => startOfDay(subDays(new Date(), 6 - i)));
+  const completed = new Set(recent.map((s) => startOfDay(new Date(s.performed_at)).getTime()));
+  const weekCount = days.filter((d) => completed.has(d.getTime())).length;
+  if (!mounted)
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Dumbbell className="h-8 w-8 animate-pulse text-primary" />
-      </div>
-    );
-  }
-
-  const fullName =
-    (user?.user_metadata?.full_name as string | undefined) ??
-    (user?.user_metadata?.name as string | undefined) ??
-    (user?.user_metadata?.display_name as string | undefined) ??
-    null;
-  const firstName = resolveDisplayName(profile, { fullName, email: user?.email });
-
-  const deleteSplit = (id: string, name: string) => setPendingDelete({ id, name });
-
-  const confirmDelete = async () => {
-    if (!pendingDelete) return;
-    const { id } = pendingDelete;
-    setPendingDelete(null);
-    try {
-      await db.deleteCustomDay(id, user?.id);
-      toast.success("Split deleted");
-      qc.invalidateQueries({ queryKey: ["custom-days-list", user?.id || "guest"] });
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  const handleImport = async (draft: ImportedDraft) => {
-    setImporting(true);
-    try {
-      const { id } = await db.createCustomDay({
-          name: draft.name,
-          subtitle: draft.subtitle || null,
-          accent: "primary",
-          muscle_groups: draft.muscleGroups,
-          exercises: draft.exercises,
-      }, user?.id);
-      setImportOpen(false);
-      toast.success("Routine imported");
-      qc.invalidateQueries({ queryKey: ["custom-days-list", user?.id || "guest"] });
-      navigate({ to: "/day/$day", params: { day: id } });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save routine");
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const dialogs = (
-    <>
-      <Suspense fallback={null}>
-        <QuickImportDialog
-          open={importOpen}
-          onOpenChange={setImportOpen}
-          onApply={handleImport}
-          applying={importing}
-        />
-      </Suspense>
-      <AlertDialog
-        open={pendingDelete !== null}
-        onOpenChange={(v) => !v && setPendingDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Split?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {pendingDelete?.name}? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
-
-  // Empty state
-  if (!splitsLoading && (splits?.length ?? 0) === 0) {
-
-  return (
-    <main className="mx-auto max-w-3xl px-5 py-12 animate-fade-in-up">
-      <div className="glass relative overflow-hidden rounded-3xl p-10 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-            <Dumbbell className="h-8 w-8" />
-          </div>
-          <h1 className="mt-6 text-3xl font-extrabold tracking-tight md:text-4xl">
-            Your journey starts here.
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Create your first custom workout split to start tracking sets, weights and progress.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-            <Button
-              size="lg"
-              className="font-bold shadow-[var(--shadow-glow)]"
-              onClick={() => navigate({ to: "/custom/new" })}
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Create New Split
-            </Button>
-            <Button size="lg" variant="outline" className="font-bold" onClick={() => setImportOpen(true)}>
-              <Zap className="mr-2 h-4 w-4" /> Import a routine
-            </Button>
-          </div>
-        </div>
-        {dialogs}
+      <main className="mx-auto max-w-4xl px-5 py-12" role="status">
+        Loading your training…
       </main>
-
     );
-  }
-
-  const week = days.slice(-7);
-  const weekCount = week.filter((d) => d.active).length;
-  const monthCount = (recent ?? []).filter(
-    (s) => new Date(s.performed_at) >= subDays(new Date(), 30),
-  ).length;
-  const upNextCount = upNext && Array.isArray(upNext.exercises) ? (upNext.exercises as unknown[]).length : 0;
-  const upNextMuscles = (upNext?.muscle_groups ?? []).slice(0, 3).map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(" · ");
-
   return (
-    <main className="mx-auto max-w-3xl px-5 pb-6">
-      {/* Greeting */}
-      <header className="pt-5 animate-fade-in">
-        <p className="text-[13px] font-medium text-muted-foreground">{format(new Date(), "EEEE, d MMMM")}</p>
-        <h1 className="mt-1 text-[26px] font-bold leading-tight tracking-tight">Hi, {firstName}</h1>
+    <main className="mx-auto max-w-4xl px-5 pb-8 pt-7">
+      <header className="mb-7">
+        <p className="forged-eyebrow">{format(new Date(), "EEEE, d MMMM")}</p>
+        <h1 className="forged-title mt-3">Your next rep.</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {recent.length ? "Build on your last session." : "Your first session starts here."}
+        </p>
       </header>
-
-      {/* Today */}
-      {upNext && (
-        <section className="mt-6 rounded-[28px] border border-border bg-card p-6 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-primary">Today</span>
-            <Link
-              to="/custom/$id/edit"
-              params={{ id: upNext.id }}
-              className="tap flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
-              aria-label="Edit workout"
-            >
-              <Pencil className="h-4 w-4" />
-            </Link>
-          </div>
-          <h2 className="mt-2 text-[32px] font-extrabold leading-[1.05] tracking-tight">{upNext.name}</h2>
-          <p className="mt-2 text-[14px] text-muted-foreground">
-            {upNextCount} exercises{upNextMuscles ? ` · ${upNextMuscles}` : ""}
-          </p>
-          <Link
-            to="/day/$day"
-            params={{ day: upNext.id }}
-            className="tap mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[16px] font-bold text-primary-foreground"
-          >
-            <Play className="h-4 w-4 fill-current" /> Start workout
-          </Link>
-        </section>
-      )}
-
-      {/* Stats */}
-      <section className="mt-4 grid grid-cols-3 divide-x divide-border rounded-[24px] border border-border bg-card py-4 animate-fade-in">
-        {[
-          { v: `${weekCount}`, suffix: "/7", l: "This week" },
-          { v: `${streak}`, suffix: streak === 1 ? " day" : " days", l: "Streak" },
-          { v: `${monthCount}`, suffix: "", l: "Last 30 days" },
-        ].map((x) => (
-          <div key={x.l} className="px-3 text-center">
-            <p className="text-[24px] font-extrabold tabular-nums leading-none">
-              {x.v}
-              <span className="text-[13px] font-semibold text-muted-foreground">{x.suffix}</span>
-            </p>
-            <p className="mt-1.5 text-[12px] font-medium text-muted-foreground">{x.l}</p>
-          </div>
-        ))}
-      </section>
-
-      {/* Week strip */}
-      <section className="mt-4 flex justify-between px-1 animate-fade-in" aria-label="This week">
-        {week.map((d, i) => {
-          const isToday = i === week.length - 1;
-          return (
-            <div key={d.date.toISOString()} className="flex flex-col items-center gap-2">
-              <span className={cn("text-[11px] font-semibold", isToday ? "text-foreground" : "text-muted-foreground")}>
-                {format(d.date, "EEEEE")}
-              </span>
-              <span
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums",
-                  d.active
-                    ? "bg-primary text-primary-foreground"
-                    : isToday
-                      ? "ring-1 ring-foreground/40 text-foreground"
-                      : "text-muted-foreground",
-                )}
-              >
-                {format(d.date, "d")}
-              </span>
-            </div>
-          );
-        })}
-      </section>
-
-      {/* Programs */}
-      <section className="mt-9 animate-fade-in">
-        <div className="mb-3 flex items-end justify-between">
-          <h3 className="text-[20px] font-bold tracking-tight">My programs</h3>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setImportOpen(true)}
-              className="tap flex h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
-            >
-              <Zap className="h-4 w-4" /> Import
-            </button>
-            <Link
-              to="/custom/new"
-              className="tap flex h-10 items-center gap-1 rounded-full bg-secondary px-4 text-[13px] font-semibold text-foreground"
-            >
-              <Plus className="h-4 w-4" /> New
-            </Link>
-          </div>
-        </div>
-        <div className="overflow-hidden rounded-[24px] border border-border bg-card divide-y divide-border">
-          {(splits ?? []).map((s, i) => (
-            <SplitCard key={s.id} split={s} index={i} isNext={s.id === upNext?.id} onDelete={deleteSplit} />
-          ))}
-        </div>
-      </section>
-
-      <footer className="mt-10 text-center text-xs text-muted-foreground">
-        <Link to="/progressive-overload-tracker" className="hover:text-foreground">
-          How IronLog tracks progressive overload
+      {startedAt && active && (
+        <Link
+          to="/day/$day"
+          params={{ day: active.id }}
+          className="mb-6 flex min-h-14 items-center justify-between rounded-xl border border-primary/40 bg-primary/10 px-4 text-sm font-semibold text-primary"
+        >
+          <span>Resume {active.name}</span>
+          <ArrowRight className="h-4 w-4" />
         </Link>
-      </footer>
-      {dialogs}
+      )}
+      <div className="forged-hub-grid">
+        <div>
+          <section aria-label="Last seven days" className="mb-7">
+            <div className="mb-4 flex justify-between">
+              <p className="forged-eyebrow">Last 7 days</p>
+              <p className="text-xs text-primary">
+                {weekCount} training {weekCount === 1 ? "day" : "days"}
+              </p>
+            </div>
+            <div className="flex justify-between">
+              {days.map((d) => (
+                <div key={d.toISOString()} className="flex flex-col items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">{format(d, "EEEEE")}</span>
+                  <span
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-full text-xs",
+                      completed.has(d.getTime())
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card text-muted-foreground",
+                    )}
+                  >
+                    {completed.has(d.getTime()) ? <Check className="h-4 w-4" /> : format(d, "d")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+          {routines.isPending ? (
+            <div role="status" className="forged-panel animate-pulse py-16 text-muted-foreground">
+              Loading routines…
+            </div>
+          ) : routines.isError ? (
+            <div className="forged-panel">
+              <p>Could not load your routines.</p>
+              <button onClick={() => routines.refetch()} className="mt-3 min-h-11 text-primary">
+                Try again
+              </button>
+            </div>
+          ) : next ? (
+            <section className="forged-panel">
+              <div className="flex items-center gap-2">
+                <span style={{ color: "var(--brand)" }} className="text-lg font-bold">
+                  /
+                </span>
+                <p className="forged-eyebrow">
+                  {planned ? "Planned for today" : "Next in your rotation"}
+                </p>
+              </div>
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight">{next.name}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {next.subtitle || next.muscle_groups?.join(" · ")}
+              </p>
+              <p className="mt-4 text-xs text-muted-foreground">
+                {Array.isArray(next.exercises) ? next.exercises.length : 0} exercises
+              </p>
+              <ul className="my-5 space-y-3 text-sm">
+                {(Array.isArray(next.exercises) ? next.exercises : []).slice(0, 3).map((ex, i) => (
+                  <li key={String(ex) + i} className="flex items-start gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span>{String(ex)}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                to="/day/$day"
+                params={{ day: next.id }}
+                className="flex min-h-14 items-center justify-between rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground"
+              >
+                Open {next.name}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </section>
+          ) : (
+            <section className="forged-panel">
+              <Dumbbell className="mb-4 text-primary" />
+              <h2 className="text-xl font-bold">Make it your own.</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Create a routine or import one to begin.
+              </p>
+              <Link to="/custom/new" className="mt-5 flex min-h-12 items-center text-primary">
+                Create a routine →
+              </Link>
+            </section>
+          )}
+          <Link
+            to="/custom/new"
+            className="mt-3 flex min-h-12 items-center justify-center text-xs text-muted-foreground"
+          >
+            Build a new workout
+          </Link>
+        </div>
+        <aside className="mt-7 space-y-6 lg:mt-0">
+          <section>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Recent activity</h2>
+              <Link to="/history" className="flex min-h-11 items-center text-xs text-primary">
+                View history →
+              </Link>
+            </div>
+            {sessions.isPending ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                Loading activity…
+              </p>
+            ) : sessions.isError ? (
+              <button onClick={() => sessions.refetch()} className="min-h-11 text-sm text-primary">
+                Retry activity
+              </button>
+            ) : last ? (
+              <Link to="/history" className="block rounded-xl border border-border bg-card p-4">
+                <p className="font-semibold">
+                  {last.title || list.find((r) => r.id === last.day)?.name || "Workout"}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {format(new Date(last.performed_at), "EEE, d MMM · HH:mm")}
+                </p>
+              </Link>
+            ) : (
+              <p className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
+                Your saved sessions will appear here. No rush. Start with one.
+              </p>
+            )}
+          </section>
+          <Link
+            to="/plan"
+            className="flex min-h-12 items-center justify-between border-b border-border py-3 text-sm"
+          >
+            Manage your routines
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+          <Link
+            to="/coach"
+            className="flex min-h-12 items-center gap-3 text-sm text-muted-foreground"
+          >
+            <Sparkles className="h-4 w-4" /> Ask about your training
+          </Link>
+        </aside>
+      </div>
     </main>
   );
 }
