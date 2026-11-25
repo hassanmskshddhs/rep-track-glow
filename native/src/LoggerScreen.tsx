@@ -139,6 +139,7 @@ export function LoggerScreen({
   const [notice, setNotice] = useState<{ title: string; msg: string } | null>(null);
   const [platesFor, setPlatesFor] = useState<string | null>(null);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
+  const [savedPRs, setSavedPRs] = useState<string[]>([]);
   const draftKey = `ironlog:draft:${userId}:${day.id}`;
 
   const emptyState = (): SetsState =>
@@ -377,6 +378,7 @@ export function LoggerScreen({
         topLifts.forEach(([ex, l]) => lines.push(`• ${ex}: ${l.weight}kg × ${l.reps}`));
       }
       lines.push("", "— Logged with IronLog");
+      setSavedPRs(prs);
       setSavedSummary(lines.join("\n"));
       haptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
     } catch (e) {
@@ -775,13 +777,17 @@ export function LoggerScreen({
       <Modal visible={!!savedSummary} transparent animationType="fade">
         <View style={styles.centerBackdrop}>
           <View style={styles.centerCard}>
-            <Text style={styles.centerTitle}>Workout saved 🎉</Text>
+            {savedPRs.length > 0 && <Text style={styles.prTrophyBig}>🏆</Text>}
+            <Text style={styles.centerTitle}>
+              {savedPRs.length > 0 ? "New PR! 🔥" : "Workout saved 🎉"}
+            </Text>
             <Text style={styles.centerBody}>{savedSummary}</Text>
             <View style={styles.centerButtons}>
               <Pressable
                 onPress={() => {
                   const text = savedSummary;
                   setSavedSummary(null);
+                  setSavedPRs([]);
                   onSaved();
                   if (text) Share.share({ message: text }).catch(() => {});
                 }}
@@ -792,6 +798,7 @@ export function LoggerScreen({
               <Pressable
                 onPress={() => {
                   setSavedSummary(null);
+                  setSavedPRs([]);
                   onSaved();
                 }}
                 style={styles.centerPrimary}
@@ -951,6 +958,7 @@ const styles = StyleSheet.create({
   setCheckTextDone: { color: colors.primaryForeground },
   addSet: { marginTop: 12, paddingVertical: 8, alignItems: "center" },
   addSetText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
+  prTrophyBig: { fontSize: 44, textAlign: "center" as const, marginBottom: 4 },
   restBar: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
