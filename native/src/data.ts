@@ -324,6 +324,7 @@ export type PRRecord = { ex: string; weight: number; prev: number; date: string 
 export type ProgressData = {
   overview: ProgressOverview;
   prs: PRRecord[];
+  prBoard: { ex: string; weight: number; date: string }[];
   weeklyVolume: { w: string; val: number }[];
   exerciseHistory: Record<string, { date: string; val: number; oneRm: number }[]>;
   uniqueExercises: string[];
@@ -467,6 +468,10 @@ export async function getProgressData(userId: string | undefined): Promise<Progr
         longestStreak,
       },
       prs: newPRs,
+      prBoard: Object.entries(maxWeights)
+        .filter(([, v]) => v.weight > 0)
+        .map(([ex, v]) => ({ ex, weight: v.weight, date: v.date }))
+        .sort((a, b) => b.weight - a.weight),
       weeklyVolume: [
         { w: "W1", val: weeklyVolume["W1"] || 0 },
         { w: "W2", val: weeklyVolume["W2"] || 0 },
@@ -708,4 +713,42 @@ export async function saveBodyMeasurement(
 export async function deleteBodyMeasurement(id: string): Promise<void> {
   const { error } = await supabase.from("body_measurements").delete().eq("id", id);
   if (error) throw error;
+}
+
+// --- CSV export: the user's full history, theirs to take anywhere ---
+
+export async function exportHistoryCsv(
+  userId: string,
+): Promise<{ csv: string; sessions: number; sets: number }> {
+  const { data: sessions, error: sErr } = await supabase
+    .from("workout_sessions")
+    .select("id,day,title,performed_at")
+    .eq("user_id", userId)
+    .order("performed_at", { ascending: true })
+    .limit(5000);
+  if (sErr) throw sErr;
+  const { data: logs, error: lErr } = await supabase
+    .from("set_logs")
+    .select("session_id,exercise_name,set_number,weight,reps")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(20000);
+  if (lErr) throw lErr;
+  const days = await getCustomDays(userId);
+  const dayName = new Map(days.map((d) => [d.id, d.name]));
+  const byId = new Map((sessions ?? []).map((s) => [s.id, s]));
+  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const lines = ["date,routine,exercise,set_number,weight_kg,reps"];
+  let sets = 0;
+  for (const l of logs ?? []) {
+    const s = byId.get(l.session_id);
+    if (!s) continue;
+    const date = (s.performed_at ?? "").slice(0, 10);
+    const routine = s.title?.trim() || dayName.get(s.day) || s.day;
+    lines.push(
+      [date, esc(routine), esc(l.exercise_name), String(l.set_number), l.weight ?? "", l.reps ?? ""].join(","),
+    );
+    sets++;
+  }
+  return { csv: lines.join("\n"), sessions: sessions?.length ?? 0, sets };
 }

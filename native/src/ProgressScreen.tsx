@@ -456,6 +456,24 @@ export function ProgressScreen({ session }: { session: Session }) {
               </RiseIn>
             )}
 
+            {data.prBoard.length > 0 && (
+              <RiseIn delay={380}>
+                <Text style={styles.sectionTitle}>PR Board</Text>
+                <Text style={styles.boardSub}>All-time best on every lift</Text>
+                <View style={styles.boardGrid}>
+                  {data.prBoard.slice(0, 8).map((p) => (
+                    <View key={p.ex} style={styles.boardCell}>
+                      <Text style={styles.boardWeight}>{p.weight}kg</Text>
+                      <Text style={styles.boardEx} numberOfLines={1}>{p.ex}</Text>
+                      <Text style={styles.boardDate}>
+                        {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </RiseIn>
+            )}
+
             {history.length > 1 && exercise && (
               <RiseIn delay={400}>
                 <View style={styles.chartCard}>
@@ -707,6 +725,21 @@ const styles = StyleSheet.create({
   bar: { width: 24, borderRadius: 6, backgroundColor: colors.primary },
   barLabel: { color: colors.mutedForeground, fontSize: 11, marginTop: 6 },
   barValue: { color: colors.mutedForeground, fontSize: 10, marginBottom: 4 },
+  boardSub: { color: colors.mutedForeground, fontSize: 12, marginTop: 2 },
+  boardGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+  boardCell: {
+    width: "31%",
+    flexGrow: 1,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  boardWeight: { color: colors.primary, fontSize: 16, fontWeight: "800" },
+  boardEx: { color: colors.foreground, fontSize: 11, fontWeight: "600", marginTop: 2 },
+  boardDate: { color: colors.mutedForeground, fontSize: 10, marginTop: 2 },
   prRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -75,11 +75,20 @@ export function HistoryScreen({ session }: { session: Session }) {
   const [renameValue, setRenameValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<SessionWithSets | null>(null);
+  const [undoDelete, setUndoDelete] = useState<SessionWithSets | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useBackHandler(!!(renaming || deleting), () => {
+  useEffect(() => {
+    return () => {
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+    };
+  }, []);
+
+  useBackHandler(!!(renaming || deleting || undoDelete), () => {
     if (renaming) setRenaming(null);
     else if (deleting) setDeleting(null);
+    else if (undoDelete) undoPendingDelete();
     else return false;
     return true;
   });
@@ -119,18 +128,38 @@ export function HistoryScreen({ session }: { session: Session }) {
     }
   };
 
-  const confirmDelete = async () => {
+  // Delete is never instant: the row hides, an undo bar shows for 6 seconds,
+  // and only then does anything leave the database.
+  const confirmDelete = () => {
     if (!deleting) return;
-    setSaving(true);
+    const target = deleting;
+    setDeleting(null);
     setError(null);
-    try {
-      await deleteSessionAndLogs(deleting.id, userId);
-      setDeleting(null);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete");
-    } finally {
-      setSaving(false);
+    setData((cur) => (cur ? cur.filter((s) => s.id !== target.id) : cur));
+    setUndoDelete(target);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => {
+      setUndoDelete(null);
+      deleteSessionAndLogs(target.id, userId).catch(async () => {
+        setError("Couldn't delete that workout — it was restored.");
+        await load();
+      });
+    }, 6000);
+  };
+
+  const undoPendingDelete = () => {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = null;
+    const target = undoDelete;
+    setUndoDelete(null);
+    if (target) {
+      setData((cur) => {
+        const next = [...(cur ?? []), target];
+        next.sort(
+          (a, b) => new Date(b.performed_at).getTime() - new Date(a.performed_at).getTime(),
+        );
+        return next;
+      });
     }
   };
 
@@ -241,6 +270,15 @@ export function HistoryScreen({ session }: { session: Session }) {
         )}
       </ScrollView>
 
+      {undoDelete ? (
+        <View style={styles.undoBar}>
+          <Text style={styles.undoText}>Workout deleted</Text>
+          <Pressable onPress={undoPendingDelete} hitSlop={10} style={styles.undoButton}>
+            <Text style={styles.undoAction}>Undo</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <Modal visible={!!renaming} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
@@ -292,6 +330,35 @@ export function HistoryScreen({ session }: { session: Session }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
+  undoBar: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    bottom: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  undoText: { color: colors.foreground, fontSize: 13, fontWeight: "600" },
+  undoButton: {
+    borderWidth: 1,
+    borderColor: colors.brand,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  undoAction: { color: colors.brand, fontSize: 13, fontWeight: "800" },
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
   title: {
     color: colors.foreground,

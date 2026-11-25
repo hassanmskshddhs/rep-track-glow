@@ -76,6 +76,15 @@ function parseRepRange(name: string): { min: number; max: number } {
 
 type Intensity = "easy" | "steady" | "savage";
 
+// Accept Arabic-Indic (٠١٢٣٤٥٦٧٨٩) and Eastern Arabic (۰۱۲۳۴۵۶۷۸۹) digits plus the
+// Arabic decimal separator, so Egyptian users can type numbers their way.
+function normalizeDigits(v: string): string {
+  return v
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٫،]/g, ".");
+}
+
 const INTENSITY_META: Record<Intensity, { label: string; inc: number }> = {
   easy: { label: "Easy", inc: 1.25 },
   steady: { label: "Steady", inc: 2.5 },
@@ -183,6 +192,7 @@ export function LoggerScreen({
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const [savedPRs, setSavedPRs] = useState<string[]>([]);
   const [intensity, setIntensity] = useState<Intensity>("steady");
+  const [coachEnabled, setCoachEnabled] = useState(true);
 
   const draftKey = `ironlog:draft:${userId}:${day.id}`;
   const intensityKey = "ironlog:coach:intensity";
@@ -265,6 +275,9 @@ export function LoggerScreen({
         if (v === "easy" || v === "steady" || v === "savage") setIntensity(v);
       })
       .catch(() => {});
+    AsyncStorage.getItem("ironlog:coach:enabled")
+      .then((v) => setCoachEnabled(v !== "0"))
+      .catch(() => {});
   }, [intensityKey]);
 
   const pickIntensity = (v: Intensity) => {
@@ -314,7 +327,8 @@ export function LoggerScreen({
   }, []);
 
   const update = (ex: string, idx: number, field: keyof SetRow, value: string | SetKind) => {
-    const cleaned = field === "kind" ? value : String(value).replace(/[^0-9.]/g, "");
+    const cleaned =
+      field === "kind" ? value : normalizeDigits(String(value)).replace(/[^0-9.]/g, "");
     setState((s) => ({
       ...s,
       [ex]: s[ex].map((r, i) => (i === idx ? { ...r, [field]: cleaned } : r)),
@@ -530,6 +544,7 @@ export function LoggerScreen({
                   <Text style={styles.menuDots}>⋯</Text>
                 </Pressable>
               </View>
+              {coachEnabled ? (
               <View style={styles.coachBox}>
                 <View style={styles.coachTopRow}>
                   <View style={styles.coachLabelRow}>
@@ -564,6 +579,7 @@ export function LoggerScreen({
                   </Pressable>
                 ) : null}
               </View>
+              ) : null}
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Pressable
                   onPress={() => {

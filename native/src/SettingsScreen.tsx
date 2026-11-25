@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -12,7 +13,10 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
-import { Check, Mail, Shield, User } from "lucide-react-native";
+import { Check, Download, Mail, Shield, Sparkles, User } from "lucide-react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
+import { exportHistoryCsv } from "./data";
 
 // Same storage key and shape as the web profile (src/lib/profile.ts)
 const PROFILE_KEY = "ironlog.profile.v1";
@@ -36,6 +40,44 @@ export function SettingsScreen({
 }) {
   const [draft, setDraft] = useState<LocalProfile>(EMPTY);
   const [savedTick, setSavedTick] = useState(false);
+  const [coachEnabled, setCoachEnabled] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState<string | null>(null);
+
+  const exportCsv = async () => {
+    setExporting(true);
+    setExportMsg(null);
+    try {
+      const { csv, sessions, sets } = await exportHistoryCsv(session.user.id);
+      if (sets === 0) {
+        setExportMsg("No logged sets yet — finish a workout first.");
+        return;
+      }
+      const uri = `${FileSystem.cacheDirectory}ironlog-history.csv`;
+      await FileSystem.writeAsStringAsync(uri, csv);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Your IronLog history" });
+        setExportMsg(`${sessions} workouts · ${sets} sets exported. Yours forever.`);
+      } else {
+        setExportMsg("Sharing is not available on this device.");
+      }
+    } catch {
+      setExportMsg("Export failed — check your connection and try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  useEffect(() => {
+    AsyncStorage.getItem("ironlog:coach:enabled")
+      .then((v) => setCoachEnabled(v !== "0"))
+      .catch(() => {});
+  }, []);
+
+  const toggleCoach = (v: boolean) => {
+    setCoachEnabled(v);
+    AsyncStorage.setItem("ironlog:coach:enabled", v ? "1" : "0").catch(() => {});
+  };
 
   useEffect(() => {
     (async () => {
@@ -167,6 +209,48 @@ export function SettingsScreen({
           </View>
         </RiseIn>
 
+        <RiseIn delay={240}>
+          <View style={styles.section}>
+            <View style={styles.coachRow}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Sparkles size={13} color={colors.brand} />
+                  <Text style={styles.sectionLabel}>COACH'S CALL</Text>
+                </View>
+                <Text style={styles.sectionSub}>
+                  Weight suggestions with the reason behind them, shown while you log. Fully
+                  optional, your numbers are only ever suggestions until you tap to use them.
+                </Text>
+              </View>
+              <Switch
+                value={coachEnabled}
+                onValueChange={toggleCoach}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={coachEnabled ? colors.primaryForeground : colors.mutedForeground}
+              />
+            </View>
+          </View>
+        </RiseIn>
+
+        <RiseIn delay={260}>
+          <View style={styles.section}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Download size={13} color={colors.mutedForeground} />
+              <Text style={styles.sectionLabel}>YOUR DATA</Text>
+            </View>
+            <Text style={styles.sectionSub}>
+              Every set you ever logged, as a CSV you can open anywhere. No lock-in, no paywall
+              on your own history.
+            </Text>
+            <Pressable onPress={() => void exportCsv()} style={styles.exportButton} disabled={exporting}>
+              <Text style={styles.exportButtonText}>
+                {exporting ? "Preparing..." : "Export history (CSV)"}
+              </Text>
+            </Pressable>
+            {exportMsg ? <Text style={styles.exportMsg}>{exportMsg}</Text> : null}
+          </View>
+        </RiseIn>
+
         <RiseIn delay={280}>
           <View style={styles.section}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -250,6 +334,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sectionSub: { color: colors.mutedForeground, fontSize: 12, marginTop: 8, lineHeight: 18 },
+  coachRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  exportButton: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    marginTop: 10,
+  },
+  exportButtonText: { color: colors.foreground, fontSize: 13, fontWeight: "700" },
+  exportMsg: { color: colors.primary, fontSize: 12, marginTop: 10 },
   label: { color: colors.foreground, fontSize: 13, fontWeight: "600", marginTop: 14, marginBottom: 6 },
   input: {
     backgroundColor: colors.background,
