@@ -26,7 +26,19 @@ import {
 } from "./data";
 import { EXERCISE_DB } from "./exercises";
 
-type SetRow = { weight: string; reps: string; done?: boolean };
+type SetKind = "N" | "W" | "D" | "F";
+type SetRow = { weight: string; reps: string; done?: boolean; kind?: SetKind };
+
+const SET_KIND_ORDER: SetKind[] = ["N", "W", "D", "F"];
+const SET_KIND_META: Record<SetKind, { title: string; color: string }> = {
+  N: { title: "Working set", color: "#9fb5a8" },
+  W: { title: "Warm-up (not saved)", color: "#7ea6ff" },
+  D: { title: "Drop set", color: "#f0b866" },
+  F: { title: "To failure", color: "#ff8f7a" },
+};
+function nextSetKind(k?: SetKind): SetKind {
+  return SET_KIND_ORDER[(SET_KIND_ORDER.indexOf(k ?? "N") + 1) % SET_KIND_ORDER.length];
+}
 type SetsState = Record<string, SetRow[]>;
 
 // Double-progression, same as the web day page
@@ -196,8 +208,8 @@ export function LoggerScreen({
     return () => clearInterval(t);
   }, []);
 
-  const update = (ex: string, idx: number, field: keyof SetRow, value: string) => {
-    const cleaned = value.replace(/[^0-9.]/g, "");
+  const update = (ex: string, idx: number, field: keyof SetRow, value: string | SetKind) => {
+    const cleaned = field === "kind" ? value : String(value).replace(/[^0-9.]/g, "");
     setState((s) => ({
       ...s,
       [ex]: s[ex].map((r, i) => (i === idx ? { ...r, [field]: cleaned } : r)),
@@ -293,11 +305,14 @@ export function LoggerScreen({
   const filledRows = (): SetRowInput[] => {
     const rows: SetRowInput[] = [];
     for (const ex of exercises) {
-      (state[ex] ?? []).forEach((r, i) => {
+      let setNumber = 0;
+      (state[ex] ?? []).forEach((r) => {
+        if (r.kind === "W") return; // warm-ups are never saved to history
         const w = r.weight === "" ? null : Number(r.weight);
         const reps = r.reps === "" ? null : Number(r.reps);
         if (w === null && reps === null) return;
-        rows.push({ exercise_name: ex, set_number: i + 1, weight: w, reps });
+        setNumber += 1;
+        rows.push({ exercise_name: ex, set_number: setNumber, weight: w, reps });
       });
     }
     return rows;
@@ -472,7 +487,24 @@ export function LoggerScreen({
               </View>
               {(state[ex] ?? []).map((r, idx) => (
                 <View key={idx} style={[styles.setRow, r.done && styles.setRowDone]}>
-                  <Text style={styles.setNum}>{idx + 1}</Text>
+                  {(() => {
+                    const kind: SetKind = r.kind ?? "N";
+                    const working = (state[ex] ?? [])
+                      .slice(0, idx + 1)
+                      .filter((s) => (s.kind ?? "N") !== "W").length;
+                    const meta = SET_KIND_META[kind];
+                    return (
+                      <Pressable
+                        onPress={() => update(ex, idx, "kind", nextSetKind(r.kind))}
+                        hitSlop={4}
+                        style={styles.setNum}
+                      >
+                        <Text style={[styles.setNumText, { color: meta.color }]}>
+                          {kind === "N" ? String(working) : kind}
+                        </Text>
+                      </Pressable>
+                    );
+                  })()}
                   <TextInput
                     value={r.weight}
                     onChangeText={(v) => update(ex, idx, "weight", v)}
@@ -877,7 +909,8 @@ const styles = StyleSheet.create({
     gap: 8,
     width: "100%",
   },
-  setNum: { color: colors.mutedForeground, fontSize: 13, width: 44 },
+  setNum: { width: 44, justifyContent: "center" as const },
+  setNumText: { color: colors.mutedForeground, fontSize: 13, fontWeight: "700" as const },
   setInput: {
     flex: 1,
     flexBasis: 0,
