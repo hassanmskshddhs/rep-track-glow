@@ -478,3 +478,46 @@ export async function getProgressData(userId: string | undefined): Promise<Progr
     return null;
   }
 }
+
+// --- Plan ---
+
+// Same accent tokens as the web styles.css
+export const ACCENT_COLORS: Record<string, string> = {
+  push: "#c8f2cb",
+  pull: "#aec7b4",
+  legs: "#dfcca1",
+  upper: "#ffb092",
+  primary: "#c8f2cb",
+};
+
+// Same rules as the web getSplitAccent
+export function getSplitAccent(
+  name: string | null | undefined,
+  muscleGroups: string[] | null | undefined,
+  fallback = "primary",
+): string {
+  const n = (name ?? "").toLowerCase();
+  const mgs = (muscleGroups ?? []).map((m) => m.toLowerCase());
+  if (/\bpush\b/.test(n)) return "push";
+  if (/\bpull\b/.test(n)) return "pull";
+  if (/\b(leg|legs|lower|quad|hamstring|glute|calf|abs?)\b/.test(n)) return "legs";
+  if (/\b(upper|arms?|shoulder|chest|back)\b/.test(n)) return "upper";
+  const hasPush = ["chest", "triceps", "shoulders"].some((m) => mgs.includes(m));
+  const hasPull = ["back", "biceps", "forearms"].some((m) => mgs.includes(m));
+  const hasLegs = ["quads", "hamstrings", "glutes", "calves", "core"].some((m) =>
+    mgs.includes(m),
+  );
+  if (hasLegs && !hasPush && !hasPull) return "legs";
+  if (hasPush && !hasPull) return "push";
+  if (hasPull && !hasPush) return "pull";
+  return fallback || "primary";
+}
+
+export async function deleteCustomDay(id: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("custom_workout_days")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
