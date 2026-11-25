@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,88 +12,8 @@ import {
 import { StatusBar } from "expo-status-bar";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/supabase";
-
-// FORGED dark theme, same tokens as the web app (src/styles.css)
-const colors = {
-  background: "#101411",
-  foreground: "#f0f2e9",
-  card: "#1b231e",
-  primary: "#c8f2cb",
-  primaryForeground: "#101411",
-  mutedForeground: "#a5b2a8",
-  border: "#303b33",
-  input: "#3a493e",
-  brand: "#ff8459",
-};
-
-function RiseIn({
-  delay = 0,
-  children,
-  style,
-}: {
-  delay?: number;
-  children: React.ReactNode;
-  style?: object;
-}) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 500,
-      delay,
-      useNativeDriver: true,
-    }).start();
-  }, [anim, delay]);
-  return (
-    <Animated.View
-      style={[
-        style,
-        {
-          opacity: anim,
-          transform: [
-            {
-              translateY: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [14, 0],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
-function Wordmark({ size = 22 }: { size?: number }) {
-  return (
-    <View style={styles.wordmark}>
-      <Text style={[styles.brandBars, { fontSize: size + 2 }]}>Ⅱ</Text>
-      <Text style={[styles.wordmarkText, { fontSize: size }]}>IRONLOG</Text>
-    </View>
-  );
-}
-
-function PrimaryButton({
-  label,
-  onPress,
-}: {
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.primaryButton,
-        pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-      ]}
-    >
-      <Text style={styles.primaryButtonText}>{label}</Text>
-    </Pressable>
-  );
-}
+import { colors, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
+import { TrainScreen } from "./src/TrainScreen";
 
 function WelcomeScreen({ onStart }: { onStart: () => void }) {
   return (
@@ -108,8 +27,7 @@ function WelcomeScreen({ onStart }: { onStart: () => void }) {
         </RiseIn>
         <RiseIn delay={220} style={{ marginTop: 14 }}>
           <Text style={styles.heroSub}>
-            Track every lift. Crush every PR. Built for the gym floor, not the
-            desk.
+            Track every lift. Crush every PR. Built for the gym floor, not the desk.
           </Text>
         </RiseIn>
       </View>
@@ -120,7 +38,13 @@ function WelcomeScreen({ onStart }: { onStart: () => void }) {
   );
 }
 
-function AuthScreen({ onBack, onSignedIn }: { onBack: () => void; onSignedIn: (s: Session) => void }) {
+function AuthScreen({
+  onBack,
+  onSignedIn,
+}: {
+  onBack: () => void;
+  onSignedIn: (s: Session) => void;
+}) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -226,27 +150,6 @@ function AuthScreen({ onBack, onSignedIn }: { onBack: () => void; onSignedIn: (s
   );
 }
 
-function HomeScreen({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
-  return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.welcomeBody}>
-        <RiseIn>
-          <Wordmark size={26} />
-        </RiseIn>
-        <RiseIn delay={120} style={{ marginTop: 48 }}>
-          <Text style={styles.heroTitle}>Your next{"\n"}rep.</Text>
-        </RiseIn>
-        <RiseIn delay={220} style={{ marginTop: 14 }}>
-          <Text style={styles.heroSub}>Signed in as {session.user.email}.</Text>
-        </RiseIn>
-      </View>
-      <RiseIn delay={340} style={styles.footer}>
-        <PrimaryButton label="Sign out" onPress={onSignOut} />
-      </RiseIn>
-    </SafeAreaView>
-  );
-}
-
 export default function App() {
   const [screen, setScreen] = useState<"welcome" | "auth">("welcome");
   const [session, setSession] = useState<Session | null>(null);
@@ -275,7 +178,7 @@ export default function App() {
     <View style={styles.flex}>
       <StatusBar style="light" />
       {session ? (
-        <HomeScreen
+        <TrainScreen
           session={session}
           onSignOut={() => {
             void supabase.auth.signOut();
@@ -293,13 +196,6 @@ export default function App() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   screen: { flex: 1, backgroundColor: colors.background },
-  wordmark: { flexDirection: "row", alignItems: "center", gap: 8 },
-  brandBars: { color: colors.brand, fontWeight: "800" },
-  wordmarkText: {
-    color: colors.foreground,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
   welcomeBody: { flex: 1, justifyContent: "center", paddingHorizontal: 24 },
   heroTitle: {
     color: colors.foreground,
@@ -314,17 +210,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   footer: { paddingHorizontal: 24, paddingBottom: 24 },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  primaryButtonText: {
-    color: colors.primaryForeground,
-    fontSize: 16,
-    fontWeight: "700",
-  },
   authBody: { flex: 1, paddingHorizontal: 24, paddingTop: 24 },
   authTitle: {
     color: colors.foreground,
@@ -359,5 +244,5 @@ const styles = StyleSheet.create({
   },
   switchModeStrong: { color: colors.primary, fontWeight: "700" },
   backLink: { paddingVertical: 16, alignItems: "center" },
-  errorText: { color: "#f17d79", fontSize: 13, marginTop: 12 },
+  errorText: { color: colors.destructive, fontSize: 13, marginTop: 12 },
 });
