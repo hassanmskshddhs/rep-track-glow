@@ -339,7 +339,7 @@ export function PlanScreen({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
+  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 },
   eyebrow: {
     color: colors.mutedForeground,
     fontSize: 11,

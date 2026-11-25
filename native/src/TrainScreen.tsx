@@ -207,7 +207,7 @@ export function TrainScreen({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 110 },
   headerRow: { flexDirection: "row", justifyContent: "space-between" },
   coachRow: {
     flexDirection: "row",

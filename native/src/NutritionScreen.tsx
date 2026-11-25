@@ -130,7 +130,7 @@ function Wizard({ onComplete }: { onComplete: (t: MacroTargets) => void }) {
 
   const now = new Date();
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+    <ScrollView style={styles.screen} contentContainerStyle={{ padding: 20, paddingBottom: 110 }}>
       <Text style={styles.dateLine}>
         {WEEKDAYS[now.getDay()]}, {now.getDate()} {MONTHS[now.getMonth()]}
       </Text>
@@ -523,7 +523,7 @@ export function NutritionScreen({ session }: { session: Session }) {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 110 }}>
         <Text style={styles.dateLine}>
           {WEEKDAYS[now.getDay()]}, {now.getDate()} {MONTHS[now.getMonth()]}
         </Text>
