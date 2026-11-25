@@ -17,11 +17,17 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "app.ironlog.native"
+      "package": "com.ironlog.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "ironlog"
+    "scheme": "ironlog",
+    "extra": {
+      "eas": {
+        "projectId": "870d8691-754d-49c1-9734-4f9904674b8d"
+      }
+    },
+    "owner": "hassan0v0"
   }
 }
