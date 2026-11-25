@@ -498,7 +498,16 @@ export function LoggerScreen({
                 <View style={{ width: 22 }} />
               </View>
               {(state[ex] ?? []).map((r, idx) => (
-                <View key={idx} style={[styles.setRow, r.done && styles.setRowDone]}>
+                <View
+                  key={idx}
+                  style={[
+                    styles.setRow,
+                    r.done && styles.setRowDone,
+                    (r.kind ?? "N") === "W" && styles.setRowWarmup,
+                    (r.kind ?? "N") === "D" && styles.setRowDrop,
+                    (r.kind ?? "N") === "F" && styles.setRowFailure,
+                  ]}
+                >
                   {(() => {
                     const kind: SetKind = r.kind ?? "N";
                     const working = (state[ex] ?? [])
@@ -615,7 +624,7 @@ export function LoggerScreen({
 
       <View style={styles.bottomBar}>
         <Text style={styles.readyText}>
-          {rows.length} sets ready · {day.name}
+          {rows.length} {rows.length === 1 ? "set" : "sets"} ready · {day.name}
         </Text>
         <View style={styles.bottomButtons}>
           <Pressable onPress={confirmReset} style={styles.resetButton}>
@@ -640,7 +649,9 @@ export function LoggerScreen({
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Session review</Text>
-            <Text style={styles.modalSub}>{rows.length} filled sets</Text>
+            <Text style={styles.modalSub}>
+              {rows.length} filled {rows.length === 1 ? "set" : "sets"}
+            </Text>
             <ScrollView style={{ maxHeight: 320, marginTop: 12 }}>
               {exercises.map((ex) => {
                 const exRows = rows.filter((r) => r.exercise_name === ex);
@@ -959,6 +970,9 @@ const styles = StyleSheet.create({
   addSet: { marginTop: 12, paddingVertical: 8, alignItems: "center" },
   addSetText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
   prTrophyBig: { fontSize: 44, textAlign: "center" as const, marginBottom: 4 },
+  setRowWarmup: { backgroundColor: "rgba(126,166,255,0.07)", borderRadius: 8 },
+  setRowDrop: { backgroundColor: "rgba(240,184,102,0.07)", borderRadius: 8 },
+  setRowFailure: { backgroundColor: "rgba(255,143,122,0.07)", borderRadius: 8 },
   restBar: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
