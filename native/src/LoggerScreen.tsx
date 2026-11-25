@@ -156,6 +156,27 @@ function buildCoachCall(
   };
 }
 
+function round25(w: number): number {
+  return Math.round(w / 2.5) * 2.5;
+}
+
+// Classic ramp to the working weight: empty bar, then 40/60/80%.
+function warmUpSets(working: number): { w: number; reps: number }[] {
+  if (!Number.isFinite(working) || working <= BAR_KG) return [];
+  const steps = [
+    { w: BAR_KG, reps: 10 },
+    { w: round25(working * 0.4), reps: 8 },
+    { w: round25(working * 0.6), reps: 6 },
+    { w: round25(working * 0.8), reps: 3 },
+  ];
+  const seen = new Set<number>();
+  return steps.filter((s) => {
+    if (s.w > working || s.w < BAR_KG || seen.has(s.w)) return false;
+    seen.add(s.w);
+    return true;
+  });
+}
+
 function formatClock(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -189,6 +210,7 @@ export function LoggerScreen({
   const [resetOpen, setResetOpen] = useState(false);
   const [notice, setNotice] = useState<{ title: string; msg: string } | null>(null);
   const [platesFor, setPlatesFor] = useState<string | null>(null);
+  const [warmFor, setWarmFor] = useState<string | null>(null);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const [savedPRs, setSavedPRs] = useState<string[]>([]);
   const [intensity, setIntensity] = useState<Intensity>("steady");
@@ -205,13 +227,15 @@ export function LoggerScreen({
   const [elapsed, setElapsed] = useState(0);
   // Rest timer: auto-starts when a set is marked done.
   const [restTarget, setRestTarget] = useState(90);
+  const [restFor, setRestFor] = useState<string | null>(null);
+  const [restByEx, setRestByEx] = useState<Record<string, number>>({});
   const [restDeadline, setRestDeadline] = useState<number | null>(null);
   const [restRemaining, setRestRemaining] = useState(90);
   const [reviewOpen, setReviewOpen] = useState(false);
   // Hardware back: close whatever sheet/dialog is open, topmost first.
   const anyOverlay = !!(
     notice || savedSummary || resetOpen || reviewOpen || renamingEx ||
-    removingEx || platesFor || noteEditing || menuFor || addOpen
+    removingEx || platesFor || warmFor || noteEditing || menuFor || addOpen
   );
   useBackHandler(anyOverlay, () => {
     if (notice) setNotice(null);
@@ -224,6 +248,7 @@ export function LoggerScreen({
     else if (renamingEx) setRenamingEx(null);
     else if (removingEx) setRemovingEx(null);
     else if (platesFor) setPlatesFor(null);
+    else if (warmFor) setWarmFor(null);
     else if (noteEditing) setNoteEditing(null);
     else if (menuFor) setMenuFor(null);
     else if (addOpen) setAddOpen(false);
@@ -265,6 +290,26 @@ export function LoggerScreen({
         ...(fillReps ? { reps: String(call.applyReps) } : {}),
       };
       return { ...cur, [ex]: rows };
+    });
+  };
+
+  // Per-exercise rest times, saved on this device.
+  useEffect(() => {
+    AsyncStorage.getItem("ironlog:rest-by-ex")
+      .then((v) => {
+        if (v) {
+          const parsed = JSON.parse(v);
+          if (parsed && typeof parsed === "object") setRestByEx(parsed);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const rememberRest = (ex: string, t: number) => {
+    setRestByEx((cur) => {
+      const next = { ...cur, [ex]: t };
+      AsyncStorage.setItem("ironlog:rest-by-ex", JSON.stringify(next)).catch(() => {});
+      return next;
     });
   };
 
@@ -347,8 +392,11 @@ export function LoggerScreen({
     });
     if (marking) {
       haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
-      setRestRemaining(restTarget);
-      setRestDeadline(Date.now() + restTarget * 1000);
+      const t = restByEx[ex] ?? restTarget;
+      setRestFor(ex);
+      setRestTarget(t);
+      setRestRemaining(t);
+      setRestDeadline(Date.now() + t * 1000);
     }
   };
 
@@ -595,16 +643,66 @@ export function LoggerScreen({
                     </Text>
                   </View>
                 </Pressable>
-                <Pressable
-                  onPress={() => setPlatesFor(platesFor === ex ? null : ex)}
-                  style={styles.noteToggle}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    <Calculator size={12} color={colors.primary} />
-                    <Text style={styles.noteToggleText}>Plates</Text>
-                  </View>
-                </Pressable>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                  <Pressable
+                    onPress={() => setWarmFor(warmFor === ex ? null : ex)}
+                    style={styles.noteToggle}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                      <Flame size={12} color={colors.primary} />
+                      <Text style={styles.noteToggleText}>Warm-up</Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setPlatesFor(platesFor === ex ? null : ex)}
+                    style={styles.noteToggle}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                      <Calculator size={12} color={colors.primary} />
+                      <Text style={styles.noteToggleText}>Plates</Text>
+                    </View>
+                  </Pressable>
+                </View>
               </View>
+              {warmFor === ex &&
+                (() => {
+                  const entered = [...(state[ex] ?? [])]
+                    .map((r) => parseFloat(r.weight))
+                    .find((w) => Number.isFinite(w) && w > 0);
+                  const working = entered ?? call.applyWeight ?? undefined;
+                  const steps = working ? warmUpSets(working) : [];
+                  return (
+                    <View style={styles.platesBox}>
+                      {!working ? (
+                        <Text style={styles.platesHint}>
+                          Enter your working weight above and I'll lay out the ramp.
+                        </Text>
+                      ) : (
+                        <>
+                          <Text style={styles.platesHint}>
+                            Ramp up to {working}kg - never jump straight to working weight:
+                          </Text>
+                          <View style={styles.warmList}>
+                            {steps.map((s) => (
+                              <View key={s.w} style={styles.warmRow}>
+                                <Text style={styles.warmWeight}>{s.w}kg</Text>
+                                <Text style={styles.warmReps}>x {s.reps}</Text>
+                              </View>
+                            ))}
+                            <View style={[styles.warmRow, styles.warmRowWorking]}>
+                              <Text style={[styles.warmWeight, { color: colors.brand }]}>
+                                {working}kg
+                              </Text>
+                              <Text style={[styles.warmReps, { color: colors.brand }]}>
+                                working sets
+                              </Text>
+                            </View>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  );
+                })()}
               {platesFor === ex &&
                 (() => {
                   const lastW = [...(state[ex] ?? [])]
@@ -757,6 +855,7 @@ export function LoggerScreen({
                     setRestTarget(t);
                     setRestRemaining(t);
                     setRestDeadline(Date.now() + t * 1000);
+                    if (restFor) rememberRest(restFor, t);
                   }}
                   style={[styles.restPreset, restTarget === t && styles.restPresetActive]}
                 >
@@ -1253,6 +1352,19 @@ const styles = StyleSheet.create({
   coachApplyText: { color: colors.brand, fontSize: 12, fontWeight: "800" },
   noteToggle: { marginTop: 10, paddingVertical: 4 },
   noteToggleText: { color: colors.mutedForeground, fontSize: 13 },
+  warmList: { marginTop: 8, gap: 6 },
+  warmRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  warmRowWorking: { borderWidth: 1, borderColor: colors.brand },
+  warmWeight: { color: colors.foreground, fontSize: 13, fontWeight: "800" },
+  warmReps: { color: colors.mutedForeground, fontSize: 12, fontWeight: "600" },
   platesBox: {
     marginTop: 8,
     borderWidth: 1,
