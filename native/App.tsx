@@ -16,6 +16,7 @@ import { colors, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
 import { TrainScreen } from "./src/TrainScreen";
 import { LoggerScreen } from "./src/LoggerScreen";
 import { HistoryScreen } from "./src/HistoryScreen";
+import { ProgressScreen } from "./src/ProgressScreen";
 import type { CustomDay } from "./src/data";
 
 function WelcomeScreen({ onStart }: { onStart: () => void }) {
@@ -157,12 +158,13 @@ function TabBar({
   tab,
   onChange,
 }: {
-  tab: "train" | "history";
-  onChange: (t: "train" | "history") => void;
+  tab: "train" | "history" | "progress";
+  onChange: (t: "train" | "history" | "progress") => void;
 }) {
   const tabs = [
     { key: "train" as const, label: "Train", icon: "🏋️" },
     { key: "history" as const, label: "History", icon: "📜" },
+    { key: "progress" as const, label: "Progress", icon: "📈" },
   ];
   return (
     <SafeAreaView style={tabStyles.bar}>
@@ -198,7 +200,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [restoring, setRestoring] = useState(true);
   const [activeDay, setActiveDay] = useState<CustomDay | null>(null);
-  const [tab, setTab] = useState<"train" | "history">("train");
+  const [tab, setTab] = useState<"train" | "history" | "progress">("train");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -240,8 +242,10 @@ export default function App() {
               }}
               onOpenDay={(d) => setActiveDay(d)}
             />
-          ) : (
+          ) : tab === "history" ? (
             <HistoryScreen session={session} />
+          ) : (
+            <ProgressScreen session={session} />
           )}
           <TabBar tab={tab} onChange={setTab} />
         </>

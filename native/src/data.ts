@@ -305,3 +305,176 @@ export async function deleteSessionAndLogs(id: string, userId: string): Promise<
     .eq("user_id", userId);
   if (sErr) throw sErr;
 }
+
+// --- Progress ---
+
+export type ProgressOverview = {
+  workoutsThisMonth: number;
+  workoutsDiff: number;
+  volumeThisMonth: number;
+  volumeDiffPct: number;
+  volumeUp: boolean;
+  prsThisMonth: number;
+  currentStreak: number;
+  longestStreak: number;
+};
+
+export type PRRecord = { ex: string; weight: number; prev: number; date: string };
+
+export type ProgressData = {
+  overview: ProgressOverview;
+  prs: PRRecord[];
+  weeklyVolume: { w: string; val: number }[];
+  exerciseHistory: Record<string, { date: string; val: number }[]>;
+  uniqueExercises: string[];
+};
+
+function sameMonth(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function dayKey(d: Date) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+const MONTHS_CHART = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// Mirrors the web useProgressData hook: same month buckets, streaks,
+// weekly volume and PR detection, computed from the same tables.
+export async function getProgressData(userId: string | undefined): Promise<ProgressData | null> {
+  if (!userId) return null;
+  try {
+    const { data: sessions, error: sErr } = await supabase
+      .from("workout_sessions")
+      .select("id,performed_at")
+      .eq("user_id", userId)
+      .order("performed_at", { ascending: true })
+      .limit(500);
+    if (sErr || !sessions) return null;
+    const ids = sessions.map((s) => s.id as string);
+    let sets: { exercise_name: string; weight: number | null; reps: number | null; created_at: string }[] = [];
+    if (ids.length > 0) {
+      const { data: logs, error: lErr } = await supabase
+        .from("set_logs")
+        .select("exercise_name,weight,reps,created_at")
+        .eq("user_id", userId)
+        .in("session_id", ids)
+        .order("created_at", { ascending: true });
+      if (!lErr && logs) sets = logs;
+    }
+
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    let workoutsThisMonth = 0;
+    let workoutsLastMonth = 0;
+    const sessionDays: string[] = [];
+    for (const s of sessions) {
+      const d = new Date(s.performed_at as string);
+      if (sameMonth(d, now)) workoutsThisMonth++;
+      if (sameMonth(d, lastMonth)) workoutsLastMonth++;
+      const k = dayKey(d);
+      if (!sessionDays.includes(k)) sessionDays.push(k);
+    }
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+    if (sessionDays.length > 0) {
+      sessionDays.sort();
+      let temp = 1;
+      longestStreak = 1;
+      for (let i = 1; i < sessionDays.length; i++) {
+        const diff = Math.round(
+          (new Date(sessionDays[i]).getTime() - new Date(sessionDays[i - 1]).getTime()) / 86400000,
+        );
+        if (diff === 1) {
+          temp++;
+          if (temp > longestStreak) longestStreak = temp;
+        } else if (diff > 1) {
+          temp = 1;
+        }
+      }
+      const last = new Date(sessionDays[sessionDays.length - 1]);
+      const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const diffToToday = Math.round((todayMid - last.getTime()) / 86400000);
+      currentStreak = diffToToday <= 1 ? temp : 0;
+    }
+
+    let volumeThisMonth = 0;
+    let volumeLastMonth = 0;
+    const weeklyVolume: Record<string, number> = {};
+    const maxWeights: Record<string, { weight: number; date: string }> = {};
+    const newPRs: PRRecord[] = [];
+    const exerciseHistory: Record<string, { date: string; val: number }[]> = {};
+    const uniqueExercises = new Set<string>();
+
+    for (const set of sets) {
+      const date = new Date(set.created_at);
+      const w = set.weight || 0;
+      const r = set.reps || 0;
+      const vol = w * r;
+      uniqueExercises.add(set.exercise_name);
+
+      if (sameMonth(date, now)) volumeThisMonth += vol;
+      if (sameMonth(date, lastMonth)) volumeLastMonth += vol;
+
+      const weekDiff = (now.getTime() - date.getTime()) / (7 * 86400000);
+      if (weekDiff <= 4 && weekDiff >= 0) {
+        const weekNum = 4 - Math.floor(weekDiff);
+        const key = `W${weekNum}`;
+        weeklyVolume[key] = (weeklyVolume[key] || 0) + vol;
+      }
+
+      const cur = maxWeights[set.exercise_name];
+      if (!cur) {
+        maxWeights[set.exercise_name] = { weight: w, date: set.created_at };
+        if (sameMonth(date, now)) {
+          newPRs.push({ ex: set.exercise_name, weight: w, prev: 0, date: set.created_at });
+        }
+      } else if (w > cur.weight) {
+        if (sameMonth(date, now)) {
+          newPRs.push({ ex: set.exercise_name, weight: w, prev: cur.weight, date: set.created_at });
+        }
+        maxWeights[set.exercise_name] = { weight: w, date: set.created_at };
+      }
+
+      const label = `${MONTHS_CHART[date.getMonth()]} ${date.getDate()}`;
+      const arr = (exerciseHistory[set.exercise_name] ||= []);
+      const existing = arr.find((h) => h.date === label);
+      if (existing) {
+        if (w > existing.val) existing.val = w;
+      } else {
+        arr.push({ date: label, val: w });
+      }
+    }
+
+    newPRs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return {
+      overview: {
+        workoutsThisMonth,
+        workoutsDiff: workoutsThisMonth - workoutsLastMonth,
+        volumeThisMonth,
+        volumeDiffPct:
+          volumeLastMonth > 0
+            ? Math.round(Math.abs(((volumeThisMonth - volumeLastMonth) / volumeLastMonth) * 100))
+            : 0,
+        volumeUp: volumeThisMonth >= volumeLastMonth,
+        prsThisMonth: newPRs.length,
+        currentStreak,
+        longestStreak,
+      },
+      prs: newPRs,
+      weeklyVolume: [
+        { w: "W1", val: weeklyVolume["W1"] || 0 },
+        { w: "W2", val: weeklyVolume["W2"] || 0 },
+        { w: "W3", val: weeklyVolume["W3"] || 0 },
+        { w: "W4", val: weeklyVolume["W4"] || 0 },
+      ],
+      exerciseHistory,
+      uniqueExercises: Array.from(uniqueExercises),
+    };
+  } catch {
+    return null;
+  }
+}
