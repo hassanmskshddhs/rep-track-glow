@@ -13,6 +13,17 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import * as Sharing from "expo-sharing";
+import { ShareCard, ShareCardData } from "./ShareCard";
+
+// react-native-view-shot has no web build; require it natively only.
+let ViewShot: any = null;
+let captureRefShot: ((ref: any, opts?: object) => Promise<string>) | null = null;
+if (Platform.OS !== "web") {
+  const vs = require("react-native-view-shot");
+  ViewShot = vs.default;
+  captureRefShot = vs.captureRef;
+}
 
 const haptic = (fn: () => Promise<void>) => {
   fn().catch(() => {}); // no-op on web/unsupported
@@ -213,6 +224,9 @@ export function LoggerScreen({
   const [warmFor, setWarmFor] = useState<string | null>(null);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const [savedPRs, setSavedPRs] = useState<string[]>([]);
+  const [savedCard, setSavedCard] = useState<ShareCardData | null>(null);
+  const [sharingCard, setSharingCard] = useState(false);
+  const shotRef = useRef<any>(null);
   const [intensity, setIntensity] = useState<Intensity>("steady");
   const [coachEnabled, setCoachEnabled] = useState(true);
 
@@ -242,6 +256,7 @@ export function LoggerScreen({
     else if (savedSummary) {
       setSavedSummary(null);
       setSavedPRs([]);
+      setSavedCard(null);
       onSaved();
     } else if (resetOpen) setResetOpen(false);
     else if (reviewOpen) setReviewOpen(false);
@@ -504,6 +519,22 @@ export function LoggerScreen({
 
   const confirmReset = () => setResetOpen(true);
 
+  // Capture the summary card to a PNG and hand it to the system share sheet.
+  const shareSavedCard = async () => {
+    if (!captureRefShot || !shotRef.current || sharingCard) return;
+    setSharingCard(true);
+    try {
+      const uri = await captureRefShot(shotRef.current, { format: "png", quality: 1, result: "tmpfile" });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Share your workout" });
+      }
+    } catch {
+      /* capture/share cancelled or unsupported */
+    } finally {
+      setSharingCard(false);
+    }
+  };
+
   const save = async () => {
     if (saving) return;
     setSaving(true);
@@ -541,6 +572,16 @@ export function LoggerScreen({
       lines.push("", "— Logged with IronLog");
       setSavedPRs(prs);
       setSavedSummary(lines.join("\n"));
+      setSavedCard({
+        dayName: day.name,
+        dateLabel: new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+        volume: totalVolume,
+        sets: rows.length,
+        reps: totalReps,
+        durationMin: Math.max(1, Math.round(elapsed / 60)),
+        prs,
+        topLifts: topLifts.map(([name, l]) => ({ name, weight: l.weight, reps: l.reps })),
+      });
       haptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
     } catch (e) {
       setNotice({
@@ -1048,24 +1089,48 @@ export function LoggerScreen({
             <Text style={styles.centerTitle}>
               {savedPRs.length > 0 ? "New PR!" : "Workout saved"}
             </Text>
-            <Text style={styles.centerBody}>{savedSummary}</Text>
+            {savedCard ? (
+              <View style={{ alignItems: "center", marginVertical: 10 }}>
+                {ViewShot ? (
+                  <ViewShot ref={shotRef} options={{ format: "png", quality: 1 }}>
+                    <ShareCard data={savedCard} />
+                  </ViewShot>
+                ) : (
+                  <ShareCard data={savedCard} />
+                )}
+              </View>
+            ) : (
+              <Text style={styles.centerBody}>{savedSummary}</Text>
+            )}
             <View style={styles.centerButtons}>
+              {captureRefShot && savedCard ? (
+                <Pressable
+                  onPress={() => void shareSavedCard()}
+                  disabled={sharingCard}
+                  style={styles.centerPrimary}
+                >
+                  <Text style={styles.centerPrimaryText}>{sharingCard ? "Preparing..." : "Share card"}</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    const text = savedSummary;
+                    setSavedSummary(null);
+                    setSavedPRs([]);
+                    setSavedCard(null);
+                    onSaved();
+                    if (text) Share.share({ message: text }).catch(() => {});
+                  }}
+                  style={styles.centerPrimary}
+                >
+                  <Text style={styles.centerPrimaryText}>Share</Text>
+                </Pressable>
+              )}
               <Pressable
                 onPress={() => {
-                  const text = savedSummary;
                   setSavedSummary(null);
                   setSavedPRs([]);
-                  onSaved();
-                  if (text) Share.share({ message: text }).catch(() => {});
-                }}
-                style={styles.centerPrimary}
-              >
-                <Text style={styles.centerPrimaryText}>Share</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setSavedSummary(null);
-                  setSavedPRs([]);
+                  setSavedCard(null);
                   onSaved();
                 }}
                 style={styles.centerPrimary}
