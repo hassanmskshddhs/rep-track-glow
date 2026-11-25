@@ -5,6 +5,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -32,6 +33,22 @@ type SetsState = Record<string, SetRow[]>;
 const DEFAULT_MIN_REPS = 8;
 const DEFAULT_MAX_REPS = 12;
 const WEIGHT_INCREMENT = 2.5;
+
+const PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
+const BAR_KG = 20;
+
+function platesPerSide(total: number): { plates: number[]; remainder: number } {
+  if (!Number.isFinite(total) || total <= BAR_KG) return { plates: [], remainder: 0 };
+  let side = (total - BAR_KG) / 2;
+  const out: number[] = [];
+  for (const p of PLATES_KG) {
+    while (side + 1e-9 >= p) {
+      out.push(p);
+      side -= p;
+    }
+  }
+  return { plates: out, remainder: Math.round(side * 2 * 100) / 100 };
+}
 
 function parseRepRange(name: string): { min: number; max: number } {
   const m = name.match(/(\d+)\s*-\s*(\d+)\s*reps?/i);
@@ -103,6 +120,8 @@ export function LoggerScreen({
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [notice, setNotice] = useState<{ title: string; msg: string } | null>(null);
+  const [platesFor, setPlatesFor] = useState<string | null>(null);
+  const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const draftKey = `ironlog:draft:${userId}:${day.id}`;
 
   const emptyState = (): SetsState =>
@@ -274,8 +293,35 @@ export function LoggerScreen({
       await saveWorkoutSession(userId, day.id, day.name, rows);
       await AsyncStorage.removeItem(draftKey).catch(() => {});
       setReviewOpen(false);
-      setNotice({ title: "Saved", msg: `${rows.length} sets logged for ${day.name}.` });
-      onSaved();
+      const totalVolume = rows.reduce((a, r) => a + (r.weight ?? 0) * (r.reps ?? 0), 0);
+      const totalReps = rows.reduce((a, r) => a + (r.reps ?? 0), 0);
+      const bestByEx = new Map<string, { weight: number; reps: number }>();
+      const prs: string[] = [];
+      for (const r of rows) {
+        if (r.weight == null) continue;
+        const cur = bestByEx.get(r.exercise_name);
+        if (!cur || r.weight > cur.weight) bestByEx.set(r.exercise_name, { weight: r.weight, reps: r.reps ?? 0 });
+        const prevBest = insights[r.exercise_name]?.bestWeight;
+        if (prevBest != null && r.weight > prevBest && !prs.includes(r.exercise_name)) {
+          prs.push(r.exercise_name);
+        }
+      }
+      const topLifts = [...bestByEx.entries()].sort((a, b) => b[1].weight - a[1].weight).slice(0, 3);
+      const lines = [
+        `💪 ${day.name}`,
+        `Volume: ${Math.round(totalVolume).toLocaleString()} kg`,
+        `${rows.length} sets · ${totalReps} reps`,
+      ];
+      if (prs.length) {
+        lines.push("");
+        prs.forEach((p) => lines.push(`★ New PR: ${p}`));
+      }
+      if (topLifts.length) {
+        lines.push("", "Top lifts:");
+        topLifts.forEach(([ex, l]) => lines.push(`• ${ex}: ${l.weight}kg × ${l.reps}`));
+      }
+      lines.push("", "— Logged with IronLog");
+      setSavedSummary(lines.join("\n"));
     } catch (e) {
       setNotice({
         title: "Could not save",
@@ -331,17 +377,60 @@ export function LoggerScreen({
                 <Text style={styles.insightLast}>{target.last}</Text>
                 <Text style={styles.insightTarget}>🎯 {target.target}</Text>
               </View>
-              <Pressable
-                onPress={() => {
-                  setNoteEditing(ex);
-                  setNoteDraft(notes[ex] ?? "");
-                }}
-                style={styles.noteToggle}
-              >
-                <Text style={styles.noteToggleText}>
-                  {notes[ex] ? `📝 ${notes[ex]}` : "+ Add a note"}
-                </Text>
-              </Pressable>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Pressable
+                  onPress={() => {
+                    setNoteEditing(ex);
+                    setNoteDraft(notes[ex] ?? "");
+                  }}
+                  style={styles.noteToggle}
+                >
+                  <Text style={styles.noteToggleText}>
+                    {notes[ex] ? `📝 ${notes[ex]}` : "+ Add a note"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setPlatesFor(platesFor === ex ? null : ex)}
+                  style={styles.noteToggle}
+                >
+                  <Text style={styles.noteToggleText}>🧮 Plates</Text>
+                </Pressable>
+              </View>
+              {platesFor === ex &&
+                (() => {
+                  const lastW = [...(state[ex] ?? [])]
+                    .reverse()
+                    .find((r) => r.weight !== "" && Number(r.weight) > 0);
+                  const total = lastW ? Number(lastW.weight) : 0;
+                  const { plates, remainder } = platesPerSide(total);
+                  return (
+                    <View style={styles.platesBox}>
+                      {total <= BAR_KG ? (
+                        <Text style={styles.platesHint}>
+                          Enter a weight above {BAR_KG} kg to see the plates for a {BAR_KG} kg bar.
+                        </Text>
+                      ) : (
+                        <>
+                          <Text style={styles.platesHint}>
+                            {total} kg = {BAR_KG} kg bar + each side:
+                          </Text>
+                          <View style={styles.platesChips}>
+                            {plates.map((p, i) => (
+                              <View key={i} style={styles.plateChip}>
+                                <Text style={styles.plateChipText}>{p}</Text>
+                              </View>
+                            ))}
+                          </View>
+                          {remainder > 0 && (
+                            <Text style={styles.platesHint}>
+                              {remainder} kg can't be loaded with standard plates.
+                            </Text>
+                          )}
+                        </>
+                      )}
+                    </View>
+                  );
+                })()}
               <View style={styles.setHeader}>
                 <Text style={[styles.setHeaderText, { width: 44 }]}>SET</Text>
                 <Text style={[styles.setHeaderText, { flex: 1 }]}>KG</Text>
@@ -546,6 +635,37 @@ export function LoggerScreen({
         </View>
       </Modal>
 
+      <Modal visible={!!savedSummary} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={styles.centerCard}>
+            <Text style={styles.centerTitle}>Workout saved 🎉</Text>
+            <Text style={styles.centerBody}>{savedSummary}</Text>
+            <View style={styles.centerButtons}>
+              <Pressable
+                onPress={() => {
+                  const text = savedSummary;
+                  setSavedSummary(null);
+                  onSaved();
+                  if (text) Share.share({ message: text }).catch(() => {});
+                }}
+                style={styles.centerPrimary}
+              >
+                <Text style={styles.centerPrimaryText}>Share</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setSavedSummary(null);
+                  onSaved();
+                }}
+                style={styles.centerPrimary}
+              >
+                <Text style={styles.centerPrimaryText}>Done</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={resetOpen} transparent animationType="fade">
         <View style={styles.centerBackdrop}>
           <View style={styles.centerCard}>
@@ -741,6 +861,22 @@ const styles = StyleSheet.create({
   insightTarget: { color: "#8fd694", fontSize: 12, fontWeight: "600", marginTop: 6 },
   noteToggle: { marginTop: 10, paddingVertical: 4 },
   noteToggleText: { color: colors.mutedForeground, fontSize: 13 },
+  platesBox: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+  },
+  platesHint: { color: colors.mutedForeground, fontSize: 12 },
+  platesChips: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
+  plateChip: {
+    backgroundColor: "#c8f2cb26",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  plateChipText: { color: colors.primary, fontSize: 13, fontWeight: "800" },
   addExercise: {
     marginTop: 16,
     borderWidth: 1,

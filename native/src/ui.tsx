@@ -67,16 +67,20 @@ export function Wordmark({ size = 22 }: { size?: number }) {
 export function PrimaryButton({
   label,
   onPress,
+  disabled,
 }: {
   label: string;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         ui.primaryButton,
         pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+        disabled && { opacity: 0.4 },
       ]}
     >
       <Text style={ui.primaryButtonText}>{label}</Text>

@@ -5,6 +5,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -231,6 +232,27 @@ export function PlanScreen({
               }}
             >
               <Text style={styles.sheetItemText}>Edit</Text>
+            </Pressable>
+            <Pressable
+              style={styles.sheetItem}
+              onPress={() => {
+                const d = menuFor;
+                setMenuFor(null);
+                if (!d) return;
+                const lines = [
+                  `🏋️ IronLog Workout Plan: ${d.name}`,
+                  "Track. Lift. Repeat.",
+                  "",
+                  ...(Array.isArray(d.exercises)
+                    ? d.exercises.map((ex, i) => `${i + 1}. ${ex}`)
+                    : []),
+                  "",
+                  "💪 Try this workout layout or track your lifts inside IronLog!",
+                ];
+                Share.share({ message: lines.join("\n") }).catch(() => {});
+              }}
+            >
+              <Text style={styles.sheetItemText}>Share plan</Text>
             </Pressable>
             <Pressable
               style={styles.sheetItem}

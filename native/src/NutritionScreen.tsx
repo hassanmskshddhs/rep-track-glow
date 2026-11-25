@@ -14,6 +14,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn } from "./ui";
 import { FOOD_DB, FoodDBItem } from "./food";
+import { supabase } from "./supabase";
+
+// Same server endpoint the web app calls; auth via the user's Supabase token.
+const NUTRITION_API = "https://ironlog-orcin.vercel.app/api/nutrition";
+
+type AIFoodResponse = {
+  food_name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  serving_size_quantity: number;
+  serving_size_unit: string;
+};
 
 // Same AsyncStorage keys as the web app so data carries over.
 const TARGETS_KEY = "ironlog_macro_targets";
@@ -271,7 +285,6 @@ function MacroRing({
 }
 
 export function NutritionScreen({ session }: { session: Session }) {
-  void session;
   const [targets, setTargets] = useState<MacroTargets | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -288,6 +301,8 @@ export function NutritionScreen({ session }: { session: Session }) {
   const [unit, setUnit] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -386,7 +401,54 @@ export function NutritionScreen({ session }: { session: Session }) {
     setQuery("");
     setSelectedFood(null);
     setUnitPickerOpen(false);
+    setAiError("");
     setSearchOpen(true);
+  };
+
+  const searchOnline = async () => {
+    const q = query.trim();
+    if (!q || aiLoading) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const { data: sd } = await supabase.auth.getSession();
+      const token = sd.session?.access_token;
+      if (!token) throw new Error("Sign in to use AI food search.");
+      const res = await fetch(NUTRITION_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ query: q }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(res.status === 401 ? "Sign in to use AI food search." : detail || "AI search is unavailable right now.");
+      }
+      const parsed = (await res.json()) as AIFoodResponse;
+      if (!parsed || typeof parsed.calories !== "number") {
+        throw new Error("Couldn't identify that food — try describing it differently.");
+      }
+      const item: FoodDBItem = {
+        id: `ai_${Date.now().toString(36)}`,
+        name: parsed.food_name,
+        baseAmount: parsed.serving_size_quantity,
+        baseUnit: parsed.serving_size_unit,
+        calories: parsed.calories,
+        protein: parsed.protein,
+        carbs: parsed.carbs,
+        fat: parsed.fats,
+        supportedUnits: [
+          { unit: parsed.serving_size_unit, multiplier: 1 },
+          { unit: "serving", multiplier: parsed.serving_size_quantity },
+        ],
+      };
+      setSelectedFood(item);
+      setUnit(item.supportedUnits[0].unit);
+      setQuantity(item.baseAmount.toString());
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "AI search failed.");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const addFood = () => {
@@ -565,8 +627,20 @@ export function NutritionScreen({ session }: { session: Session }) {
                     {recentFoods.length > 0 ? "RECENT FOODS" : "DATABASE"}
                   </Text>
                 )}
+                {query.trim().length > 0 && (
+                  <Pressable style={styles.aiRow} onPress={() => void searchOnline()} disabled={aiLoading}>
+                    <Text style={{ fontSize: 18 }}>{aiLoading ? "⏳" : "✨"}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.aiRowTitle}>
+                        {aiLoading ? "Searching online..." : `Search online for "${query.trim()}"`}
+                      </Text>
+                      <Text style={styles.aiRowSub}>Get precise macros for any food or meal</Text>
+                    </View>
+                  </Pressable>
+                )}
+                {aiError !== "" && <Text style={styles.aiError}>{aiError}</Text>}
                 {filteredFoods.length === 0 ? (
-                  <Text style={styles.searchEmpty}>Not found in the database.</Text>
+                  <Text style={styles.searchEmpty}>Not found in the database — try Search online above.</Text>
                 ) : (
                   filteredFoods.map((food) => (
                     <Pressable
@@ -889,6 +963,18 @@ const styles = StyleSheet.create({
   },
   searchPlus: { color: colors.mutedForeground, fontSize: 22, fontWeight: "300" },
   searchClose: { alignItems: "center", paddingVertical: 14 },
+  aiRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: "#c8f2cb10",
+  },
+  aiRowTitle: { color: colors.primary, fontSize: 15, fontWeight: "700" },
+  aiRowSub: { color: colors.mutedForeground, fontSize: 12, marginTop: 2 },
+  aiError: { color: colors.destructive, fontSize: 12, paddingHorizontal: 16, paddingVertical: 8 },
   backToSearch: { color: colors.primary, fontSize: 14, fontWeight: "600" },
   selectedName: { color: colors.foreground, fontSize: 24, fontWeight: "800", marginTop: 14 },
   calcCals: { color: colors.primary, fontSize: 36, fontWeight: "800", textAlign: "center" },

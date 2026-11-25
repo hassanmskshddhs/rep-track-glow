@@ -22,6 +22,8 @@ import { SettingsScreen } from "./src/SettingsScreen";
 import { SplitEditorScreen } from "./src/SplitEditorScreen";
 import { NutritionScreen } from "./src/NutritionScreen";
 import { CoachScreen } from "./src/CoachScreen";
+import { OnboardingScreen } from "./src/OnboardingScreen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { CustomDay } from "./src/data";
 
 type TabKey = "train" | "plan" | "history" | "progress" | "fuel" | "settings";
@@ -212,6 +214,7 @@ export default function App() {
   const [activeDay, setActiveDay] = useState<CustomDay | null>(null);
   const [editingSplit, setEditingSplit] = useState<CustomDay | "new" | null>(null);
   const [coachOpen, setCoachOpen] = useState(false);
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [tab, setTab] = useState<TabKey>("train");
 
   useEffect(() => {
@@ -225,7 +228,17 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (restoring) {
+  useEffect(() => {
+    if (!session) {
+      setOnboarded(null);
+      return;
+    }
+    AsyncStorage.getItem(`ironlog:onboarded:${session.user.id}`)
+      .then((v) => setOnboarded(v === "1"))
+      .catch(() => setOnboarded(true));
+  }, [session]);
+
+  if (restoring || (session && onboarded === null)) {
     return (
       <View style={[styles.flex, { justifyContent: "center" }]}>
         <StatusBar style="light" />
@@ -243,6 +256,8 @@ export default function App() {
           onDone={() => setEditingSplit(null)}
           onBack={() => setEditingSplit(null)}
         />
+      ) : session && onboarded === false ? (
+        <OnboardingScreen userId={session.user.id} onDone={() => setOnboarded(true)} />
       ) : session && coachOpen ? (
         <CoachScreen session={session} onBack={() => setCoachOpen(false)} />
       ) : session && activeDay ? (
