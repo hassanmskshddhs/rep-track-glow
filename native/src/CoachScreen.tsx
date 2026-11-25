@@ -144,6 +144,22 @@ function streamCoach(
   });
 }
 
+/** Minimal markdown: **bold** segments, so coach replies don't show raw asterisks. */
+function RichText({ text, base, bold }: { text: string; base: object; bold: object }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <Text style={base}>
+      {parts.map((p, i) =>
+        i % 2 === 1 ? (
+          <Text key={i} style={bold}>{p}</Text>
+        ) : (
+          <Text key={i}>{p}</Text>
+        ),
+      )}
+    </Text>
+  );
+}
+
 export function CoachScreen({ session, onBack }: { session: Session; onBack: () => void }) {
   const [threads, setThreads] = useState<CoachThread[]>([]);
   const [chatId, setChatId] = useState<string | null>(null);
@@ -409,7 +425,11 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
             ]}
           >
             {item.text ? (
-              <Text style={styles.bubbleText}>{item.text}</Text>
+              <RichText
+                text={item.text}
+                base={item.role === "user" ? styles.bubbleTextUser : styles.bubbleText}
+                bold={item.role === "user" ? styles.bubbleBoldUser : styles.bubbleBold}
+              />
             ) : (
               <Text style={styles.typing}>● ● ●</Text>
             )}
@@ -528,6 +548,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   bubbleText: { color: colors.foreground, fontSize: 15, lineHeight: 22 },
+  bubbleTextUser: { color: colors.primaryForeground, fontSize: 15, lineHeight: 22 },
+  bubbleBold: { color: colors.primary, fontWeight: "800" as const },
+  bubbleBoldUser: { color: colors.primaryForeground, fontWeight: "800" as const },
   typing: { color: colors.mutedForeground, fontSize: 12, letterSpacing: 2 },
   inputBar: {
     flexDirection: "row",
