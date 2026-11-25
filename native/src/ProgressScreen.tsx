@@ -90,6 +90,21 @@ function BodySection({ userId }: { userId: string }) {
       </View>
       {latest ? (
         <View style={styles.chartCard}>
+          {(() => {
+            const weightRows = [...rows].reverse().filter((r) => r.weight != null);
+            return weightRows.length >= 2 ? (
+              <View style={{ marginBottom: 8 }}>
+                <LineChart
+                  points={weightRows.slice(-12).map((r) => r.weight as number)}
+                  labels={weightRows.slice(-12).map((r) =>
+                    new Date(r.measured_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                  )}
+                  showBest={false}
+                />
+                <Text style={styles.chartSub}>Body weight over time (kg)</Text>
+              </View>
+            ) : null;
+          })()}
           <View style={styles.bodyGrid}>
             {BODY_FIELDS.map((f) => (
               <View key={f.key} style={styles.bodyCell}>
@@ -169,10 +184,12 @@ function LineChart({
   points,
   labels,
   height = 140,
+  showBest = true,
 }: {
   points: number[];
   labels: string[];
   height?: number;
+  showBest?: boolean;
 }) {
   const [width, setWidth] = useState(0);
   if (points.length < 2) return null;
@@ -218,9 +235,11 @@ function LineChart({
             <Text style={{ color: colors.primary, fontSize: 12, fontWeight: "700" }}>
               {points[points.length - 1]} kg
             </Text>
-            <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>
-              best {max} kg
-            </Text>
+            {showBest && (
+              <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>
+                best {max} kg
+              </Text>
+            )}
           </View>
         </>
       )}
