@@ -21,6 +21,7 @@ import { Route as ShareReceiverRouteImport } from './routes/share-receiver'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as WorkoutRouteImport } from './routes/workout'
 import { Route as ApiCoachRouteImport } from './routes/api/coach'
+import { Route as ApiImportRouteImport } from './routes/api/import'
 import { Route as ApiNutritionRouteImport } from './routes/api/nutrition'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as CoachChatIdRouteImport } from './routes/coach.$chatId'
@@ -89,6 +90,11 @@ const ApiCoachRoute = ApiCoachRouteImport.update({
   path: '/api/coach',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiImportRoute = ApiImportRouteImport.update({
+  id: '/api/import',
+  path: '/api/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiNutritionRoute = ApiNutritionRouteImport.update({
   id: '/api/nutrition',
   path: '/api/nutrition',
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
+  '/api/import': typeof ApiImportRoute
   '/api/nutrition': typeof ApiNutritionRoute
   '/coach/$chatId': typeof CoachChatIdRoute
   '/custom/new': typeof CustomNewRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
+  '/api/import': typeof ApiImportRoute
   '/api/nutrition': typeof ApiNutritionRoute
   '/coach/$chatId': typeof CoachChatIdRoute
   '/custom/new': typeof CustomNewRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/workout': typeof WorkoutRoute
   '/api/coach': typeof ApiCoachRoute
+  '/api/import': typeof ApiImportRoute
   '/api/nutrition': typeof ApiNutritionRoute
   '/coach/$chatId': typeof CoachChatIdRoute
   '/custom/new': typeof CustomNewRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/workout'
     | '/api/coach'
+    | '/api/import'
     | '/api/nutrition'
     | '/coach/$chatId'
     | '/custom/new'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/workout'
     | '/api/coach'
+    | '/api/import'
     | '/api/nutrition'
     | '/coach/$chatId'
     | '/custom/new'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/workout'
     | '/api/coach'
+    | '/api/import'
     | '/api/nutrition'
     | '/coach/$chatId'
     | '/custom/new'
@@ -255,6 +267,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WorkoutRoute: typeof WorkoutRoute
   ApiCoachRoute: typeof ApiCoachRoute
+  ApiImportRoute: typeof ApiImportRoute
   ApiNutritionRoute: typeof ApiNutritionRoute
   CustomNewRoute: typeof CustomNewRoute
   DayDayRoute: typeof DayDayRoute
@@ -347,6 +360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCoachRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/import': {
+      id: '/api/import'
+      path: '/api/import'
+      fullPath: '/api/import'
+      preLoaderRoute: typeof ApiImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/nutrition': {
       id: '/api/nutrition'
       path: '/api/nutrition'
@@ -417,6 +437,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WorkoutRoute: WorkoutRoute,
   ApiCoachRoute: ApiCoachRoute,
+  ApiImportRoute: ApiImportRoute,
   ApiNutritionRoute: ApiNutritionRoute,
   CustomNewRoute: CustomNewRoute,
   DayDayRoute: DayDayRoute,

@@ -6,7 +6,7 @@ export type AiProvider = {
   name: "lovable" | "gemini" | "openai";
   url: string;
   headers: Record<string, string>;
-  model: (kind: "coach" | "nutrition") => string;
+  model: (kind: "coach" | "nutrition" | "import") => string;
 };
 
 export function resolveAiProvider(): AiProvider | null {
@@ -16,7 +16,8 @@ export function resolveAiProvider(): AiProvider | null {
       name: "lovable",
       url: "https://ai.gateway.lovable.dev/v1/chat/completions",
       headers: { "Lovable-API-Key": lovable, "X-Lovable-AIG-SDK": "fetch" },
-      model: (k) => (k === "coach" ? "google/gemini-3.7-flash" : "openai/gpt-6-astra"),
+      model: (k) =>
+        k === "coach" ? "google/gemini-3.7-flash" : k === "import" ? "google/gemini-3.6-flash" : "openai/gpt-6-astra",
     };
   }
   const gemini = process.env["GEMINI_API_KEY"];
