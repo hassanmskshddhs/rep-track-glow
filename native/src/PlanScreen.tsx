@@ -25,9 +25,13 @@ const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export function PlanScreen({
   session,
   onOpenDay,
+  onNewSplit,
+  onEditSplit,
 }: {
   session: Session;
   onOpenDay: (day: CustomDay) => void;
+  onNewSplit: () => void;
+  onEditSplit: (day: CustomDay) => void;
 }) {
   const userId = session.user.id;
   const [days, setDays] = useState<CustomDay[] | null>(null);
@@ -115,6 +119,9 @@ export function PlanScreen({
             <RiseIn delay={160}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Your routines</Text>
+                <Pressable onPress={onNewSplit} style={styles.newButton}>
+                  <Text style={styles.newButtonText}>+ New</Text>
+                </Pressable>
               </View>
               <View style={styles.routineList}>
                 {days.map((s) => {
@@ -215,6 +222,15 @@ export function PlanScreen({
               }}
             >
               <Text style={styles.sheetItemText}>Open routine</Text>
+            </Pressable>
+            <Pressable
+              style={styles.sheetItem}
+              onPress={() => {
+                if (menuFor) onEditSplit(menuFor);
+                setMenuFor(null);
+              }}
+            >
+              <Text style={styles.sheetItemText}>Edit</Text>
             </Pressable>
             <Pressable
               style={styles.sheetItem}
@@ -425,4 +441,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   modalDangerText: { color: "#101411", fontSize: 15, fontWeight: "700" },
+  newButton: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginTop: 28,
+  },
+  newButtonText: { color: colors.foreground, fontSize: 13, fontWeight: "700" },
 });

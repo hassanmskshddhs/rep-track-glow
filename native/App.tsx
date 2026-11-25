@@ -19,6 +19,7 @@ import { HistoryScreen } from "./src/HistoryScreen";
 import { ProgressScreen } from "./src/ProgressScreen";
 import { PlanScreen } from "./src/PlanScreen";
 import { SettingsScreen } from "./src/SettingsScreen";
+import { SplitEditorScreen } from "./src/SplitEditorScreen";
 import type { CustomDay } from "./src/data";
 
 function WelcomeScreen({ onStart }: { onStart: () => void }) {
@@ -204,6 +205,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [restoring, setRestoring] = useState(true);
   const [activeDay, setActiveDay] = useState<CustomDay | null>(null);
+  const [editingSplit, setEditingSplit] = useState<CustomDay | "new" | null>(null);
   const [tab, setTab] = useState<"train" | "plan" | "history" | "progress" | "settings">("train");
 
   useEffect(() => {
@@ -228,7 +230,14 @@ export default function App() {
   return (
     <View style={styles.flex}>
       <StatusBar style="light" />
-      {session && activeDay ? (
+      {session && editingSplit ? (
+        <SplitEditorScreen
+          session={session}
+          existing={editingSplit === "new" ? null : editingSplit}
+          onDone={() => setEditingSplit(null)}
+          onBack={() => setEditingSplit(null)}
+        />
+      ) : session && activeDay ? (
         <LoggerScreen
           day={activeDay}
           session={session}
@@ -247,7 +256,12 @@ export default function App() {
               onOpenDay={(d) => setActiveDay(d)}
             />
           ) : tab === "plan" ? (
-            <PlanScreen session={session} onOpenDay={(d) => setActiveDay(d)} />
+            <PlanScreen
+              session={session}
+              onOpenDay={(d) => setActiveDay(d)}
+              onNewSplit={() => setEditingSplit("new")}
+              onEditSplit={(d) => setEditingSplit(d)}
+            />
           ) : tab === "history" ? (
             <HistoryScreen session={session} />
           ) : tab === "progress" ? (

@@ -521,3 +521,47 @@ export async function deleteCustomDay(id: string, userId: string): Promise<void>
     .eq("user_id", userId);
   if (error) throw error;
 }
+
+// --- Split editor ---
+
+export async function createCustomDay(
+  userId: string,
+  data: {
+    name: string;
+    subtitle: string | null;
+    accent: string;
+    muscle_groups: string[];
+    exercises: string[];
+  },
+): Promise<{ id: string }> {
+  const id = uuidv4();
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("custom_workout_days").insert({
+    id,
+    user_id: userId,
+    created_at: now,
+    updated_at: now,
+    ...data,
+  });
+  if (error) throw error;
+  return { id };
+}
+
+export async function updateCustomDay(
+  id: string,
+  userId: string,
+  data: Partial<{
+    name: string;
+    subtitle: string | null;
+    accent: string;
+    muscle_groups: string[];
+    exercises: string[];
+  }>,
+): Promise<void> {
+  const { error } = await supabase
+    .from("custom_workout_days")
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
