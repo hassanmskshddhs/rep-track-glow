@@ -565,3 +565,94 @@ export async function updateCustomDay(
     .eq("user_id", userId);
   if (error) throw error;
 }
+
+// --- Day detail: per-exercise insights and notes ---
+
+export type LastSetEntry = { weight: number | null; reps: number | null; set_number: number };
+export type ExerciseInsight = { lastSets: LastSetEntry[]; bestWeight: number | null };
+
+// Mirrors the web buildInsights: for each exercise, the most recent session's
+// sets and the all-time best weight.
+export async function getExerciseInsights(
+  userId: string | undefined,
+  exercises: string[],
+): Promise<Record<string, ExerciseInsight>> {
+  const out: Record<string, ExerciseInsight> = {};
+  if (!userId || exercises.length === 0) return out;
+  try {
+    const { data, error } = await supabase
+      .from("set_logs")
+      .select("session_id,exercise_name,set_number,weight,reps,created_at")
+      .eq("user_id", userId)
+      .in("exercise_name", exercises)
+      .order("created_at", { ascending: false })
+      .limit(800);
+    if (error || !data) return out;
+    for (const ex of exercises) {
+      const exRows = data.filter((r) => r.exercise_name === ex);
+      const latestSessionId = exRows[0]?.session_id ?? null;
+      const lastSets = latestSessionId
+        ? exRows
+            .filter((r) => r.session_id === latestSessionId)
+            .map((r) => ({ weight: r.weight, reps: r.reps, set_number: r.set_number }))
+            .sort((a, b) => a.set_number - b.set_number)
+        : [];
+      const bestWeight = exRows.reduce<number | null>((max, r) => {
+        if (r.weight == null) return max;
+        return max == null || r.weight > max ? r.weight : max;
+      }, null);
+      out[ex] = { lastSets, bestWeight };
+    }
+  } catch {
+    /* offline */
+  }
+  return out;
+}
+
+export async function getExerciseNotes(
+  userId: string | undefined,
+  exercises: string[],
+): Promise<Record<string, string>> {
+  const map: Record<string, string> = {};
+  if (!userId || exercises.length === 0) return map;
+  try {
+    const { data, error } = await supabase
+      .from("exercise_notes")
+      .select("exercise_name,note")
+      .eq("user_id", userId)
+      .in("exercise_name", exercises);
+    if (!error && data) {
+      for (const r of data) map[r.exercise_name as string] = (r.note as string) ?? "";
+    }
+  } catch {
+    /* offline */
+  }
+  return map;
+}
+
+export async function saveExerciseNote(
+  userId: string,
+  exerciseName: string,
+  note: string,
+): Promise<void> {
+  const trimmed = note.trim();
+  if (!trimmed) {
+    const { error } = await supabase
+      .from("exercise_notes")
+      .delete()
+      .eq("user_id", userId)
+      .eq("exercise_name", exerciseName);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase.from("exercise_notes").upsert(
+    {
+      user_id: userId,
+      exercise_name: exerciseName,
+      note: trimmed,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,exercise_name" },
+  );
+  if (error) throw error;
+}

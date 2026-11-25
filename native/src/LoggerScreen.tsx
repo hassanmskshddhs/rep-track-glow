@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,10 +13,63 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn } from "./ui";
-import { CustomDay, saveWorkoutSession, SetRowInput } from "./data";
+import {
+  CustomDay,
+  ExerciseInsight,
+  getExerciseInsights,
+  getExerciseNotes,
+  saveExerciseNote,
+  saveWorkoutSession,
+  SetRowInput,
+  updateCustomDay,
+} from "./data";
+import { EXERCISE_DB } from "./exercises";
 
 type SetRow = { weight: string; reps: string };
 type SetsState = Record<string, SetRow[]>;
+
+// Double-progression, same as the web day page
+const DEFAULT_MIN_REPS = 8;
+const DEFAULT_MAX_REPS = 12;
+const WEIGHT_INCREMENT = 2.5;
+
+function parseRepRange(name: string): { min: number; max: number } {
+  const m = name.match(/(\d+)\s*-\s*(\d+)\s*reps?/i);
+  if (m) return { min: parseInt(m[1], 10), max: parseInt(m[2], 10) };
+  return { min: DEFAULT_MIN_REPS, max: DEFAULT_MAX_REPS };
+}
+
+function buildTarget(
+  exercise: string,
+  lastSets: { weight: number | null; reps: number | null }[] | undefined,
+): { last: string; target: string } {
+  const range = parseRepRange(exercise);
+  if (!lastSets || lastSets.length === 0) {
+    return {
+      last: "No history yet",
+      target: `Pick a comfortable weight · aim for ${range.min}-${range.max} reps`,
+    };
+  }
+  const valid = lastSets.filter((s) => s.weight != null && s.reps != null);
+  if (valid.length === 0) {
+    return { last: "No tracked sets last time", target: `Aim for ${range.min}-${range.max} reps` };
+  }
+  const topWeight = Math.max(...valid.map((s) => s.weight as number));
+  const topSets = valid.filter((s) => s.weight === topWeight);
+  const allHit = topSets.every((s) => (s.reps as number) >= range.max);
+  const lastStr = valid.map((s) => `${s.weight}kg × ${s.reps}`).join("  ·  ");
+  if (allHit) {
+    const next = +(topWeight + WEIGHT_INCREMENT).toFixed(2);
+    return {
+      last: lastStr,
+      target: `Increase to ${next}kg · aim for ${range.min}-${range.min + 2} reps`,
+    };
+  }
+  return {
+    last: lastStr,
+    target: `Stay at ${topWeight}kg · add 1-2 total reps across sets`,
+  };
+}
 
 function formatClock(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
@@ -37,10 +89,20 @@ export function LoggerScreen({
   onSaved: () => void;
 }) {
   const userId = session.user.id;
-  const exercises = useMemo(
-    () => (Array.isArray(day.exercises) ? day.exercises : []),
-    [day.exercises],
+  const [exercises, setExercises] = useState<string[]>(
+    Array.isArray(day.exercises) ? day.exercises : [],
   );
+  const [insights, setInsights] = useState<Record<string, ExerciseInsight>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [noteEditing, setNoteEditing] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [removingEx, setRemovingEx] = useState<string | null>(null);
+  const [renamingEx, setRenamingEx] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; msg: string } | null>(null);
   const draftKey = `ironlog:draft:${userId}:${day.id}`;
 
   const emptyState = (): SetsState =>
@@ -52,6 +114,24 @@ export function LoggerScreen({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const startRef = useRef(Date.now());
+
+  // Load per-exercise history insights and saved notes.
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const [ins, nts] = await Promise.all([
+        getExerciseInsights(userId, exercises),
+        getExerciseNotes(userId, exercises),
+      ]);
+      if (!live) return;
+      setInsights(ins);
+      setNotes(nts);
+    })();
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // Restore any in-progress draft, like the web logger.
   useEffect(() => {
@@ -110,6 +190,55 @@ export function LoggerScreen({
       [ex]: s[ex].length > 1 ? s[ex].filter((_, i) => i !== idx) : s[ex],
     }));
 
+  const persistExercises = async (next: string[]) => {
+    setExercises(next);
+    try {
+      await updateCustomDay(day.id, userId, { exercises: next });
+    } catch {
+      /* offline: keep local */
+    }
+  };
+
+  const removeExercise = (ex: string) => {
+    const next = exercises.filter((e) => e !== ex);
+    setState((s) => {
+      const copy = { ...s };
+      delete copy[ex];
+      return copy;
+    });
+    setRemovingEx(null);
+    void persistExercises(next);
+  };
+
+  const commitRename = () => {
+    if (!renamingEx) return;
+    const n = renameDraft.trim();
+    if (n && n !== renamingEx) {
+      const next = exercises.map((e) => (e === renamingEx ? n : e));
+      setState((s) => {
+        const copy = { ...s };
+        if (copy[renamingEx]) {
+          copy[n] = copy[renamingEx];
+          delete copy[renamingEx];
+        }
+        return copy;
+      });
+      void persistExercises(next);
+    }
+    setRenamingEx(null);
+  };
+
+  const saveNote = async (ex: string) => {
+    const text = noteDraft;
+    setNotes((n) => ({ ...n, [ex]: text }));
+    setNoteEditing(null);
+    try {
+      await saveExerciseNote(userId, ex, text);
+    } catch {
+      /* offline: keep local */
+    }
+  };
+
   const filledRows = (): SetRowInput[] => {
     const rows: SetRowInput[] = [];
     for (const ex of exercises) {
@@ -136,15 +265,7 @@ export function LoggerScreen({
     }
   };
 
-  const confirmReset = () =>
-    Alert.alert(
-      "Reset session?",
-      "Clear all current inputs and stop the timer? This won't affect saved history.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Reset", onPress: () => void doReset() },
-      ],
-    );
+  const confirmReset = () => setResetOpen(true);
 
   const save = async () => {
     if (saving) return;
@@ -153,13 +274,13 @@ export function LoggerScreen({
       await saveWorkoutSession(userId, day.id, day.name, rows);
       await AsyncStorage.removeItem(draftKey).catch(() => {});
       setReviewOpen(false);
-      Alert.alert("Saved", `${rows.length} sets logged for ${day.name}.`);
+      setNotice({ title: "Saved", msg: `${rows.length} sets logged for ${day.name}.` });
       onSaved();
     } catch (e) {
-      Alert.alert(
-        "Could not save",
-        e instanceof Error ? e.message : "Check your connection and try again.",
-      );
+      setNotice({
+        title: "Could not save",
+        msg: e instanceof Error ? e.message : "Check your connection and try again.",
+      });
     } finally {
       setSaving(false);
     }
@@ -180,10 +301,47 @@ export function LoggerScreen({
       <Text style={styles.title}>{day.name}</Text>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {exercises.map((ex, i) => (
+        {exercises.map((ex, i) => {
+          const insight = insights[ex];
+          const target = buildTarget(ex, insight?.lastSets);
+          const enteredBest = Math.max(
+            0,
+            ...(state[ex] ?? [])
+              .map((r) => parseFloat(r.weight))
+              .filter((w) => Number.isFinite(w)),
+          );
+          const isPR =
+            insight?.bestWeight != null && enteredBest > insight.bestWeight;
+          return (
           <RiseIn key={ex} delay={i * 70} style={{ marginTop: 14 }}>
             <View style={styles.card}>
-              <Text style={styles.exName}>{ex}</Text>
+              <View style={styles.exHeaderRow}>
+                <Text style={styles.exName}>{ex}</Text>
+                {isPR && (
+                  <View style={styles.prBadge}>
+                    <Text style={styles.prBadgeText}>PR</Text>
+                  </View>
+                )}
+                <Pressable onPress={() => setMenuFor(ex)} hitSlop={10}>
+                  <Text style={styles.menuDots}>⋯</Text>
+                </Pressable>
+              </View>
+              <View style={styles.insightBox}>
+                <Text style={styles.insightLabel}>LAST SESSION</Text>
+                <Text style={styles.insightLast}>{target.last}</Text>
+                <Text style={styles.insightTarget}>🎯 {target.target}</Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  setNoteEditing(ex);
+                  setNoteDraft(notes[ex] ?? "");
+                }}
+                style={styles.noteToggle}
+              >
+                <Text style={styles.noteToggleText}>
+                  {notes[ex] ? `📝 ${notes[ex]}` : "+ Add a note"}
+                </Text>
+              </Pressable>
               <View style={styles.setHeader}>
                 <Text style={[styles.setHeaderText, { width: 44 }]}>SET</Text>
                 <Text style={[styles.setHeaderText, { flex: 1 }]}>KG</Text>
@@ -219,7 +377,11 @@ export function LoggerScreen({
               </Pressable>
             </View>
           </RiseIn>
-        ))}
+          );
+        })}
+        <Pressable onPress={() => setAddOpen(true)} style={styles.addExercise}>
+          <Text style={styles.addExerciseText}>+ Add exercise</Text>
+        </Pressable>
         <View style={{ height: 120 }} />
       </ScrollView>
 
@@ -236,7 +398,7 @@ export function LoggerScreen({
               label="Review session"
               onPress={() => {
                 if (rows.length === 0) {
-                  Alert.alert("Nothing to review", "Add at least one set with weight or reps.");
+                  setNotice({ title: "Nothing to review", msg: "Add at least one set with weight or reps." });
                   return;
                 }
                 setReviewOpen(true);
@@ -282,6 +444,170 @@ export function LoggerScreen({
           </View>
         </View>
       </Modal>
+      <Modal visible={!!menuFor} transparent animationType="fade">
+        <Pressable style={styles.sheetBackdrop} onPress={() => setMenuFor(null)}>
+          <View style={styles.sheet}>
+            <Pressable
+              style={styles.sheetItem}
+              onPress={() => {
+                setRenamingEx(menuFor);
+                setRenameDraft(menuFor ?? "");
+                setMenuFor(null);
+              }}
+            >
+              <Text style={styles.sheetItemText}>Rename exercise</Text>
+            </Pressable>
+            <Pressable
+              style={styles.sheetItem}
+              onPress={() => {
+                setRemovingEx(menuFor);
+                setMenuFor(null);
+              }}
+            >
+              <Text style={[styles.sheetItemText, { color: colors.destructive }]}>
+                Remove exercise
+              </Text>
+            </Pressable>
+            <Pressable style={styles.sheetItem} onPress={() => setMenuFor(null)}>
+              <Text style={[styles.sheetItemText, { color: colors.mutedForeground }]}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={!!renamingEx} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={styles.centerCard}>
+            <Text style={styles.centerTitle}>Rename exercise</Text>
+            <TextInput
+              style={styles.centerInput}
+              value={renameDraft}
+              onChangeText={setRenameDraft}
+              autoFocus
+              placeholder="Exercise name"
+              placeholderTextColor={colors.mutedForeground}
+            />
+            <View style={styles.centerButtons}>
+              <Pressable onPress={() => setRenamingEx(null)} style={styles.centerGhost}>
+                <Text style={styles.centerGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={commitRename} style={styles.centerPrimary}>
+                <Text style={styles.centerPrimaryText}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!removingEx} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={styles.centerCard}>
+            <Text style={styles.centerTitle}>Remove exercise?</Text>
+            <Text style={styles.centerSub}>
+              Remove {removingEx} from this workout? Your saved history is not affected.
+            </Text>
+            <View style={styles.centerButtons}>
+              <Pressable onPress={() => setRemovingEx(null)} style={styles.centerGhost}>
+                <Text style={styles.centerGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => removingEx && removeExercise(removingEx)}
+                style={styles.centerDanger}
+              >
+                <Text style={styles.centerDangerText}>Remove</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!noteEditing} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={styles.centerCard}>
+            <Text style={styles.centerTitle}>Note · {noteEditing}</Text>
+            <TextInput
+              style={[styles.centerInput, { minHeight: 80, textAlignVertical: "top" }]}
+              value={noteDraft}
+              onChangeText={setNoteDraft}
+              multiline
+              autoFocus
+              placeholder="e.g. slow eccentric, watch left shoulder"
+              placeholderTextColor={colors.mutedForeground}
+            />
+            <View style={styles.centerButtons}>
+              <Pressable onPress={() => setNoteEditing(null)} style={styles.centerGhost}>
+                <Text style={styles.centerGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={() => noteEditing && saveNote(noteEditing)} style={styles.centerPrimary}>
+                <Text style={styles.centerPrimaryText}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={resetOpen} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={styles.centerCard}>
+            <Text style={styles.centerTitle}>Reset session?</Text>
+            <Text style={styles.centerBody}>
+              Clear all current inputs and stop the timer? This won't affect saved history.
+            </Text>
+            <View style={styles.centerButtons}>
+              <Pressable onPress={() => setResetOpen(false)} style={styles.centerGhost}>
+                <Text style={styles.centerGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setResetOpen(false);
+                  void doReset();
+                }}
+                style={styles.centerPrimary}
+              >
+                <Text style={styles.centerPrimaryText}>Reset</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!notice} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={styles.centerCard}>
+            <Text style={styles.centerTitle}>{notice?.title}</Text>
+            <Text style={styles.centerBody}>{notice?.msg}</Text>
+            <View style={styles.centerButtons}>
+              <Pressable onPress={() => setNotice(null)} style={styles.centerPrimary}>
+                <Text style={styles.centerPrimaryText}>OK</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={addOpen} transparent animationType="fade">
+        <Pressable style={styles.sheetBackdrop} onPress={() => setAddOpen(false)}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Add exercise</Text>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {EXERCISE_DB.filter((e) => !exercises.includes(e.name)).map((e) => (
+                <Pressable
+                  key={e.name}
+                  style={styles.sheetItem}
+                  onPress={() => {
+                    const next = [...exercises, e.name];
+                    setState((s) => ({ ...s, [e.name]: [{ weight: "", reps: "" }] }));
+                    void persistExercises(next);
+                    setAddOpen(false);
+                  }}
+                >
+                  <Text style={styles.sheetItemText}>{e.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -326,7 +652,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
   },
-  exName: { color: colors.foreground, fontSize: 16, fontWeight: "700" },
+  exName: { color: colors.foreground, fontSize: 16, fontWeight: "700", flex: 1 },
   setHeader: { flexDirection: "row", alignItems: "center", marginTop: 12, gap: 8 },
   setHeaderText: { color: colors.mutedForeground, fontSize: 10, letterSpacing: 1.2 },
   setRow: {
@@ -388,4 +714,104 @@ const styles = StyleSheet.create({
   reviewSets: { color: colors.mutedForeground, fontSize: 12, marginTop: 4 },
   reviewNote: { color: colors.mutedForeground, fontSize: 12, marginTop: 8 },
   switchMode: { color: colors.mutedForeground, fontSize: 14, textAlign: "center" },
+  exHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  exMenuDots: { color: colors.mutedForeground, fontSize: 18, fontWeight: "700", paddingHorizontal: 4 },
+  prBadge: {
+    backgroundColor: "#c8f2cb33",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  prBadgeText: { color: colors.primary, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+  insightBox: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+  },
+  insightLabel: {
+    color: colors.mutedForeground,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+  },
+  insightLast: { color: colors.foreground, fontSize: 12, marginTop: 2 },
+  insightTarget: { color: "#8fd694", fontSize: 12, fontWeight: "600", marginTop: 6 },
+  noteToggle: { marginTop: 10, paddingVertical: 4 },
+  noteToggleText: { color: colors.mutedForeground, fontSize: 13 },
+  addExercise: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  addExerciseText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
+  sheetBackdrop: { flex: 1, backgroundColor: "#000000aa", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    maxHeight: "75%",
+  },
+  sheetTitle: {
+    color: colors.mutedForeground,
+    fontSize: 13,
+    fontWeight: "700",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  sheetItem: { paddingHorizontal: 16, paddingVertical: 14 },
+  sheetItemText: { color: colors.foreground, fontSize: 16, fontWeight: "600" },
+  centerBackdrop: {
+    flex: 1,
+    backgroundColor: "#000000aa",
+    justifyContent: "center",
+    padding: 24,
+  },
+  centerCard: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 20,
+  },
+  centerTitle: { color: colors.foreground, fontSize: 18, fontWeight: "800" },
+  centerBody: { color: colors.mutedForeground, fontSize: 14, marginTop: 8, lineHeight: 20 },
+  menuDots: { color: colors.mutedForeground, fontSize: 20, fontWeight: "700", paddingHorizontal: 4 },
+  centerSub: { color: colors.mutedForeground, fontSize: 13, marginTop: 6, lineHeight: 19 },
+  centerInput: {
+    backgroundColor: colors.background,
+    borderColor: colors.input,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.foreground,
+    fontSize: 15,
+    marginTop: 14,
+  },
+  centerButtons: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 18 },
+  centerGhost: { paddingHorizontal: 16, paddingVertical: 10 },
+  centerGhostText: { color: colors.mutedForeground, fontSize: 15, fontWeight: "600" },
+  centerPrimary: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  centerPrimaryText: { color: colors.primaryForeground, fontSize: 15, fontWeight: "700" },
+  centerDanger: {
+    backgroundColor: colors.destructive,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  centerDangerText: { color: "#101411", fontSize: 15, fontWeight: "700" },
 });
