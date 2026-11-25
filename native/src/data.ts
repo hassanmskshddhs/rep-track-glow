@@ -658,3 +658,49 @@ export async function saveExerciseNote(
   );
   if (error) throw error;
 }
+
+export type BodyMeasurement = {
+  id: string;
+  user_id: string;
+  created_at: string;
+  measured_at: string;
+  weight: number | null;
+  body_fat: number | null;
+  waist: number | null;
+  chest: number | null;
+  arm: number | null;
+  thigh: number | null;
+};
+
+export async function getBodyMeasurements(userId: string): Promise<BodyMeasurement[]> {
+  const { data, error } = await supabase
+    .from("body_measurements")
+    .select("*")
+    .eq("user_id", userId)
+    .order("measured_at", { ascending: false })
+    .limit(30);
+  if (error) throw error;
+  return (data ?? []) as BodyMeasurement[];
+}
+
+export async function saveBodyMeasurement(
+  userId: string,
+  entry: Partial<Omit<BodyMeasurement, "id" | "user_id" | "created_at">>,
+): Promise<void> {
+  const { error } = await supabase.from("body_measurements").insert({
+    user_id: userId,
+    measured_at: entry.measured_at ?? new Date().toISOString(),
+    weight: entry.weight ?? null,
+    body_fat: entry.body_fat ?? null,
+    waist: entry.waist ?? null,
+    chest: entry.chest ?? null,
+    arm: entry.arm ?? null,
+    thigh: entry.thigh ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function deleteBodyMeasurement(id: string): Promise<void> {
+  const { error } = await supabase.from("body_measurements").delete().eq("id", id);
+  if (error) throw error;
+}

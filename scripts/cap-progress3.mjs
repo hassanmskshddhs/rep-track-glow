@@ -32,6 +32,10 @@ await p.route('**/rest/v1/**', (route) => {
   if (url.includes('custom_workout_days')) body = [];
   else if (url.includes('workout_sessions')) body = [...sessions].reverse();
   else if (url.includes('set_logs')) body = logs;
+  else if (url.includes('body_measurements')) body = [
+    { id:'m1', user_id:'local', created_at:new Date(now-2*day).toISOString(), measured_at:new Date(now-2*day).toISOString(), weight:81.5, body_fat:16.2, waist:84, chest:104, arm:36, thigh:58 },
+    { id:'m2', user_id:'local', created_at:new Date(now-16*day).toISOString(), measured_at:new Date(now-16*day).toISOString(), weight:82.4, body_fat:17.0, waist:86, chest:103, arm:35.5, thigh:57 }
+  ];
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 });
 await p.goto('http://localhost:8082/', {waitUntil:'networkidle'});
@@ -47,6 +51,12 @@ await p.screenshot({path:'/downloads/NAT-39-Progress-1RM.png'});
 await p.locator('text=Top weight').first().click({force:true});
 await p.waitForTimeout(500);
 await p.screenshot({path:'/downloads/NAT-40-Progress-topweight.png'});
+await p.locator('text=Body measurements').first().scrollIntoViewIfNeeded();
+await p.waitForTimeout(500);
+await p.screenshot({path:'/downloads/NAT-41-Body-section.png'});
+await p.locator('text=+ Log').first().click({force:true});
+await p.waitForTimeout(500);
+await p.screenshot({path:'/downloads/NAT-42-Body-modal.png'});
 await p.mouse.wheel(0, 1400);
 await p.waitForTimeout(600);
 

@@ -1,17 +1,169 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { colors, RiseIn, Wordmark } from "./ui";
-import { ProgressData, getProgressData } from "./data";
+import {
+  BodyMeasurement,
+  ProgressData,
+  deleteBodyMeasurement,
+  getBodyMeasurements,
+  getProgressData,
+  saveBodyMeasurement,
+} from "./data";
+
+const BODY_FIELDS = [
+  { key: "weight", label: "Body weight", unit: "kg" },
+  { key: "body_fat", label: "Body fat", unit: "%" },
+  { key: "waist", label: "Waist", unit: "cm" },
+  { key: "chest", label: "Chest", unit: "cm" },
+  { key: "arm", label: "Arm", unit: "cm" },
+  { key: "thigh", label: "Thigh", unit: "cm" },
+] as const;
+type BodyFieldKey = (typeof BODY_FIELDS)[number]["key"];
+
+function BodySection({ userId }: { userId: string }) {
+  const [rows, setRows] = useState<BodyMeasurement[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<Record<BodyFieldKey, string>>({
+    weight: "", body_fat: "", waist: "", chest: "", arm: "", thigh: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setRows(await getBodyMeasurements(userId));
+    } catch {
+      /* offline */
+    }
+    setLoaded(true);
+  }, [userId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const latest = rows[0];
+  const latestOf = (k: BodyFieldKey) => rows.find((r) => r[k] != null)?.[k] ?? null;
+
+  const save = async () => {
+    const entry: Partial<Record<BodyFieldKey, number>> = {};
+    for (const f of BODY_FIELDS) {
+      const v = draft[f.key].trim();
+      if (v) entry[f.key] = Number(v);
+    }
+    if (Object.keys(entry).length === 0) {
+      setOpen(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveBodyMeasurement(userId, entry);
+      setDraft({ weight: "", body_fat: "", waist: "", chest: "", arm: "", thigh: "" });
+      setOpen(false);
+      await load();
+    } catch {
+      /* keep draft */
+    }
+    setSaving(false);
+  };
+
+  if (!loaded) return null;
+  return (
+    <RiseIn delay={460}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Body measurements</Text>
+        <Pressable onPress={() => setOpen(true)}>
+          <Text style={styles.bodyAddText}>+ Log</Text>
+        </Pressable>
+      </View>
+      {latest ? (
+        <View style={styles.chartCard}>
+          <View style={styles.bodyGrid}>
+            {BODY_FIELDS.map((f) => (
+              <View key={f.key} style={styles.bodyCell}>
+                <Text style={styles.bodyCellLabel}>{f.label}</Text>
+                <Text style={styles.bodyCellValue}>
+                  {latestOf(f.key) != null ? `${latestOf(f.key)}${f.unit === "%" ? "%" : ""}` : "—"}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {rows.slice(0, 5).map((r) => (
+            <View key={r.id} style={styles.bodyRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.bodyRowDate}>
+                  {new Date(r.measured_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </Text>
+                <Text style={styles.bodyRowVals} numberOfLines={2}>
+                  {BODY_FIELDS.filter((f) => r[f.key] != null)
+                    .map((f) => `${f.label} ${r[f.key]}${f.unit}`)
+                    .join(" · ")}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  void deleteBodyMeasurement(r.id).then(load);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.bodyDelete}>×</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.chartCard}>
+          <Text style={styles.chartSub}>
+            No measurements yet. Tap + Log to track weight, body fat and tape measurements.
+          </Text>
+        </View>
+      )}
+
+      <Modal visible={open} transparent animationType="fade">
+        <View style={styles.bodyBackdrop}>
+          <View style={styles.bodyCard}>
+            <Text style={styles.bodyTitle}>Log measurements</Text>
+            {BODY_FIELDS.map((f) => (
+              <View key={f.key} style={{ marginTop: 10 }}>
+                <Text style={styles.bodyCellLabel}>
+                  {f.label} ({f.unit})
+                </Text>
+                <TextInput
+                  value={draft[f.key]}
+                  onChangeText={(v) => setDraft((d) => ({ ...d, [f.key]: v.replace(/[^0-9.]/g, "") }))}
+                  keyboardType="decimal-pad"
+                  placeholder="—"
+                  placeholderTextColor={colors.mutedForeground}
+                  style={styles.bodyInput}
+                />
+              </View>
+            ))}
+            <View style={styles.bodyButtons}>
+              <Pressable onPress={() => setOpen(false)} style={styles.bodyCancel}>
+                <Text style={styles.bodyCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={() => void save()} disabled={saving} style={styles.bodySave}>
+                <Text style={styles.bodySaveText}>{saving ? "Saving..." : "Save"}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </RiseIn>
+  );
+}
 
 function LineChart({
   points,
@@ -336,6 +488,8 @@ export function ProgressScreen({ session }: { session: Session }) {
               </RiseIn>
             )}
 
+            <BodySection userId={userId} />
+
             {data.overview.workoutsThisMonth === 0 && data.prs.length === 0 && (
               <View style={styles.empty}>
                 <Text style={styles.emptyIcon}>📈</Text>
@@ -451,6 +605,67 @@ const styles = StyleSheet.create({
   metricChipActive: { backgroundColor: colors.primary },
   metricChipText: { color: colors.mutedForeground, fontSize: 12, fontWeight: "600" },
   metricChipTextActive: { color: colors.background },
+  bodyAddText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
+  bodyGrid: { flexDirection: "row", flexWrap: "wrap", marginBottom: 4 },
+  bodyCell: { width: "33.33%", paddingVertical: 8 },
+  bodyCellLabel: { color: colors.mutedForeground, fontSize: 11 },
+  bodyCellValue: { color: colors.foreground, fontSize: 18, fontWeight: "800", marginTop: 2 },
+  bodyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  bodyRowDate: { color: colors.mutedForeground, fontSize: 11 },
+  bodyRowVals: { color: colors.foreground, fontSize: 12, marginTop: 2 },
+  bodyDelete: { color: colors.destructive, fontSize: 22, paddingHorizontal: 6 },
+  bodyBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  bodyCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+    width: "100%",
+  },
+  bodyTitle: { color: colors.foreground, fontSize: 18, fontWeight: "800" },
+  bodyInput: {
+    backgroundColor: colors.input,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.foreground,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    marginTop: 4,
+  },
+  bodyButtons: { flexDirection: "row", gap: 10, marginTop: 18 },
+  bodyCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+  },
+  bodyCancelText: { color: colors.mutedForeground, fontSize: 14, fontWeight: "600" },
+  bodySave: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+  },
+  bodySaveText: { color: colors.background, fontSize: 14, fontWeight: "800" },
   barRow: {
     flexDirection: "row",
     alignItems: "flex-end",
