@@ -26,7 +26,7 @@ import {
 } from "./data";
 import { EXERCISE_DB } from "./exercises";
 
-type SetRow = { weight: string; reps: string };
+type SetRow = { weight: string; reps: string; done?: boolean };
 type SetsState = Record<string, SetRow[]>;
 
 // Double-progression, same as the web day page
@@ -130,6 +130,10 @@ export function LoggerScreen({
   const [state, setState] = useState<SetsState>(emptyState);
   const [hydrated, setHydrated] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  // Rest timer: auto-starts when a set is marked done.
+  const [restTarget, setRestTarget] = useState(90);
+  const [restDeadline, setRestDeadline] = useState<number | null>(null);
+  const [restRemaining, setRestRemaining] = useState(90);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const startRef = useRef(Date.now());
@@ -199,6 +203,34 @@ export function LoggerScreen({
       [ex]: s[ex].map((r, i) => (i === idx ? { ...r, [field]: cleaned } : r)),
     }));
   };
+
+  const toggleSetDone = (ex: string, idx: number) => {
+    let marking = false;
+    setState((s) => {
+      const row = s[ex]?.[idx];
+      marking = !(row?.done ?? false);
+      return {
+        ...s,
+        [ex]: s[ex].map((r, i) => (i === idx ? { ...r, done: marking } : r)),
+      };
+    });
+    if (marking) {
+      setRestRemaining(restTarget);
+      setRestDeadline(Date.now() + restTarget * 1000);
+    }
+  };
+
+  useEffect(() => {
+    if (!restDeadline) return;
+    const tick = () => {
+      const seconds = Math.max(0, Math.ceil((restDeadline - Date.now()) / 1000));
+      setRestRemaining(seconds);
+      if (seconds <= 0) setRestDeadline(null);
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [restDeadline]);
 
   const addSet = (ex: string) =>
     setState((s) => ({ ...s, [ex]: [...s[ex], { weight: "", reps: "" }] }));
@@ -435,10 +467,11 @@ export function LoggerScreen({
                 <Text style={[styles.setHeaderText, { width: 44 }]}>SET</Text>
                 <Text style={[styles.setHeaderText, { flex: 1 }]}>KG</Text>
                 <Text style={[styles.setHeaderText, { flex: 1 }]}>REPS</Text>
-                <View style={{ width: 28 }} />
+                <View style={{ width: 34 }} />
+                <View style={{ width: 22 }} />
               </View>
               {(state[ex] ?? []).map((r, idx) => (
-                <View key={idx} style={styles.setRow}>
+                <View key={idx} style={[styles.setRow, r.done && styles.setRowDone]}>
                   <Text style={styles.setNum}>{idx + 1}</Text>
                   <TextInput
                     value={r.weight}
@@ -456,6 +489,13 @@ export function LoggerScreen({
                     placeholderTextColor={colors.mutedForeground}
                     style={styles.setInput}
                   />
+                  <Pressable
+                    onPress={() => toggleSetDone(ex, idx)}
+                    hitSlop={6}
+                    style={[styles.setCheck, r.done && styles.setCheckDone]}
+                  >
+                    <Text style={[styles.setCheckText, r.done && styles.setCheckTextDone]}>✓</Text>
+                  </Pressable>
                   <Pressable onPress={() => removeSet(ex, idx)} hitSlop={8}>
                     <Text style={styles.removeSet}>×</Text>
                   </Pressable>
@@ -473,6 +513,61 @@ export function LoggerScreen({
         </Pressable>
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      <View style={styles.restBar}>
+        {restDeadline ? (
+          <View style={styles.restActiveRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.restLabel}>REST</Text>
+              <Text style={styles.restTime}>
+                {String(Math.floor(restRemaining / 60)).padStart(2, "0")}:
+                {String(restRemaining % 60).padStart(2, "0")}
+              </Text>
+            </View>
+            <Pressable
+              style={styles.restButton}
+              onPress={() => {
+                setRestRemaining((r) => r + 30);
+                setRestDeadline(restDeadline + 30000);
+              }}
+            >
+              <Text style={styles.restButtonText}>+30s</Text>
+            </Pressable>
+            <Pressable
+              style={styles.restButton}
+              onPress={() => {
+                setRestDeadline(null);
+                setRestRemaining(restTarget);
+              }}
+            >
+              <Text style={[styles.restButtonText, { color: colors.mutedForeground }]}>Skip</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.restActiveRow}>
+            <Text style={styles.restLabel}>REST</Text>
+            <View style={{ flex: 1, flexDirection: "row", gap: 6, marginLeft: 10 }}>
+              {[60, 90, 120, 180].map((t) => (
+                <Pressable
+                  key={t}
+                  onPress={() => {
+                    setRestTarget(t);
+                    setRestRemaining(t);
+                    setRestDeadline(Date.now() + t * 1000);
+                  }}
+                  style={[styles.restPreset, restTarget === t && styles.restPresetActive]}
+                >
+                  <Text
+                    style={[styles.restPresetText, restTarget === t && styles.restPresetTextActive]}
+                  >
+                    {`${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
 
       <View style={styles.bottomBar}>
         <Text style={styles.readyText}>
@@ -797,9 +892,52 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: "center",
   },
-  removeSet: { color: colors.mutedForeground, fontSize: 20, width: 28, textAlign: "center" },
+  removeSet: { color: colors.mutedForeground, fontSize: 20, width: 22, textAlign: "center" },
+  setRowDone: { backgroundColor: "#c8f2cb10", borderRadius: 10 },
+  setCheck: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  setCheckDone: { backgroundColor: colors.primary, borderColor: colors.primary },
+  setCheckText: { color: colors.mutedForeground, fontSize: 15, fontWeight: "800" },
+  setCheckTextDone: { color: colors.primaryForeground },
   addSet: { marginTop: 12, paddingVertical: 8, alignItems: "center" },
   addSetText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
+  restBar: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    // sits above the absolutely-positioned bottomBar
+    marginBottom: 108,
+  },
+  restActiveRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  restLabel: { color: colors.mutedForeground, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  restTime: { color: colors.primary, fontSize: 24, fontWeight: "800", marginTop: 1 },
+  restButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  restButtonText: { color: colors.foreground, fontSize: 13, fontWeight: "700" },
+  restPreset: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  restPresetActive: { borderColor: colors.primary, backgroundColor: "#c8f2cb15" },
+  restPresetText: { color: colors.mutedForeground, fontSize: 12, fontWeight: "700" },
+  restPresetTextActive: { color: colors.primary },
   bottomBar: {
     position: "absolute",
     left: 0,
