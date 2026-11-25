@@ -325,7 +325,7 @@ export type ProgressData = {
   overview: ProgressOverview;
   prs: PRRecord[];
   weeklyVolume: { w: string; val: number }[];
-  exerciseHistory: Record<string, { date: string; val: number }[]>;
+  exerciseHistory: Record<string, { date: string; val: number; oneRm: number }[]>;
   uniqueExercises: string[];
 };
 
@@ -405,7 +405,7 @@ export async function getProgressData(userId: string | undefined): Promise<Progr
     const weeklyVolume: Record<string, number> = {};
     const maxWeights: Record<string, { weight: number; date: string }> = {};
     const newPRs: PRRecord[] = [];
-    const exerciseHistory: Record<string, { date: string; val: number }[]> = {};
+    const exerciseHistory: Record<string, { date: string; val: number; oneRm: number }[]> = {};
     const uniqueExercises = new Set<string>();
 
     for (const set of sets) {
@@ -439,12 +439,14 @@ export async function getProgressData(userId: string | undefined): Promise<Progr
       }
 
       const label = `${MONTHS_CHART[date.getMonth()]} ${date.getDate()}`;
+      const e1rm = w > 0 && r > 0 ? Math.round(w * (1 + r / 30) * 10) / 10 : 0;
       const arr = (exerciseHistory[set.exercise_name] ||= []);
       const existing = arr.find((h) => h.date === label);
       if (existing) {
         if (w > existing.val) existing.val = w;
+        if (e1rm > existing.oneRm) existing.oneRm = e1rm;
       } else {
-        arr.push({ date: label, val: w });
+        arr.push({ date: label, val: w, oneRm: e1rm });
       }
     }
 

@@ -9,8 +9,72 @@ import {
   View,
 } from "react-native";
 import type { Session } from "@supabase/supabase-js";
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { colors, RiseIn, Wordmark } from "./ui";
 import { ProgressData, getProgressData } from "./data";
+
+function LineChart({
+  points,
+  labels,
+  height = 140,
+}: {
+  points: number[];
+  labels: string[];
+  height?: number;
+}) {
+  const [width, setWidth] = useState(0);
+  if (points.length < 2) return null;
+  const padTop = 16;
+  const padBottom = 22;
+  const padX = 8;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const span = max - min || 1;
+  const innerW = Math.max(width - padX * 2, 1);
+  const innerH = height - padTop - padBottom;
+  const x = (i: number) => padX + (i / (points.length - 1)) * innerW;
+  const y = (v: number) => padTop + innerH - ((v - min) / span) * innerH;
+  const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(p)}`).join(" ");
+  const area = `${line} L${x(points.length - 1)},${padTop + innerH} L${x(0)},${padTop + innerH} Z`;
+  return (
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 && (
+        <>
+          <Svg width={width} height={height}>
+            <Defs>
+              <LinearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={colors.primary} stopOpacity="0.28" />
+                <Stop offset="1" stopColor={colors.primary} stopOpacity="0.02" />
+              </LinearGradient>
+            </Defs>
+            <Path d={area} fill="url(#fill)" />
+            <Path d={line} stroke={colors.primary} strokeWidth="2.5" fill="none" />
+            {points.map((p, i) => (
+              <Circle key={i} cx={x(i)} cy={y(p)} r={i === points.length - 1 ? 4 : 3} fill={colors.primary} />
+            ))}
+          </Svg>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -14 }}>
+            {labels.map((l, i) =>
+              i === 0 || i === labels.length - 1 || i === Math.floor(labels.length / 2) ? (
+                <Text key={i} style={{ color: colors.mutedForeground, fontSize: 10 }}>{l}</Text>
+              ) : (
+                <View key={i} />
+              ),
+            )}
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: "700" }}>
+              {points[points.length - 1]} kg
+            </Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 10 }}>
+              best {max} kg
+            </Text>
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -51,6 +115,7 @@ export function ProgressScreen({ session }: { session: Session }) {
   const [refreshing, setRefreshing] = useState(false);
   const [exercise, setExercise] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [metric, setMetric] = useState<"weight" | "oneRm">("oneRm");
 
   const load = useCallback(async () => {
     const d = await getProgressData(userId);
@@ -240,25 +305,33 @@ export function ProgressScreen({ session }: { session: Session }) {
                       ))}
                     </View>
                   )}
-                  <View style={styles.barRow}>
-                    {history.slice(-8).map((h) => (
-                      <View key={h.date} style={styles.barCol}>
-                        <Text style={styles.barValue}>{h.val}</Text>
-                        <View style={styles.barTrack}>
-                          <View
-                            style={[
-                              styles.bar,
-                              { height: Math.max(4, (h.val / maxHist) * 100) },
-                            ]}
-                          />
-                        </View>
-                        <Text style={styles.barLabel} numberOfLines={1}>
-                          {h.date.split(" ")[1]}
+                  <View style={styles.metricToggle}>
+                    {(["oneRm", "weight"] as const).map((m) => (
+                      <Pressable
+                        key={m}
+                        onPress={() => setMetric(m)}
+                        style={[styles.metricChip, metric === m && styles.metricChipActive]}
+                      >
+                        <Text
+                          style={[
+                            styles.metricChipText,
+                            metric === m && styles.metricChipTextActive,
+                          ]}
+                        >
+                          {m === "oneRm" ? "Est. 1RM" : "Top weight"}
                         </Text>
-                      </View>
+                      </Pressable>
                     ))}
                   </View>
-                  <Text style={styles.chartSub}>Top weight per session (kg)</Text>
+                  <LineChart
+                    points={history.slice(-12).map((h) => (metric === "oneRm" ? h.oneRm : h.val))}
+                    labels={history.slice(-12).map((h) => h.date)}
+                  />
+                  <Text style={styles.chartSub}>
+                    {metric === "oneRm"
+                      ? "Estimated one-rep max per session (Epley)"
+                      : "Top weight per session (kg)"}
+                  </Text>
                 </View>
               </RiseIn>
             )}
@@ -368,6 +441,16 @@ const styles = StyleSheet.create({
   },
   chartTitle: { color: colors.foreground, fontSize: 16, fontWeight: "700" },
   chartSub: { color: colors.mutedForeground, fontSize: 11, marginTop: 8 },
+  metricToggle: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  metricChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.input,
+  },
+  metricChipActive: { backgroundColor: colors.primary },
+  metricChipText: { color: colors.mutedForeground, fontSize: 12, fontWeight: "600" },
+  metricChipTextActive: { color: colors.background },
   barRow: {
     flexDirection: "row",
     alignItems: "flex-end",
