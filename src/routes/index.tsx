@@ -5,7 +5,7 @@ import { ArrowRight, Check, Dumbbell, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import * as db from "@/lib/db";
 import { useSessionTimer } from "@/lib/session-timer";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -58,7 +58,7 @@ function Train() {
     );
   return (
     <main className="mx-auto max-w-4xl px-5 pb-8 pt-7">
-      <header className="mb-7">
+      <header className="rise-in mb-7">
         <p className="forged-eyebrow">{format(new Date(), "EEEE, d MMMM")}</p>
         <h1 className="forged-title mt-3">Your next rep.</h1>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -75,7 +75,7 @@ function Train() {
           <ArrowRight className="h-4 w-4" />
         </Link>
       )}
-      <div className="forged-hub-grid">
+      <div className="forged-hub-grid rise-in" style={{ "--d": "120ms" } as CSSProperties}>
         <div>
           <section aria-label="Last seven days" className="mb-7">
             <div className="mb-4 flex justify-between">

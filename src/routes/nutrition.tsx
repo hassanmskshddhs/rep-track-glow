@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type CSSProperties } from "react";
+import { useCountUp } from "@/hooks/use-count-up";
 import {
   ArrowLeft,
   ArrowRight,
@@ -688,6 +689,9 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
 
   const remainingCals = targets.calories - consumed.calories;
   const calsPercent = Math.min(100, (consumed.calories / targets.calories) * 100);
+  const shownGoalCals = useCountUp(targets.calories);
+  const shownFoodCals = useCountUp(consumed.calories);
+  const shownRemainingCals = useCountUp(remainingCals);
 
   const addFood = (food: FoodLog, baseFoodItem: FoodDBItem) => {
     // Add to daily logs
@@ -759,13 +763,13 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
             <div>
               <div className="text-[12px] font-medium text-muted-foreground">Goal</div>
               <div className="mt-0.5 text-[18px] font-extrabold tabular-nums">
-                {targets.calories}
+                {Math.round(shownGoalCals)}
               </div>
             </div>
             <div>
               <div className="text-[12px] font-medium text-muted-foreground">Food</div>
               <div className="mt-0.5 text-[18px] font-extrabold tabular-nums">
-                {Math.round(consumed.calories)}
+                {Math.round(shownFoodCals)}
               </div>
             </div>
             <div>
@@ -776,7 +780,7 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
                   remainingCals < 0 ? "text-destructive" : "text-primary",
                 )}
               >
-                {Math.round(remainingCals)}
+                {Math.round(shownRemainingCals)}
               </div>
             </div>
           </div>
@@ -793,28 +797,38 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
       </section>
 
       {/* MACRO RINGS */}
-      <section className="mt-3 grid grid-cols-3 gap-3 animate-fade-in" aria-label="Macros">
-        <MacroRing
-          label="Protein"
-          consumed={consumed.protein}
-          target={targets.protein}
-          color="text-protein"
-          icon={<Beef className="h-3 w-3" />}
-        />
-        <MacroRing
-          label="Carbs"
-          consumed={consumed.carbs}
-          target={targets.carbs}
-          color="text-carbs"
-          icon={<Wheat className="h-3 w-3" />}
-        />
-        <MacroRing
-          label="Fat"
-          consumed={consumed.fat}
-          target={targets.fat}
-          color="text-fat"
-          icon={<Droplet className="h-3 w-3" />}
-        />
+      <section className="mt-3 grid grid-cols-3 gap-3" aria-label="Macros">
+        {[
+          {
+            label: "Protein",
+            consumed: consumed.protein,
+            target: targets.protein,
+            color: "text-protein",
+            icon: <Beef className="h-3 w-3" />,
+          },
+          {
+            label: "Carbs",
+            consumed: consumed.carbs,
+            target: targets.carbs,
+            color: "text-carbs",
+            icon: <Wheat className="h-3 w-3" />,
+          },
+          {
+            label: "Fat",
+            consumed: consumed.fat,
+            target: targets.fat,
+            color: "text-fat",
+            icon: <Droplet className="h-3 w-3" />,
+          },
+        ].map((m, i) => (
+          <div
+            key={m.label}
+            className="rise-in"
+            style={{ "--d": `${(i + 1) * 80}ms` } as CSSProperties}
+          >
+            <MacroRing {...m} />
+          </div>
+        ))}
       </section>
 
       {/* MEAL SECTIONS */}
@@ -824,7 +838,11 @@ function NutritionDashboard({ targets, onReset }: { targets: MacroTargets; onRes
           const mealCals = items.reduce((acc, i) => acc + i.calories, 0);
 
           return (
-            <div key={meal} className="overflow-hidden rounded-[24px] border border-border bg-card">
+            <div
+              key={meal}
+              className="rise-in overflow-hidden rounded-[24px] border border-border bg-card"
+              style={{ "--d": `${(meals.indexOf(meal) + 3) * 80}ms` } as CSSProperties}
+            >
               <div className="flex items-center justify-between p-4">
                 <h3 className="text-[16px] font-bold tracking-tight">{meal}</h3>
                 <span className="text-sm font-semibold tabular-nums text-muted-foreground">
@@ -932,7 +950,8 @@ function MacroRing({
   color: string;
   icon: React.ReactNode;
 }) {
-  const pct = Math.min(100, target > 0 ? (consumed / target) * 100 : 0);
+  const pct = useCountUp(Math.min(100, target > 0 ? (consumed / target) * 100 : 0), 900);
+  const shownConsumed = useCountUp(consumed);
   return (
     <div className="flex flex-col items-center rounded-[24px] border border-border bg-card p-3">
       <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -948,7 +967,7 @@ function MacroRing({
             strokeWidth="3"
           />
           <path
-            className={cn("transition-all duration-500", color)}
+            className={color}
             strokeDasharray={`${pct}, 100`}
             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
@@ -958,7 +977,7 @@ function MacroRing({
         </svg>
       </div>
       <div className="text-xs font-bold tabular-nums">
-        {Math.round(consumed)}{" "}
+        {Math.round(shownConsumed)}{" "}
         <span className="font-normal text-muted-foreground">/ {target}g</span>
       </div>
     </div>

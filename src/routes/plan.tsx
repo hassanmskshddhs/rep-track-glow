@@ -1,6 +1,6 @@
 import { WeekPlan } from "@/components/WeekPlan";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dumbbell, Plus, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -219,7 +219,13 @@ function Plan() {
         </div>
         <div className="overflow-hidden rounded-[24px] border border-border bg-card divide-y divide-border">
           {(splits ?? []).map((s, i) => (
-            <SplitCard key={s.id} split={s} index={i} isNext={false} onDelete={deleteSplit} />
+            <div
+              key={s.id}
+              className="rise-in"
+              style={{ "--d": `${Math.min(i, 7) * 70}ms` } as CSSProperties}
+            >
+              <SplitCard split={s} index={i} isNext={false} onDelete={deleteSplit} />
+            </div>
           ))}
         </div>
       </section>

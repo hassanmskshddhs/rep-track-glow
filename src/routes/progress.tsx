@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { useCountUp } from "@/hooks/use-count-up";
 import {
   ArrowLeft,
   Dumbbell,
@@ -209,34 +210,48 @@ function OverviewTab({ data }: { data: ProgressData }) {
 
         {/* 2x2 Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <MetricCard
-            icon={<Dumbbell className="h-5 w-5 text-primary" />}
-            value={overview.workoutsThisMonth.toString()}
-            label="Workouts"
-            change={`${overview.workoutsDiff >= 0 ? "+" : ""}${overview.workoutsDiff} vs last month`}
-            positive={overview.workoutsDiff >= 0}
-          />
-          <MetricCard
-            icon={<Activity className="h-5 w-5 text-primary" />}
-            value={`${overview.volumeThisMonth.toLocaleString()} kg`}
-            label="Total Volume"
-            change={`${overview.volumeDiff >= 0 ? "↑" : "↓"} ${Math.abs(overview.volumeDiffPct)}% vs last month`}
-            positive={overview.volumeDiff >= 0}
-          />
-          <MetricCard
-            icon={<Trophy className="h-5 w-5 text-amber-500" />}
-            value={overview.prsThisMonth.toString()}
-            label="New PRs"
-            change="This Month"
-            positive={true}
-          />
-          <MetricCard
-            icon={<Flame className="h-5 w-5 text-orange-500" />}
-            value={overview.workoutsThisMonth > 0 ? "Active" : "Idle"}
-            label="Status"
-            change={overview.workoutsThisMonth > 0 ? "Keep it up" : "Start working out"}
-            positive={overview.workoutsThisMonth > 0}
-          />
+          {[
+            <MetricCard
+              key="workouts"
+              icon={<Dumbbell className="h-5 w-5 text-primary" />}
+              value={overview.workoutsThisMonth.toString()}
+              label="Workouts"
+              change={`${overview.workoutsDiff >= 0 ? "+" : ""}${overview.workoutsDiff} vs last month`}
+              positive={overview.workoutsDiff >= 0}
+            />,
+            <MetricCard
+              key="volume"
+              icon={<Activity className="h-5 w-5 text-primary" />}
+              value={`${overview.volumeThisMonth.toLocaleString()} kg`}
+              label="Total Volume"
+              change={`${overview.volumeDiff >= 0 ? "↑" : "↓"} ${Math.abs(overview.volumeDiffPct)}% vs last month`}
+              positive={overview.volumeDiff >= 0}
+            />,
+            <MetricCard
+              key="prs"
+              icon={<Trophy className="h-5 w-5 text-amber-500" />}
+              value={overview.prsThisMonth.toString()}
+              label="New PRs"
+              change="This Month"
+              positive={true}
+            />,
+            <MetricCard
+              key="status"
+              icon={<Flame className="h-5 w-5 text-orange-500" />}
+              value={overview.workoutsThisMonth > 0 ? "Active" : "Idle"}
+              label="Status"
+              change={overview.workoutsThisMonth > 0 ? "Keep it up" : "Start working out"}
+              positive={overview.workoutsThisMonth > 0}
+            />,
+          ].map((card, i) => (
+            <div
+              key={card.key}
+              className="rise-in"
+              style={{ "--d": `${i * 80}ms` } as CSSProperties}
+            >
+              {card}
+            </div>
+          ))}
         </div>
       </section>
 
@@ -299,11 +314,18 @@ function MetricCard({
   change: string;
   positive: boolean;
 }) {
+  const match = value.match(/^([\d,]+)(.*)$/);
+  const numeric = match ? Number(match[1].replace(/,/g, "")) : NaN;
+  const shown = useCountUp(Number.isFinite(numeric) ? numeric : 0);
+  const display =
+    match && Number.isFinite(numeric)
+      ? `${Math.round(shown).toLocaleString("en-US")}${match[2]}`
+      : value;
   return (
     <div className="flex h-32 flex-col justify-between rounded-[24px] border border-border bg-card p-4">
       <div className="flex items-start justify-between">{icon || <div className="h-5 w-5" />}</div>
       <div>
-        <div className="text-2xl font-extrabold tabular-nums tracking-tight">{value}</div>
+        <div className="text-2xl font-extrabold tabular-nums tracking-tight">{display}</div>
         <div className="mb-1 text-xs text-muted-foreground">{label}</div>
         <div
           className={cn("text-[10px] font-bold", positive ? "text-primary" : "text-destructive")}

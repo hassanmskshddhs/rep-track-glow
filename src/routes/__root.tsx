@@ -258,7 +258,13 @@ function AppShell() {
             Offline. Keep this device open until your workout is saved.
           </div>
         )}
-        <Outlet />
+        {focusMode ? (
+          <Outlet />
+        ) : (
+          <div key={pathname} className="page-enter">
+            <Outlet />
+          </div>
+        )}
       </div>
       <BottomNav />
     </div>

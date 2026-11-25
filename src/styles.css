@@ -264,6 +264,57 @@ h3,
   animation-delay: 0.18s;
 }
 
+@utility stagger-4 {
+  animation-delay: 0.24s;
+}
+
+@utility stagger-5 {
+  animation-delay: 0.3s;
+}
+
+@utility stagger-6 {
+  animation-delay: 0.36s;
+}
+
+@utility stagger-7 {
+  animation-delay: 0.42s;
+}
+
+@utility stagger-8 {
+  animation-delay: 0.48s;
+}
+
+/* Phase 2 motion: staggered card/item entrances. Pass --d for a custom delay. */
+@keyframes ilRiseIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@utility rise-in {
+  animation: ilRiseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Route transitions: opacity only, so fixed-position children stay fixed. */
+@keyframes ilPageIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility page-enter {
+  animation: ilPageIn 0.25s ease-out both;
+}
+
 @utility skeleton-shimmer {
   background-image: linear-gradient(
     90deg,

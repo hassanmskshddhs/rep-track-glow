@@ -1,0 +1,22 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({executablePath:'/usr/bin/google-chrome-stable',args:['--no-sandbox']});
+const c = await b.newContext({viewport:{width:390,height:844},recordVideo:{dir:'/tmp/ob-video',size:{width:390,height:844}}});
+const p = await c.newPage(); const errors=[]; p.on('pageerror',e=>errors.push(e.message));
+await p.goto('http://localhost:8081/');
+await p.getByRole('dialog',{name:'Welcome to IronLog'}).waitFor({timeout:15000});
+await p.waitForTimeout(1600);
+await p.getByRole('button',{name:/Get started/}).click();
+await p.waitForTimeout(1600);
+await p.getByRole('radio',{name:/Build muscle/}).click();
+await p.waitForTimeout(900);
+await p.getByRole('button',{name:/Continue/}).click();
+await p.waitForTimeout(1800);
+await p.screenshot({path:'/downloads/OB-3-Body.png'}); // settled
+await p.getByRole('button',{name:/Continue/}).click();
+await p.waitForTimeout(1800);
+await p.getByRole('button',{name:/Start training/}).click();
+await p.getByRole('heading',{name:'Your next rep.'}).waitFor({timeout:15000});
+await p.waitForTimeout(1200);
+await p.close();
+await c.close(); await b.close();
+console.log(JSON.stringify({errors}));
