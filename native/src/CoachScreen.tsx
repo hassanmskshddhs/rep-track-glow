@@ -17,6 +17,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn } from "./ui";
+import { useBackHandler } from "./back";
 import { supabase } from "./supabase";
 
 // Streams through the deployed web app's server route, same as the web client.
@@ -188,6 +189,23 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
   const [streaming, setStreaming] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Hardware back: close dialogs, then leave the open chat before leaving the screen.
+  useBackHandler(!!(notice || deleting || chatId), () => {
+    if (notice) {
+      setNotice(null);
+      return true;
+    }
+    if (deleting) {
+      setDeleting(null);
+      return true;
+    }
+    if (chatId) {
+      setChatId(null);
+      return true;
+    }
+    return false;
+  });
   const sendTimesRef = useRef<number[]>([]);
   const listRef = useRef<FlatList<CoachMessage>>(null);
 

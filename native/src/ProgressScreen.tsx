@@ -13,6 +13,7 @@ import {
 import type { Session } from "@supabase/supabase-js";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { colors, RiseIn, Wordmark } from "./ui";
+import { useBackHandler } from "./back";
 import {
   BodyMeasurement,
   ProgressData,
@@ -36,6 +37,10 @@ function BodySection({ userId }: { userId: string }) {
   const [rows, setRows] = useState<BodyMeasurement[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
+  useBackHandler(open, () => {
+    setOpen(false);
+    return true;
+  });
   const [draft, setDraft] = useState<Record<BodyFieldKey, string>>({
     weight: "", body_fat: "", waist: "", chest: "", arm: "", thigh: "",
   });
@@ -286,6 +291,10 @@ export function ProgressScreen({ session }: { session: Session }) {
   const [refreshing, setRefreshing] = useState(false);
   const [exercise, setExercise] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  useBackHandler(pickerOpen, () => {
+    setPickerOpen(false);
+    return true;
+  });
   const [metric, setMetric] = useState<"weight" | "oneRm">("oneRm");
 
   const load = useCallback(async () => {

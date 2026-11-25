@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import Svg, { Circle } from "react-native-svg";
 import { colors, PrimaryButton, RiseIn } from "./ui";
+import { useBackHandler } from "./back";
 import { FOOD_DB, FoodDBItem } from "./food";
 import { supabase } from "./supabase";
 
@@ -328,6 +329,20 @@ export function NutritionScreen({ session }: { session: Session }) {
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+
+  // Hardware back: close dialogs, then the food detail, then the search sheet.
+  useBackHandler(
+    !!(resetConfirm || settingsOpen || unitPickerOpen || selectedFood || searchOpen),
+    () => {
+      if (resetConfirm) setResetConfirm(false);
+      else if (settingsOpen) setSettingsOpen(false);
+      else if (unitPickerOpen) setUnitPickerOpen(false);
+      else if (selectedFood) setSelectedFood(null);
+      else if (searchOpen) setSearchOpen(false);
+      else return false;
+      return true;
+    },
+  );
 
   useEffect(() => {
     (async () => {

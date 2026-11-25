@@ -13,6 +13,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
+import { useBackHandler } from "./back";
 import {
   ACCENT_COLORS,
   CustomDay,
@@ -42,6 +43,14 @@ export function PlanScreen({
   const [menuFor, setMenuFor] = useState<CustomDay | null>(null);
   const [pickerDay, setPickerDay] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useBackHandler(!!(pickerDay || menuFor || deleting), () => {
+    if (pickerDay) setPickerDay(null);
+    else if (menuFor) setMenuFor(null);
+    else if (deleting) setDeleting(null);
+    else return false;
+    return true;
+  });
 
   // Same storage key as the web WeekPlan component
   const scheduleKey = `ironlog:forged:schedule:${userId}`;

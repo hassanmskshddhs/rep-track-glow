@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { runTopBackHandler } from "./src/back";
 import { StatusBar } from "expo-status-bar";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/supabase";
@@ -216,6 +218,36 @@ export default function App() {
   const [coachOpen, setCoachOpen] = useState(false);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [tab, setTab] = useState<TabKey>("train");
+
+  // Android hardware back: let open modals/sub-views handle it first, then walk
+  // the app hierarchy up (editor -> coach -> logger -> first tab), exit only at root.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (runTopBackHandler()) return true;
+      if (editingSplit) {
+        setEditingSplit(null);
+        return true;
+      }
+      if (coachOpen) {
+        setCoachOpen(false);
+        return true;
+      }
+      if (activeDay) {
+        setActiveDay(null);
+        return true;
+      }
+      if (session && tab !== "train") {
+        setTab("train");
+        return true;
+      }
+      if (!session && screen === "auth") {
+        setScreen("welcome");
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [editingSplit, coachOpen, activeDay, session, tab, screen]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {

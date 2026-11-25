@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
+import { useBackHandler } from "./back";
 import {
   CustomDay,
   SessionWithSets,
@@ -74,6 +75,13 @@ export function HistoryScreen({ session }: { session: Session }) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<SessionWithSets | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useBackHandler(!!(renaming || deleting), () => {
+    if (renaming) setRenaming(null);
+    else if (deleting) setDeleting(null);
+    else return false;
+    return true;
+  });
 
   const load = useCallback(async () => {
     const [d, h] = await Promise.all([getCustomDays(userId), getHistorySessions(userId)]);

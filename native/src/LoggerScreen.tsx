@@ -19,6 +19,7 @@ const haptic = (fn: () => Promise<void>) => {
 };
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn } from "./ui";
+import { useBackHandler } from "./back";
 import {
   CustomDay,
   ExerciseInsight,
@@ -140,6 +141,7 @@ export function LoggerScreen({
   const [platesFor, setPlatesFor] = useState<string | null>(null);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const [savedPRs, setSavedPRs] = useState<string[]>([]);
+
   const draftKey = `ironlog:draft:${userId}:${day.id}`;
 
   const emptyState = (): SetsState =>
@@ -153,6 +155,28 @@ export function LoggerScreen({
   const [restDeadline, setRestDeadline] = useState<number | null>(null);
   const [restRemaining, setRestRemaining] = useState(90);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // Hardware back: close whatever sheet/dialog is open, topmost first.
+  const anyOverlay = !!(
+    notice || savedSummary || resetOpen || reviewOpen || renamingEx ||
+    removingEx || platesFor || noteEditing || menuFor || addOpen
+  );
+  useBackHandler(anyOverlay, () => {
+    if (notice) setNotice(null);
+    else if (savedSummary) {
+      setSavedSummary(null);
+      setSavedPRs([]);
+      onSaved();
+    } else if (resetOpen) setResetOpen(false);
+    else if (reviewOpen) setReviewOpen(false);
+    else if (renamingEx) setRenamingEx(null);
+    else if (removingEx) setRemovingEx(null);
+    else if (platesFor) setPlatesFor(null);
+    else if (noteEditing) setNoteEditing(null);
+    else if (menuFor) setMenuFor(null);
+    else if (addOpen) setAddOpen(false);
+    else return false;
+    return true;
+  });
   const [saving, setSaving] = useState(false);
   const startRef = useRef(Date.now());
 
