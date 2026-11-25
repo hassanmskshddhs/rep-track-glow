@@ -12,6 +12,11 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
+
+const haptic = (fn: () => Promise<void>) => {
+  fn().catch(() => {}); // no-op on web/unsupported
+};
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn } from "./ui";
 import {
@@ -227,6 +232,7 @@ export function LoggerScreen({
       };
     });
     if (marking) {
+      haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
       setRestRemaining(restTarget);
       setRestDeadline(Date.now() + restTarget * 1000);
     }
@@ -237,7 +243,10 @@ export function LoggerScreen({
     const tick = () => {
       const seconds = Math.max(0, Math.ceil((restDeadline - Date.now()) / 1000));
       setRestRemaining(seconds);
-      if (seconds <= 0) setRestDeadline(null);
+      if (seconds <= 0) {
+        setRestDeadline(null);
+        haptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
+      }
     };
     tick();
     const id = setInterval(tick, 250);
@@ -369,6 +378,7 @@ export function LoggerScreen({
       }
       lines.push("", "— Logged with IronLog");
       setSavedSummary(lines.join("\n"));
+      haptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
     } catch (e) {
       setNotice({
         title: "Could not save",
