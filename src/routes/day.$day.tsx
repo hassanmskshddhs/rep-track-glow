@@ -35,6 +35,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -174,6 +184,7 @@ function DayPage({ day }: { day: string }) {
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [activeExercise, setActiveExercise] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
   const [summary, setSummary] = useState<WorkoutSummary | null>(null);
@@ -262,8 +273,6 @@ function DayPage({ day }: { day: string }) {
   }, [remoteNotes, notesHydrated]);
 
   const resetInputs = () => {
-    if (!confirm("Clear all current inputs and stop the timer? This won't affect saved history."))
-      return;
     setState(Object.fromEntries(config!.exercises.map((e) => [e, [{ weight: "", reps: "" }]])));
     if (draftKey && typeof window !== "undefined") localStorage.removeItem(draftKey);
     sessionTimer.stop();
@@ -749,7 +758,7 @@ function DayPage({ day }: { day: string }) {
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={resetInputs}
+                  onClick={() => setConfirmReset(true)}
                   disabled={saving}
                   className="border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
@@ -816,6 +825,24 @@ function DayPage({ day }: { day: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
+        <AlertDialogContent className="rounded-[24px] border-border bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-extrabold tracking-tight">
+              Reset session?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Clear all current inputs and stop the timer? This won't affect saved history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={resetInputs} className="rounded-full">
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Suspense fallback={null}>
         <ShareWorkoutDialog
           open={shareOpen}
@@ -913,6 +940,7 @@ const ExerciseCard = memo(function ExerciseCard({
   const best = insight?.bestWeight ?? null;
 
   const [editing, setEditing] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [draftName, setDraftName] = useState(ex);
   useEffect(() => {
     setDraftName(ex);
@@ -1007,7 +1035,7 @@ const ExerciseCard = memo(function ExerciseCard({
             )}
           </div>
           {!editing && (
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
@@ -1023,15 +1051,34 @@ const ExerciseCard = memo(function ExerciseCard({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onSelect={() => {
-                    if (confirm(`Remove ${ex} from this workout?`)) void onRemove(ex);
-                  }}
+                  onSelect={() => setConfirmRemove(true)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" /> Remove exercise
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+            <AlertDialogContent className="rounded-[24px] border-border bg-card">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-xl font-extrabold tracking-tight">
+                  Remove exercise?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Remove {ex} from this workout? Your saved history is not affected.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => void onRemove(ex)}
+                  className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Remove
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <div className="mt-2 rounded-lg border border-border bg-transparent px-3 py-2">
