@@ -26,6 +26,7 @@ import {
   useElapsedMs,
   formatElapsed,
 } from "@/lib/session-timer";
+import { Onboarding } from "@/components/Onboarding";
 import { ThemeProvider } from "@/lib/theme";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 
@@ -217,6 +218,18 @@ function AppShell() {
   const { user } = useAuth();
   const { online } = useOfflineSync();
 
+  // First-run onboarding: shown once per profile until completed or skipped.
+  // null = still checking storage (avoids flashing the app on first open).
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  const onboardingKey = `ironlog:onboarded:${user?.id || "local"}`;
+  useEffect(() => {
+    try {
+      setOnboarded(localStorage.getItem(onboardingKey) === "1");
+    } catch {
+      setOnboarded(true);
+    }
+  }, [onboardingKey]);
+
   useEffect(() => {
     if (user && online) {
       import("@/lib/db").then((db) => {
@@ -224,6 +237,17 @@ function AppShell() {
       });
     }
   }, [user, online]);
+
+  if (onboarded === null) {
+    return <div className="min-h-screen bg-background" />;
+  }
+  if (!onboarded) {
+    return (
+      <div className="bg-background text-foreground min-h-screen">
+        <Onboarding storageKey={onboardingKey} onDone={() => setOnboarded(true)} />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background text-foreground min-h-screen">

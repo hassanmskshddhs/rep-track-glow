@@ -1,0 +1,16 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({executablePath:'/usr/bin/google-chrome-stable',args:['--no-sandbox']});
+const c = await b.newContext({viewport:{width:390,height:844}});
+const p = await c.newPage(); const errors=[]; p.on('pageerror',e=>errors.push(e.message));
+await p.goto('http://localhost:8081/');
+await p.getByRole('dialog',{name:'Welcome to IronLog'}).waitFor({timeout:15000});
+await p.getByRole('button',{name:/Get started/}).click();
+await p.waitForTimeout(400);
+await p.getByRole('radio',{name:/Build muscle/}).click();
+await p.getByRole('button',{name:/Continue/}).click();
+await p.waitForTimeout(1700);
+await p.screenshot({path:'/downloads/OB-3-Body.png'});
+await p.getByRole('button',{name:/Continue/}).click();
+await p.waitForTimeout(1700);
+await p.screenshot({path:'/downloads/OB-4-Done.png'});
+console.log(JSON.stringify({errors})); await b.close();

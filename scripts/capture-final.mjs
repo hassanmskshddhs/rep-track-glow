@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 const b=await chromium.launch({executablePath:'/usr/bin/google-chrome-stable',args:['--no-sandbox']});
 const c=await b.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});
 // All browser test writes are on this isolated localhost origin, with no account.
+await c.addInitScript(()=>{try{localStorage.setItem('ironlog:onboarded:local','1')}catch(e){}});
 const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
 for(const [route,name] of [['/','Train'],['/plan','Plan'],['/progress','Progress-signin'],['/nutrition','Fuel-setup']]){await p.goto('http://localhost:8081'+route);await p.waitForTimeout(1000);if(route==='/')await p.getByRole('heading',{name:'Your next rep.'}).waitFor();if(route==='/plan')await p.getByRole('heading',{name:'Your routines'}).waitFor();await p.screenshot({path:'/downloads/FORGED-built-'+name+'.png'});}
 await p.goto('http://localhost:8081/day/push');await p.getByLabel('Incline DB Press set 1 weight in kilograms').fill('22');await p.getByLabel('Incline DB Press set 1 repetitions').fill('10');await p.getByRole('button',{name:'Complete set and start rest'}).click();await p.getByRole('button',{name:'Start Workout',exact:true}).click();await p.waitForTimeout(500);await p.screenshot({path:'/downloads/FORGED-built-Logger.png'});

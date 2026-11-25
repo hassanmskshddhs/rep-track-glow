@@ -36,7 +36,7 @@ export function AuthScreen({ compact = false }: { compact?: boolean } = {}) {
         });
         if (error) throw error;
         if (data.user) {
-            await migrateLocalDataToSupabase(data.user.id);
+          await migrateLocalDataToSupabase(data.user.id);
         }
         toast.success("Account created. Data migrated! You're in.");
       } else {
@@ -66,31 +66,53 @@ export function AuthScreen({ compact = false }: { compact?: boolean } = {}) {
       <div className="w-full max-w-md mx-auto">
         {!compact && (
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
+            <div className="animate-fade-in-up mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
               <Dumbbell className="h-7 w-7" />
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight">IRONLOG</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Track every rep. Crush every PR.</p>
+            <h1 className="animate-fade-in-up stagger-1 text-3xl font-extrabold tracking-tight">
+              IRONLOG
+            </h1>
+            <p className="animate-fade-in-up stagger-2 mt-1 text-sm text-muted-foreground">
+              Track every rep. Crush every PR.
+            </p>
           </div>
         )}
 
         <form
           onSubmit={submit}
-          className="rounded-2xl border border-border bg-[var(--gradient-card)] p-6 shadow-[var(--shadow-card)]"
+          className="animate-fade-in-up stagger-2 rounded-2xl border border-border bg-[var(--gradient-card)] p-6 shadow-[var(--shadow-card)]"
         >
-          <h2 className="text-xl font-bold">{mode === "signin" ? "Welcome back" : "Create account"}</h2>
+          <h2 className="text-xl font-bold">
+            {mode === "signin" ? "Welcome back" : "Create account"}
+          </h2>
           <p className="mb-5 text-sm text-muted-foreground">
-            {mode === "signin" ? "Sign in to continue logging." : "Start tracking your lifts in seconds."}
+            {mode === "signin"
+              ? "Sign in to continue logging."
+              : "Start tracking your lifts in seconds."}
           </p>
 
           <div className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input
+                id="password"
+                type="password"
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
           </div>
 

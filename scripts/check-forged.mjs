@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome-stable',headless:true,args:['--no-sandbox']});
 const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:"reduce"});
+await context.addInitScript(()=>{try{localStorage.setItem('ironlog:onboarded:local','1')}catch(e){}});
 const page=await context.newPage();
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto('http://localhost:8081/');await page.getByRole('heading',{name:'Your next rep.'}).waitFor();await page.getByText('Next in your rotation').waitFor();
