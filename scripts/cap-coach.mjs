@@ -7,6 +7,7 @@ await c.addInitScript(() => {
       access_token: 'fake', refresh_token: 'fake', expires_at: 4102444800,
       token_type: 'bearer', user: { id: 'local', email: 'hassan@example.com', aud: 'authenticated' }
     }));
+    localStorage.setItem('ironlog:onboarded:local','1');
     localStorage.setItem('ironlog.profile.v1', JSON.stringify({firstName:'Hassan',displayName:'Hassan',age:'21',weight:'82',height:'180'}));
   } catch {}
 });

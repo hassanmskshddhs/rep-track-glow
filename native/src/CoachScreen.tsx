@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,6 +12,8 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn } from "./ui";
@@ -22,7 +25,8 @@ const COACH_API = "https://ironlog-orcin.vercel.app/api/coach";
 const THREADS_KEY = "ironlog.coach.threads.v1";
 const PROFILE_KEY = "ironlog.profile.v1";
 
-export type CoachMessage = { role: "user" | "assistant"; text: string };
+export type CoachAttachment = { kind: "image"; url: string; name?: string };
+export type CoachMessage = { role: "user" | "assistant"; text: string; attachments?: CoachAttachment[] };
 export type CoachThread = {
   id: string;
   title: string;
@@ -138,7 +142,22 @@ function streamCoach(
     xhr.send(
       JSON.stringify({
         context,
-        messages: messages.map((m) => ({ role: m.role, content: m.text })),
+        messages: messages.map((m) => {
+          const images = (m.attachments ?? []).filter((a) => a.kind === "image");
+          if (images.length === 0) return { role: m.role, content: m.text };
+          const note =
+            (m.text || "") +
+            (images.length === 1
+              ? "\n\n[Attached photo: analyze it.]"
+              : `\n\n[${images.length} attached photos: analyze them.]`);
+          return {
+            role: m.role,
+            content: [
+              { type: "text", text: note },
+              ...images.map((a) => ({ type: "image_url", image_url: { url: a.url } })),
+            ],
+          };
+        }),
       }),
     );
   });
@@ -164,6 +183,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
   const [threads, setThreads] = useState<CoachThread[]>([]);
   const [chatId, setChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CoachMessage[]>([]);
+  const [attachments, setAttachments] = useState<CoachAttachment[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -258,9 +278,48 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
     return bits.join("\n");
   };
 
+  const pickImage = async () => {
+    if (attachments.length >= 3) {
+      setNotice("Up to 3 photos per message.");
+      return;
+    }
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.9,
+        base64: false,
+      });
+      const asset = res.assets?.[0];
+      if (res.canceled || !asset) return;
+      const max = 1024;
+      const scale = Math.min(1, max / Math.max(asset.width || max, asset.height || max));
+      const manipulated = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        scale < 1
+          ? [
+              {
+                resize: {
+                  width: Math.round((asset.width || max) * scale),
+                  height: Math.round((asset.height || max) * scale),
+                },
+              },
+            ]
+          : [],
+        { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+      );
+      if (!manipulated.base64) throw new Error("no base64");
+      setAttachments((cur) => [
+        ...cur,
+        { kind: "image", url: `data:image/jpeg;base64,${manipulated.base64}`, name: asset.fileName ?? "photo.jpg" },
+      ]);
+    } catch {
+      setNotice("Couldn't read that image.");
+    }
+  };
+
   const send = async () => {
     const text = input.replace(/\s+/g, " ").trim().slice(0, 4000);
-    if (!text || streaming || !chatId) return;
+    if ((!text && attachments.length === 0) || streaming || !chatId) return;
 
     const now = Date.now();
     const recentSends = sendTimesRef.current.filter((t) => now - t < 60000);
@@ -277,10 +336,11 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
       return;
     }
 
-    const userMsg: CoachMessage = { role: "user", text };
+    const userMsg: CoachMessage = { role: "user", text, attachments: attachments.length ? attachments : undefined };
     const history = [...messages, userMsg];
     setMessages([...history, { role: "assistant", text: "" }]);
     setInput("");
+    setAttachments([]);
     setStreaming(true);
     void saveMessages(chatId, history);
 
@@ -424,20 +484,46 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
               item.role === "user" ? styles.bubbleUser : styles.bubbleCoach,
             ]}
           >
+            {item.attachments && item.attachments.length > 0 && (
+              <View style={styles.attachRow}>
+                {item.attachments.map((a, k) => (
+                  <Image key={k} source={{ uri: a.url }} style={styles.attachImg} />
+                ))}
+              </View>
+            )}
             {item.text ? (
               <RichText
                 text={item.text}
                 base={item.role === "user" ? styles.bubbleTextUser : styles.bubbleText}
                 bold={item.role === "user" ? styles.bubbleBoldUser : styles.bubbleBold}
               />
-            ) : (
+            ) : item.attachments && item.attachments.length > 0 ? null : (
               <Text style={styles.typing}>● ● ●</Text>
             )}
           </View>
         )}
       />
 
+      {attachments.length > 0 && (
+        <View style={styles.pendingRow}>
+          {attachments.map((a, k) => (
+            <View key={k}>
+              <Image source={{ uri: a.url }} style={styles.pendingImg} />
+              <Pressable
+                onPress={() => setAttachments((cur) => cur.filter((_, i) => i !== k))}
+                style={styles.pendingRemove}
+                hitSlop={6}
+              >
+                <Text style={styles.pendingRemoveText}>×</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
       <View style={styles.inputBar}>
+        <Pressable onPress={() => void pickImage()} disabled={streaming} style={styles.attachButton} hitSlop={6}>
+          <Text style={styles.attachButtonText}>📷</Text>
+        </Pressable>
         <TextInput
           style={styles.chatInput}
           placeholder="Ask IronCoach..."
@@ -449,8 +535,8 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
         />
         <Pressable
           onPress={() => void send()}
-          disabled={streaming || !input.trim()}
-          style={[styles.sendButton, (streaming || !input.trim()) && { opacity: 0.4 }]}
+          disabled={streaming || (!input.trim() && attachments.length === 0)}
+          style={[styles.sendButton, (streaming || (!input.trim() && attachments.length === 0)) && { opacity: 0.4 }]}
         >
           <Text style={styles.sendButtonText}>↑</Text>
         </Pressable>
@@ -574,6 +660,39 @@ const styles = StyleSheet.create({
     fontSize: 15,
     maxHeight: 110,
   },
+  attachRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 },
+  attachImg: { width: 140, height: 140, borderRadius: 10 },
+  pendingRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+  },
+  pendingImg: { width: 56, height: 56, borderRadius: 8 },
+  pendingRemove: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.destructive,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pendingRemoveText: { color: "#fff", fontSize: 13, fontWeight: "700", marginTop: -1 },
+  attachButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.input,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  attachButtonText: { fontSize: 17 },
   sendButton: {
     width: 42,
     height: 42,
