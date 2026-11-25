@@ -571,7 +571,11 @@ export async function updateCustomDay(
 // --- Day detail: per-exercise insights and notes ---
 
 export type LastSetEntry = { weight: number | null; reps: number | null; set_number: number };
-export type ExerciseInsight = { lastSets: LastSetEntry[]; bestWeight: number | null };
+export type ExerciseInsight = {
+  lastSets: LastSetEntry[];
+  bestWeight: number | null;
+  lastDate: string | null;
+};
 
 // Mirrors the web buildInsights: for each exercise, the most recent session's
 // sets and the all-time best weight.
@@ -603,7 +607,8 @@ export async function getExerciseInsights(
         if (r.weight == null) return max;
         return max == null || r.weight > max ? r.weight : max;
       }, null);
-      out[ex] = { lastSets, bestWeight };
+      const lastDate = exRows.find((r) => r.session_id === latestSessionId)?.created_at ?? null;
+      out[ex] = { lastSets, bestWeight, lastDate };
     }
   } catch {
     /* offline */

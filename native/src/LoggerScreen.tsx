@@ -20,7 +20,7 @@ const haptic = (fn: () => Promise<void>) => {
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn } from "./ui";
 import { useBackHandler } from "./back";
-import { Calculator, Check, Flame, PartyPopper, RotateCcw, StickyNote, Target, Trophy } from "lucide-react-native";
+import { ArrowRight, Calculator, Check, Flame, PartyPopper, RotateCcw, Sparkles, StickyNote, Trophy } from "lucide-react-native";
 import {
   CustomDay,
   ExerciseInsight,
@@ -51,7 +51,6 @@ type SetsState = Record<string, SetRow[]>;
 // Double-progression, same as the web day page
 const DEFAULT_MIN_REPS = 8;
 const DEFAULT_MAX_REPS = 12;
-const WEIGHT_INCREMENT = 2.5;
 
 const PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
 const BAR_KG = 20;
@@ -75,35 +74,76 @@ function parseRepRange(name: string): { min: number; max: number } {
   return { min: DEFAULT_MIN_REPS, max: DEFAULT_MAX_REPS };
 }
 
-function buildTarget(
+type Intensity = "easy" | "steady" | "savage";
+
+const INTENSITY_META: Record<Intensity, { label: string; inc: number }> = {
+  easy: { label: "Easy", inc: 1.25 },
+  steady: { label: "Steady", inc: 2.5 },
+  savage: { label: "Savage", inc: 5 },
+};
+
+type CoachCall = {
+  headline: string;
+  why: string;
+  applyWeight: number | null;
+  applyReps: number | null;
+};
+
+function formatShortDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// The transparent coach: every suggestion ships with the numbers behind it.
+function buildCoachCall(
   exercise: string,
-  lastSets: { weight: number | null; reps: number | null }[] | undefined,
-): { last: string; target: string } {
+  insight: ExerciseInsight | undefined,
+  intensity: Intensity,
+): CoachCall {
   const range = parseRepRange(exercise);
+  const inc = INTENSITY_META[intensity].inc;
+  const lastSets = insight?.lastSets;
   if (!lastSets || lastSets.length === 0) {
     return {
-      last: "No history yet",
-      target: `Pick a comfortable weight · aim for ${range.min}-${range.max} reps`,
+      headline: `First time logging this one`,
+      why: `No history yet. Start with a weight you own, aim for ${range.min}-${range.max} clean reps, and I'll take it from there next session.`,
+      applyWeight: null,
+      applyReps: null,
     };
   }
   const valid = lastSets.filter((s) => s.weight != null && s.reps != null);
   if (valid.length === 0) {
-    return { last: "No tracked sets last time", target: `Aim for ${range.min}-${range.max} reps` };
+    return {
+      headline: `Aim for ${range.min}-${range.max} reps`,
+      why: "Last session had no tracked sets for this, so we're starting fresh on targets.",
+      applyWeight: null,
+      applyReps: null,
+    };
   }
   const topWeight = Math.max(...valid.map((s) => s.weight as number));
   const topSets = valid.filter((s) => s.weight === topWeight);
+  const date = formatShortDate(insight?.lastDate);
+  const when = date ? ` on ${date}` : " last session";
+  const lastStr = valid.map((s) => `${s.weight}×${s.reps}`).join(", ");
   const allHit = topSets.every((s) => (s.reps as number) >= range.max);
-  const lastStr = valid.map((s) => `${s.weight}kg × ${s.reps}`).join("  ·  ");
   if (allHit) {
-    const next = +(topWeight + WEIGHT_INCREMENT).toFixed(2);
+    const next = +(topWeight + inc).toFixed(2);
     return {
-      last: lastStr,
-      target: `Increase to ${next}kg · aim for ${range.min}-${range.min + 2} reps`,
+      headline: `Go ${next}kg today`,
+      why: `${when} you did ${lastStr}. Every set at ${topWeight}kg hit the top of your range, and that's earned +${inc}kg. Aim for ${range.min}-${range.min + 2} reps.`,
+      applyWeight: next,
+      applyReps: range.min,
     };
   }
+  const got = topSets.reduce((sum, s) => sum + (s.reps as number), 0);
+  const want = topSets.length * range.max;
   return {
-    last: lastStr,
-    target: `Stay at ${topWeight}kg · add 1-2 total reps across sets`,
+    headline: `Hold at ${topWeight}kg`,
+    why: `${when} you did ${lastStr}, ${got} of ${want} reps at the top weight. Bank the full ${range.max} first, then we jump.`,
+    applyWeight: topWeight,
+    applyReps: range.max,
   };
 }
 
@@ -142,8 +182,10 @@ export function LoggerScreen({
   const [platesFor, setPlatesFor] = useState<string | null>(null);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const [savedPRs, setSavedPRs] = useState<string[]>([]);
+  const [intensity, setIntensity] = useState<Intensity>("steady");
 
   const draftKey = `ironlog:draft:${userId}:${day.id}`;
+  const intensityKey = "ironlog:coach:intensity";
 
   const emptyState = (): SetsState =>
     Object.fromEntries(exercises.map((e) => [e, [{ weight: "", reps: "" }]]));
@@ -198,6 +240,38 @@ export function LoggerScreen({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  const applyCall = (ex: string, call: CoachCall) => {
+    if (call.applyWeight == null) return;
+    haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
+    setState((cur) => {
+      const rows = [...(cur[ex] ?? [{ weight: "", reps: "" }])];
+      const emptyIdx = rows.findIndex((r) => r.weight === "" && !r.done);
+      const i = emptyIdx === -1 ? rows.length - 1 : emptyIdx;
+      const fillReps = call.applyReps != null && rows[i].reps === "";
+      rows[i] = {
+        ...rows[i],
+        weight: String(call.applyWeight),
+        ...(fillReps ? { reps: String(call.applyReps) } : {}),
+      };
+      return { ...cur, [ex]: rows };
+    });
+  };
+
+  // Restore the coach intensity preference.
+  useEffect(() => {
+    AsyncStorage.getItem(intensityKey)
+      .then((v) => {
+        if (v === "easy" || v === "steady" || v === "savage") setIntensity(v);
+      })
+      .catch(() => {});
+  }, [intensityKey]);
+
+  const pickIntensity = (v: Intensity) => {
+    setIntensity(v);
+    haptic(() => Haptics.selectionAsync());
+    AsyncStorage.setItem(intensityKey, v).catch(() => {});
+  };
 
   // Restore any in-progress draft, like the web logger.
   useEffect(() => {
@@ -433,7 +507,7 @@ export function LoggerScreen({
       <ScrollView contentContainerStyle={styles.scroll}>
         {exercises.map((ex, i) => {
           const insight = insights[ex];
-          const target = buildTarget(ex, insight?.lastSets);
+          const call = buildCoachCall(ex, insight, intensity);
           const enteredBest = Math.max(
             0,
             ...(state[ex] ?? [])
@@ -456,13 +530,39 @@ export function LoggerScreen({
                   <Text style={styles.menuDots}>⋯</Text>
                 </Pressable>
               </View>
-              <View style={styles.insightBox}>
-                <Text style={styles.insightLabel}>LAST SESSION</Text>
-                <Text style={styles.insightLast}>{target.last}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                  <Target size={12} color={colors.primary} />
-                  <Text style={styles.insightTarget}>{target.target}</Text>
+              <View style={styles.coachBox}>
+                <View style={styles.coachTopRow}>
+                  <View style={styles.coachLabelRow}>
+                    <Sparkles size={11} color={colors.brand} />
+                    <Text style={styles.coachLabel}>COACH'S CALL</Text>
+                  </View>
+                  <View style={styles.intensityRow}>
+                    {(Object.keys(INTENSITY_META) as Intensity[]).map((k) => (
+                      <Pressable
+                        key={k}
+                        onPress={() => pickIntensity(k)}
+                        style={[styles.intensityChip, intensity === k && styles.intensityChipOn]}
+                        hitSlop={4}
+                      >
+                        <Text
+                          style={[styles.intensityChipText, intensity === k && styles.intensityChipTextOn]}
+                        >
+                          {INTENSITY_META[k].label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
+                <Text style={styles.coachHeadline}>{call.headline}</Text>
+                <Text style={styles.coachWhy}>{call.why}</Text>
+                {call.applyWeight != null ? (
+                  <Pressable onPress={() => applyCall(ex, call)} style={styles.coachApply}>
+                    <Text style={styles.coachApplyText}>
+                      Use {call.applyWeight}kg{call.applyReps != null ? ` × ${call.applyReps}` : ""}
+                    </Text>
+                    <ArrowRight size={13} color={colors.brand} />
+                  </Pressable>
+                ) : null}
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Pressable
@@ -1087,22 +1187,54 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   prBadgeText: { color: colors.primary, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
-  insightBox: {
+  coachBox: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     marginTop: 10,
+    backgroundColor: "rgba(200,242,203,0.04)",
   },
-  insightLabel: {
-    color: colors.mutedForeground,
+  coachTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  coachLabelRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  coachLabel: {
+    color: colors.brand,
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 1.2,
   },
-  insightLast: { color: colors.foreground, fontSize: 12, marginTop: 2 },
-  insightTarget: { color: "#8fd694", fontSize: 12, fontWeight: "600", marginTop: 6 },
+  intensityRow: { flexDirection: "row", gap: 4 },
+  intensityChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  intensityChipOn: { borderColor: colors.brand, backgroundColor: "rgba(255,132,89,0.12)" },
+  intensityChipText: { color: colors.mutedForeground, fontSize: 10, fontWeight: "700" },
+  intensityChipTextOn: { color: colors.brand },
+  coachHeadline: { color: colors.foreground, fontSize: 14, fontWeight: "800", marginTop: 8 },
+  coachWhy: { color: colors.mutedForeground, fontSize: 12, lineHeight: 17, marginTop: 3 },
+  coachApply: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 5,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  coachApplyText: { color: colors.brand, fontSize: 12, fontWeight: "800" },
   noteToggle: { marginTop: 10, paddingVertical: 4 },
   noteToggleText: { color: colors.mutedForeground, fontSize: 13 },
   platesBox: {
