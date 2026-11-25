@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
+import Svg, { Circle } from "react-native-svg";
 import { colors, PrimaryButton, RiseIn } from "./ui";
 import { FOOD_DB, FoodDBItem } from "./food";
 import { supabase } from "./supabase";
@@ -268,18 +269,42 @@ function MacroRing({
   target: number;
   color: string;
 }) {
-  const pct = Math.min(100, target > 0 ? (consumed / target) * 100 : 0);
+  const pct = Math.min(1, target > 0 ? consumed / target : 0);
+  const size = 84;
+  const stroke = 8;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
   return (
     <View style={styles.ringCard}>
       <Text style={styles.ringLabel}>
         {icon} {label}
       </Text>
-      <View style={styles.ringTrack}>
-        <View style={[styles.ringFill, { width: `${pct}%` as never, backgroundColor: color }]} />
+      <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+        <Svg width={size} height={size} style={{ position: "absolute" }}>
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke={colors.input}
+            strokeWidth={stroke}
+            fill="none"
+          />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke={color}
+            strokeWidth={stroke}
+            fill="none"
+            strokeDasharray={`${c}`}
+            strokeDashoffset={c * (1 - pct)}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </Svg>
+        <Text style={styles.ringCenterValue}>{Math.round(consumed)}</Text>
+        <Text style={styles.ringCenterTarget}>/ {target}g</Text>
       </View>
-      <Text style={styles.ringValue}>
-        {Math.round(consumed)} <Text style={styles.ringTarget}>/ {target}g</Text>
-      </Text>
     </View>
   );
 }
@@ -855,6 +880,8 @@ const styles = StyleSheet.create({
   ringFill: { height: "100%", borderRadius: 999 },
   ringValue: { color: colors.foreground, fontSize: 13, fontWeight: "800", marginTop: 8 },
   ringTarget: { color: colors.mutedForeground, fontWeight: "400" },
+  ringCenterValue: { color: colors.foreground, fontSize: 18, fontWeight: "800" },
+  ringCenterTarget: { color: colors.mutedForeground, fontSize: 10 },
   mealHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   mealTitle: { color: colors.foreground, fontSize: 16, fontWeight: "700" },
   mealCals: { color: colors.mutedForeground, fontSize: 14, fontWeight: "600" },

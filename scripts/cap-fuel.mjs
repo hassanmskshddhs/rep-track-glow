@@ -7,6 +7,7 @@ await c.addInitScript(() => {
       access_token: 'fake', refresh_token: 'fake', expires_at: 4102444800,
       token_type: 'bearer', user: { id: 'local', email: 'hassan@example.com', aud: 'authenticated' }
     }));
+    localStorage.setItem('ironlog:onboarded:local','1');
     // preload logs + targets so the dashboard shows data (AsyncStorage on web uses localStorage)
     localStorage.setItem('ironlog_macro_targets', JSON.stringify({calories:2600,protein:160,carbs:290,fat:72,goal:'Maintain'}));
     const today = new Date();
