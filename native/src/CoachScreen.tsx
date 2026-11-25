@@ -18,6 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn } from "./ui";
 import { useBackHandler } from "./back";
+import { ArrowUp, Bot, Camera, Trash2 } from "lucide-react-native";
 import { supabase } from "./supabase";
 
 // Streams through the deployed web app's server route, same as the web client.
@@ -403,7 +404,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
           <RiseIn>
             <View style={styles.coachHeader}>
               <View style={styles.coachIcon}>
-                <Text style={{ fontSize: 22 }}>🤖</Text>
+                <Bot size={22} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.coachTitle}>IronCoach</Text>
@@ -434,7 +435,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
                       </Text>
                     </Pressable>
                     <Pressable onPress={() => setDeleting(t.id)} hitSlop={8}>
-                      <Text style={styles.threadDelete}>🗑</Text>
+                      <Trash2 size={15} color={colors.mutedForeground} />
                     </Pressable>
                   </View>
                 ))}
@@ -474,7 +475,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
           <Text style={styles.backText}>← Chats</Text>
         </Pressable>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ fontSize: 16 }}>🤖</Text>
+          <Bot size={16} color={colors.primary} />
           <Text style={styles.chatTitle}>IronCoach</Text>
         </View>
         <View style={{ width: 60 }} />
@@ -488,7 +489,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
         ListEmptyComponent={
           <View style={{ paddingTop: 60, alignItems: "center" }}>
-            <Text style={{ fontSize: 36 }}>🤖</Text>
+            <Bot size={36} color={colors.primary} strokeWidth={1.5} />
             <Text style={styles.emptyChatTitle}>Your coach sees your log.</Text>
             <Text style={styles.emptyChatSub}>
               Ask about progression, plateaus, nutrition or recovery — answers use your actual logged sets.
@@ -540,7 +541,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
       )}
       <View style={styles.inputBar}>
         <Pressable onPress={() => void pickImage()} disabled={streaming} style={styles.attachButton} hitSlop={6}>
-          <Text style={styles.attachButtonText}>📷</Text>
+          <Camera size={17} color={colors.primary} />
         </Pressable>
         <TextInput
           style={styles.chatInput}
@@ -556,7 +557,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
           disabled={streaming || (!input.trim() && attachments.length === 0)}
           style={[styles.sendButton, (streaming || (!input.trim() && attachments.length === 0)) && { opacity: 0.4 }]}
         >
-          <Text style={styles.sendButtonText}>↑</Text>
+          <ArrowUp size={18} color={colors.primaryForeground} strokeWidth={2.5} />
         </Pressable>
       </View>
 

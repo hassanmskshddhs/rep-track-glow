@@ -29,7 +29,7 @@ await p.locator('text=+ New chat').click({force:true});
 await p.waitForTimeout(800);
 await p.screenshot({path:'/downloads/NAT-30-Coach-empty.png'});
 await p.locator('textarea, input').fill('How do I break my bench plateau?');
-await p.locator('text=↑').click({force:true});
+await p.locator('textarea, input').locator('xpath=..').locator('div').last().click({force:true});
 await p.waitForTimeout(1500);
 await p.screenshot({path:'/downloads/NAT-31-Coach-chat.png'});
 await b.close();

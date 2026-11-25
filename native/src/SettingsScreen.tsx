@@ -12,6 +12,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
+import { Check, Mail, Shield, User } from "lucide-react-native";
 
 // Same storage key and shape as the web profile (src/lib/profile.ts)
 const PROFILE_KEY = "ironlog.profile.v1";
@@ -84,14 +85,14 @@ export function SettingsScreen({
         <RiseIn delay={160}>
           <View style={styles.accountCard}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>👤</Text>
+              <User size={22} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.accountName} numberOfLines={1}>
                 {greet}
               </Text>
               <Text style={styles.accountEmail} numberOfLines={1}>
-                ✉️ {email}
+                {email}
               </Text>
             </View>
           </View>
@@ -158,14 +159,20 @@ export function SettingsScreen({
             />
 
             <Pressable onPress={save} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>{savedTick ? "Saved ✓" : "Save profile"}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                {savedTick ? <Check size={15} color={colors.primaryForeground} strokeWidth={3} /> : null}
+                <Text style={styles.saveButtonText}>{savedTick ? "Saved" : "Save profile"}</Text>
+              </View>
             </Pressable>
           </View>
         </RiseIn>
 
         <RiseIn delay={280}>
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>🛡 PRIVACY</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Shield size={13} color={colors.mutedForeground} />
+              <Text style={styles.sectionLabel}>PRIVACY</Text>
+            </View>
             <Text style={styles.sectionSub}>
               Your splits and logs are private to your account. Profile info is stored only on
               this device.
@@ -186,7 +193,7 @@ export function SettingsScreen({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 },
+  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
   title: {
     color: colors.foreground,
     fontSize: 30,

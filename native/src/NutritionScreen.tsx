@@ -15,6 +15,8 @@ import type { Session } from "@supabase/supabase-js";
 import Svg, { Circle } from "react-native-svg";
 import { colors, PrimaryButton, RiseIn } from "./ui";
 import { useBackHandler } from "./back";
+import { Beef, Droplet, RotateCcw, Settings as SettingsIcon, Sparkles, Trash2, Wheat } from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 import { FOOD_DB, FoodDBItem } from "./food";
 import { supabase } from "./supabase";
 
@@ -130,7 +132,7 @@ function Wizard({ onComplete }: { onComplete: (t: MacroTargets) => void }) {
 
   const now = new Date();
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={{ padding: 20, paddingBottom: 110 }}>
+    <ScrollView style={styles.screen} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
       <Text style={styles.dateLine}>
         {WEEKDAYS[now.getDay()]}, {now.getDate()} {MONTHS[now.getMonth()]}
       </Text>
@@ -207,9 +209,9 @@ function Wizard({ onComplete }: { onComplete: (t: MacroTargets) => void }) {
             <Text style={styles.wizardHeading}>Your Goal</Text>
             {(
               [
-                { key: "Lose", label: "🔥 Fat Loss" },
-                { key: "Maintain", label: "⚖️ Maintenance" },
-                { key: "Gain", label: "💪 Muscle Gain" },
+                { key: "Lose", label: "Fat Loss" },
+                { key: "Maintain", label: "Maintenance" },
+                { key: "Gain", label: "Muscle Gain" },
               ] as const
             ).map((g) => (
               <Pressable
@@ -259,13 +261,13 @@ function Wizard({ onComplete }: { onComplete: (t: MacroTargets) => void }) {
 
 function MacroRing({
   label,
-  icon,
+  icon: Icon,
   consumed,
   target,
   color,
 }: {
   label: string;
-  icon: string;
+  icon: LucideIcon;
   consumed: number;
   target: number;
   color: string;
@@ -277,9 +279,10 @@ function MacroRing({
   const c = 2 * Math.PI * r;
   return (
     <View style={styles.ringCard}>
-      <Text style={styles.ringLabel}>
-        {icon} {label}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 }}>
+        <Icon size={13} color={color} />
+        <Text style={styles.ringLabel}>{label}</Text>
+      </View>
       <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
         <Svg width={size} height={size} style={{ position: "absolute" }}>
           <Circle
@@ -523,14 +526,14 @@ export function NutritionScreen({ session }: { session: Session }) {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 110 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
         <Text style={styles.dateLine}>
           {WEEKDAYS[now.getDay()]}, {now.getDate()} {MONTHS[now.getMonth()]}
         </Text>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Fuel</Text>
           <Pressable onPress={() => setSettingsOpen(true)} hitSlop={10}>
-            <Text style={styles.gearIcon}>⚙️</Text>
+            <SettingsIcon size={20} color={colors.mutedForeground} />
           </Pressable>
         </View>
 
@@ -590,13 +593,13 @@ export function NutritionScreen({ session }: { session: Session }) {
         {/* Macro rings */}
         <View style={styles.ringsRow}>
           <RiseIn delay={120} style={{ flex: 1 }}>
-            <MacroRing label="Protein" icon="🥩" consumed={consumed.protein} target={targets.protein} color="#f2a3a3" />
+            <MacroRing label="Protein" icon={Beef} consumed={consumed.protein} target={targets.protein} color="#f2a3a3" />
           </RiseIn>
           <RiseIn delay={200} style={{ flex: 1 }}>
-            <MacroRing label="Carbs" icon="🌾" consumed={consumed.carbs} target={targets.carbs} color="#e8d5a0" />
+            <MacroRing label="Carbs" icon={Wheat} consumed={consumed.carbs} target={targets.carbs} color="#e8d5a0" />
           </RiseIn>
           <RiseIn delay={280} style={{ flex: 1 }}>
-            <MacroRing label="Fat" icon="💧" consumed={consumed.fat} target={targets.fat} color="#a3c4f2" />
+            <MacroRing label="Fat" icon={Droplet} consumed={consumed.fat} target={targets.fat} color="#a3c4f2" />
           </RiseIn>
         </View>
 
@@ -625,7 +628,7 @@ export function NutritionScreen({ session }: { session: Session }) {
                         </View>
                         <Text style={styles.foodCals}>{Math.round(item.calories)}</Text>
                         <Pressable onPress={() => removeFood(item.id)} hitSlop={8}>
-                          <Text style={styles.foodRemove}>🗑</Text>
+                          <Trash2 size={15} color={colors.mutedForeground} />
                         </Pressable>
                       </View>
                     ))
@@ -669,7 +672,7 @@ export function NutritionScreen({ session }: { session: Session }) {
                 )}
                 {query.trim().length > 0 && (
                   <Pressable style={styles.aiRow} onPress={() => void searchOnline()} disabled={aiLoading}>
-                    <Text style={{ fontSize: 18 }}>{aiLoading ? "⏳" : "✨"}</Text>
+                    <Sparkles size={16} color={colors.primary} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.aiRowTitle}>
                         {aiLoading ? "Searching online..." : `Search online for "${query.trim()}"`}
@@ -793,7 +796,10 @@ export function NutritionScreen({ session }: { session: Session }) {
               }}
               style={styles.dangerButton}
             >
-              <Text style={styles.dangerButtonText}>↺ Recalculate Macros</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <RotateCcw size={13} color={colors.destructive} />
+                <Text style={styles.dangerButtonText}>Recalculate Macros</Text>
+              </View>
             </Pressable>
             <Pressable onPress={() => setSettingsOpen(false)} style={{ alignSelf: "center", marginTop: 14 }}>
               <Text style={styles.wizardBack}>Close</Text>

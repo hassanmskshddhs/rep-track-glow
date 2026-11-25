@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { runTopBackHandler, useBackHandler } from "./src/back";
+import { Apple, CalendarDays, Dumbbell, ScrollText, Settings as SettingsIcon, TrendingUp } from "lucide-react-native";
 import { StatusBar } from "expo-status-bar";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/supabase";
@@ -166,135 +167,56 @@ function AuthScreen({
   );
 }
 
-const TABS: { key: TabKey; label: string; icon: string; blurb: string }[] = [
-  { key: "train", label: "Train", icon: "🏋️", blurb: "Today's session" },
-  { key: "plan", label: "Plan", icon: "🗓️", blurb: "Splits & schedule" },
-  { key: "history", label: "History", icon: "📜", blurb: "Every session" },
-  { key: "progress", label: "Progress", icon: "📈", blurb: "PRs & charts" },
-  { key: "fuel", label: "Fuel", icon: "🍎", blurb: "Food & macros" },
-  { key: "settings", label: "Settings", icon: "⚙️", blurb: "Profile & app" },
+import type { LucideIcon } from "lucide-react-native";
+
+const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
+  { key: "train", label: "Train", icon: Dumbbell },
+  { key: "plan", label: "Plan", icon: CalendarDays },
+  { key: "history", label: "History", icon: ScrollText },
+  { key: "progress", label: "Progress", icon: TrendingUp },
+  { key: "fuel", label: "Fuel", icon: Apple },
+  { key: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
-/** Floating menu button + full-screen navigation menu (no bottom tab bar). */
-function NavFab({
+/** Bottom navigation bar with vector icons. */
+function TabBar({
   tab,
   onChange,
 }: {
   tab: TabKey;
   onChange: (t: TabKey) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  useBackHandler(open, () => {
-    setOpen(false);
-    return true;
-  });
   return (
-    <>
-      <Pressable onPress={() => setOpen(true)} style={navStyles.fab} hitSlop={6}>
-        <View style={navStyles.fabLine} />
-        <View style={[navStyles.fabLine, { width: 12 }]} />
-        <View style={navStyles.fabLine} />
-      </Pressable>
-      <Modal visible={open} animationType="fade" transparent>
-        <View style={navStyles.overlay}>
-          <SafeAreaView style={navStyles.bar}>
-            <View style={navStyles.barInner}>
-              <Wordmark size={18} />
-              <Pressable onPress={() => setOpen(false)} style={navStyles.menuButton} hitSlop={8}>
-                <Text style={navStyles.menuButtonText}>CLOSE</Text>
-                <Text style={navStyles.closeX}>×</Text>
-              </Pressable>
-            </View>
-          </SafeAreaView>
-          <View style={navStyles.list}>
-            {TABS.map((t, i) => {
-              const active = t.key === tab;
-              return (
-                <RiseIn key={t.key} delay={i * 45}>
-                  <Pressable
-                    onPress={() => {
-                      setOpen(false);
-                      onChange(t.key);
-                    }}
-                    style={navStyles.item}
-                  >
-                    <Text style={navStyles.itemIcon}>{t.icon}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[navStyles.itemLabel, active && { color: colors.primary }]}
-                      >
-                        {t.label}
-                      </Text>
-                      <Text style={navStyles.itemBlurb}>{t.blurb}</Text>
-                    </View>
-                    {active && <View style={navStyles.activeDot} />}
-                    <Text style={navStyles.itemChevron}>›</Text>
-                  </Pressable>
-                </RiseIn>
-              );
-            })}
-          </View>
-        </View>
-      </Modal>
-    </>
+    <SafeAreaView style={tabStyles.bar}>
+      {TABS.map((t) => {
+        const active = tab === t.key;
+        const Icon = t.icon;
+        return (
+          <Pressable key={t.key} onPress={() => onChange(t.key)} style={tabStyles.item}>
+            <Icon
+              size={21}
+              color={active ? colors.primary : colors.mutedForeground}
+              strokeWidth={active ? 2.4 : 1.8}
+            />
+            <Text style={[tabStyles.label, active && { color: colors.primary }]}>
+              {t.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </SafeAreaView>
   );
 }
 
-const navStyles = StyleSheet.create({
-  bar: { backgroundColor: colors.background },
-  barInner: {
+const tabStyles = StyleSheet.create({
+  bar: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 28,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
     backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    zIndex: 10,
   },
-  fabLine: { width: 20, height: 2, backgroundColor: colors.primary, borderRadius: 1 },
-  menuButton: { flexDirection: "row", alignItems: "center", gap: 8 },
-  menuButtonText: {
-    color: colors.mutedForeground,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 2,
-  },
-  closeX: { color: colors.primary, fontSize: 22, fontWeight: "400", marginTop: -3 },
-  overlay: { flex: 1, backgroundColor: colors.background },
-  list: { paddingHorizontal: 20, paddingTop: 16 },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  itemIcon: { fontSize: 22, width: 30 },
-  itemLabel: { color: colors.foreground, fontSize: 22, fontWeight: "800", letterSpacing: -0.3 },
-  itemBlurb: { color: colors.mutedForeground, fontSize: 12, marginTop: 1 },
-  activeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary },
-  itemChevron: { color: colors.mutedForeground, fontSize: 22 },
+  item: { flex: 1, alignItems: "center", paddingVertical: 9, gap: 3 },
+  label: { color: colors.mutedForeground, fontSize: 10, fontWeight: "700" },
 });
 
 export default function App() {
@@ -424,7 +346,7 @@ export default function App() {
             />
           )}
           </View>
-          <NavFab tab={tab} onChange={setTab} />
+          <TabBar tab={tab} onChange={setTab} />
         </>
       ) : screen === "welcome" ? (
         <WelcomeScreen onStart={() => setScreen("auth")} />

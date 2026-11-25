@@ -24,7 +24,7 @@ const p = await c.newPage(); const errors=[]; p.on('pageerror',e=>errors.push(e.
 await p.route('**/rest/v1/**', r=>r.fulfill({status:200,contentType:'application/json',body:'[]'}));
 await p.goto('http://localhost:8082/', {waitUntil:'networkidle'});
 await p.waitForTimeout(1500);
-await p.mouse.click(358, 788); await p.waitForTimeout(800); await p.locator('text=Fuel').last().click({force:true});
+await p.locator('text=Fuel').first().click({force:true});
 await p.waitForTimeout(1500);
 await p.screenshot({path:'/downloads/NAT-25-Fuel.png'});
 // open Add Food on Breakfast

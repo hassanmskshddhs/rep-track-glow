@@ -40,7 +40,7 @@ await p.route('**/rest/v1/**', (route) => {
 });
 await p.goto('http://localhost:8082/', {waitUntil:'networkidle'});
 await p.waitForTimeout(1800);
-await p.mouse.click(358, 788); await p.waitForTimeout(800); await p.locator('text=Progress').last().click({force:true});
+await p.locator('text=Progress').first().click();
 await p.waitForTimeout(1800);
 await p.mouse.move(195, 500);
 await p.mouse.wheel(0, 1400);

@@ -14,6 +14,8 @@ import type { Session } from "@supabase/supabase-js";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { colors, RiseIn, Wordmark } from "./ui";
 import { useBackHandler } from "./back";
+import { ChevronDown, Dumbbell, Flame, TrendingUp, Trophy } from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 import {
   BodyMeasurement,
   ProgressData,
@@ -258,13 +260,13 @@ const MONTHS = [
 ];
 
 function MetricCard({
-  icon,
+  icon: Icon,
   value,
   label,
   change,
   positive,
 }: {
-  icon: string;
+  icon: LucideIcon;
   value: string;
   label: string;
   change: string;
@@ -272,7 +274,7 @@ function MetricCard({
 }) {
   return (
     <View style={styles.metricCard}>
-      <Text style={styles.metricIcon}>{icon}</Text>
+      <Icon size={20} color={colors.mutedForeground} strokeWidth={1.8} />
       <View>
         <Text style={styles.metricValue}>{value}</Text>
         <Text style={styles.metricLabel}>{label}</Text>
@@ -356,28 +358,28 @@ export function ProgressScreen({ session }: { session: Session }) {
               </View>
               <View style={styles.grid}>
                 <MetricCard
-                  icon="🏋️"
+                  icon={Dumbbell}
                   value={`${data.overview.workoutsThisMonth}`}
                   label="Workouts"
                   change={`${data.overview.workoutsDiff >= 0 ? "+" : ""}${data.overview.workoutsDiff} vs last month`}
                   positive={data.overview.workoutsDiff >= 0}
                 />
                 <MetricCard
-                  icon="📈"
+                  icon={TrendingUp}
                   value={`${Math.round(data.overview.volumeThisMonth).toLocaleString("en-US")} kg`}
                   label="Total Volume"
                   change={`${data.overview.volumeUp ? "↑" : "↓"} ${data.overview.volumeDiffPct}% vs last month`}
                   positive={data.overview.volumeUp}
                 />
                 <MetricCard
-                  icon="🏆"
+                  icon={Trophy}
                   value={`${data.overview.prsThisMonth}`}
                   label="New PRs"
                   change="This Month"
                   positive
                 />
                 <MetricCard
-                  icon="🔥"
+                  icon={Flame}
                   value={data.overview.workoutsThisMonth > 0 ? "Active" : "Idle"}
                   label="Status"
                   change={data.overview.workoutsThisMonth > 0 ? "Keep it up" : "Start working out"}
@@ -388,7 +390,7 @@ export function ProgressScreen({ session }: { session: Session }) {
 
             <RiseIn delay={220} style={styles.streakRow}>
               <View style={styles.streakCard}>
-                <Text style={styles.streakIcon}>🔥</Text>
+                <Flame size={20} color={colors.primary} />
                 <View>
                   <Text style={styles.streakLabel}>CURRENT STREAK</Text>
                   <Text style={styles.streakValue}>
@@ -397,7 +399,7 @@ export function ProgressScreen({ session }: { session: Session }) {
                 </View>
               </View>
               <View style={styles.streakCard}>
-                <Text style={styles.streakIcon}>🏆</Text>
+                <Trophy size={20} color={colors.primary} />
                 <View>
                   <Text style={styles.streakLabel}>LONGEST STREAK</Text>
                   <Text style={styles.streakValue}>
@@ -437,7 +439,7 @@ export function ProgressScreen({ session }: { session: Session }) {
                 <Text style={styles.sectionTitle}>Recent PRs</Text>
                 {data.prs.slice(0, 5).map((pr) => (
                   <View key={`${pr.ex}-${pr.date}`} style={styles.prRow}>
-                    <Text style={styles.prTrophy}>🏆</Text>
+                    <Trophy size={16} color={colors.primary} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.prEx}>{pr.ex}</Text>
                       <Text style={styles.prDate}>
@@ -459,7 +461,7 @@ export function ProgressScreen({ session }: { session: Session }) {
                 <View style={styles.chartCard}>
                   <Pressable onPress={() => setPickerOpen(!pickerOpen)}>
                     <Text style={styles.chartTitle}>
-                      {exercise} <Text style={styles.pickerHint}>▾</Text>
+                      {exercise} <ChevronDown size={14} color={colors.mutedForeground} />
                     </Text>
                   </Pressable>
                   {pickerOpen && (
@@ -520,7 +522,7 @@ export function ProgressScreen({ session }: { session: Session }) {
 
             {data.overview.workoutsThisMonth === 0 && data.prs.length === 0 && (
               <View style={styles.empty}>
-                <Text style={styles.emptyIcon}>📈</Text>
+                <TrendingUp size={40} color={colors.mutedForeground} strokeWidth={1.5} />
                 <Text style={styles.emptyTitle}>No data yet</Text>
                 <Text style={styles.emptySub}>
                   Log a few sessions and your progress shows up here.
@@ -536,7 +538,7 @@ export function ProgressScreen({ session }: { session: Session }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 },
+  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
   title: {
     color: colors.foreground,
     fontSize: 30,

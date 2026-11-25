@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
+import { Dumbbell, Pencil, Trash2, Trophy } from "lucide-react-native";
 import { useBackHandler } from "./back";
 import {
   CustomDay,
@@ -155,7 +156,7 @@ export function HistoryScreen({ session }: { session: Session }) {
           <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
         ) : data.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🏋️</Text>
+            <Dumbbell size={40} color={colors.mutedForeground} strokeWidth={1.5} />
             <Text style={styles.emptyTitle}>No workouts yet</Text>
             <Text style={styles.emptySub}>Log your first session to see it here.</Text>
           </View>
@@ -175,7 +176,7 @@ export function HistoryScreen({ session }: { session: Session }) {
                   <View style={styles.cardHeader}>
                     <View style={styles.cardHeaderLeft}>
                       <View style={styles.iconBox}>
-                        <Text style={styles.iconText}>🏋️</Text>
+                        <Dumbbell size={18} color={colors.primary} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <View style={styles.titleRow}>
@@ -190,7 +191,7 @@ export function HistoryScreen({ session }: { session: Session }) {
                             }}
                             hitSlop={8}
                           >
-                            <Text style={styles.pencil}>✎</Text>
+                            <Pencil size={15} color={colors.mutedForeground} />
                           </Pressable>
                         </View>
                         <Text style={styles.cardDate}>{formatWhen(s.performed_at)}</Text>
@@ -205,7 +206,7 @@ export function HistoryScreen({ session }: { session: Session }) {
                         onPress={() => setDeleting(s)}
                         hitSlop={8}
                       >
-                        <Text style={styles.trash}>🗑</Text>
+                        <Trash2 size={16} color={colors.destructive} />
                       </Pressable>
                     </View>
                   </View>
@@ -216,7 +217,8 @@ export function HistoryScreen({ session }: { session: Session }) {
                         <Text style={styles.exName}>{ex}</Text>
                         {prSet.has(ex) && (
                           <View style={styles.prBadge}>
-                            <Text style={styles.prText}>🏆 New PR</Text>
+                            <Trophy size={11} color={colors.primary} />
+                            <Text style={styles.prText}>New PR</Text>
                           </View>
                         )}
                       </View>
@@ -290,7 +292,7 @@ export function HistoryScreen({ session }: { session: Session }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 },
+  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
   title: {
     color: colors.foreground,
     fontSize: 30,

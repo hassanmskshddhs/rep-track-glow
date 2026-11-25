@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
 import { useBackHandler } from "./back";
+import { ChevronDown, Trash2 } from "lucide-react-native";
 import {
   ACCENT_COLORS,
   CustomDay,
@@ -201,7 +202,7 @@ export function PlanScreen({
                         >
                           {rid ? routineName(rid) : "Unscheduled"}
                         </Text>
-                        <Text style={styles.weekChevron}>▾</Text>
+                        <ChevronDown size={14} color={colors.mutedForeground} />
                       </Pressable>
                       {routine && (
                         <Pressable
@@ -249,14 +250,14 @@ export function PlanScreen({
                 setMenuFor(null);
                 if (!d) return;
                 const lines = [
-                  `🏋️ IronLog Workout Plan: ${d.name}`,
+                  `IronLog Workout Plan: ${d.name}`,
                   "Track. Lift. Repeat.",
                   "",
                   ...(Array.isArray(d.exercises)
                     ? d.exercises.map((ex, i) => `${i + 1}. ${ex}`)
                     : []),
                   "",
-                  "💪 Try this workout layout or track your lifts inside IronLog!",
+                  "Try this workout layout or track your lifts inside IronLog!",
                 ];
                 Share.share({ message: lines.join("\n") }).catch(() => {});
               }}
@@ -339,7 +340,7 @@ export function PlanScreen({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 },
+  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
   eyebrow: {
     color: colors.mutedForeground,
     fontSize: 11,

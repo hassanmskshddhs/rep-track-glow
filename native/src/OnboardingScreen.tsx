@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors, PrimaryButton, RiseIn, Wordmark } from "./ui";
+import { CalendarDays, Dumbbell, Flame, Target, TrendingUp } from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 
 // Same storage keys as the web onboarding.
 const TARGETS_KEY = "ironlog_macro_targets";
@@ -16,11 +18,11 @@ const GOAL_KEY = "ironlog:goal";
 
 type Goal = "Build muscle" | "Get stronger" | "Lose fat" | "Stay consistent";
 
-const GOALS: { id: Goal; blurb: string; icon: string }[] = [
-  { id: "Build muscle", blurb: "Add size with progressive overload", icon: "🏋️" },
-  { id: "Get stronger", blurb: "Push your numbers up, week on week", icon: "📈" },
-  { id: "Lose fat", blurb: "Keep muscle while the scale drops", icon: "🔥" },
-  { id: "Stay consistent", blurb: "Build the habit, session by session", icon: "📅" },
+const GOALS: { id: Goal; blurb: string; icon: LucideIcon }[] = [
+  { id: "Build muscle", blurb: "Add size with progressive overload", icon: Dumbbell },
+  { id: "Get stronger", blurb: "Push your numbers up, week on week", icon: TrendingUp },
+  { id: "Lose fat", blurb: "Keep muscle while the scale drops", icon: Flame },
+  { id: "Stay consistent", blurb: "Build the habit, session by session", icon: CalendarDays },
 ];
 
 const ACTIVITY_LEVELS = [
@@ -143,7 +145,9 @@ export function OnboardingScreen({
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {step === 0 && (
           <RiseIn style={styles.centered}>
-            <Text style={{ fontSize: 56, textAlign: "center" }}>🏋️</Text>
+            <View style={{ alignItems: "center" }}>
+              <Dumbbell size={56} color={colors.primary} strokeWidth={1.5} />
+            </View>
             <View style={{ alignItems: "center", marginTop: 16 }}>
               <Wordmark size={26} />
             </View>
@@ -173,7 +177,7 @@ export function OnboardingScreen({
                     onPress={() => setGoal(g.id)}
                     style={[styles.goalRow, active && styles.goalRowActive]}
                   >
-                    <Text style={{ fontSize: 20 }}>{g.icon}</Text>
+                    <g.icon size={20} color={colors.primary} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.goalName}>{g.id}</Text>
                       <Text style={styles.goalBlurb}>{g.blurb}</Text>
@@ -244,7 +248,7 @@ export function OnboardingScreen({
 
         {step === 3 && targets && (
           <RiseIn style={styles.centered}>
-            <Text style={{ fontSize: 44 }}>🎯</Text>
+            <Target size={44} color={colors.primary} strokeWidth={1.5} />
             <Text style={styles.stepTitle}>Your daily targets</Text>
             <View style={styles.targetsCard}>
               <Text style={styles.targetsCals}>{targets.calories}</Text>

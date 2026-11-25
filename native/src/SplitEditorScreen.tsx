@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, Wordmark } from "./ui";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react-native";
 import { ACCENT_COLORS, CustomDay, createCustomDay, updateCustomDay } from "./data";
 import { EXERCISE_DB, MUSCLE_GROUPS } from "./exercises";
 
@@ -187,10 +188,10 @@ export function SplitEditorScreen({
             <View key={`${ex}-${i}`} style={styles.exItem}>
               <View style={styles.exOrderCol}>
                 <Pressable onPress={() => moveEx(i, -1)} hitSlop={6} accessibilityLabel="Move up">
-                  <Text style={styles.orderArrow}>▲</Text>
+                  <ChevronUp size={14} color={colors.mutedForeground} />
                 </Pressable>
                 <Pressable onPress={() => moveEx(i, 1)} hitSlop={6} accessibilityLabel="Move down">
-                  <Text style={styles.orderArrow}>▼</Text>
+                  <ChevronDown size={14} color={colors.mutedForeground} />
                 </Pressable>
               </View>
               <View style={styles.exNum}>
@@ -204,7 +205,7 @@ export function SplitEditorScreen({
                 hitSlop={8}
                 accessibilityLabel="Remove"
               >
-                <Text style={styles.exRemove}>🗑</Text>
+                <Trash2 size={15} color={colors.mutedForeground} />
               </Pressable>
             </View>
           ))}

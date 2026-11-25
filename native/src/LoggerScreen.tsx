@@ -20,6 +20,7 @@ const haptic = (fn: () => Promise<void>) => {
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn } from "./ui";
 import { useBackHandler } from "./back";
+import { Calculator, Check, Flame, PartyPopper, RotateCcw, StickyNote, Target, Trophy } from "lucide-react-native";
 import {
   CustomDay,
   ExerciseInsight,
@@ -389,13 +390,13 @@ export function LoggerScreen({
       }
       const topLifts = [...bestByEx.entries()].sort((a, b) => b[1].weight - a[1].weight).slice(0, 3);
       const lines = [
-        `💪 ${day.name}`,
+        `${day.name}`,
         `Volume: ${Math.round(totalVolume).toLocaleString()} kg`,
         `${rows.length} sets · ${totalReps} reps`,
       ];
       if (prs.length) {
         lines.push("");
-        prs.forEach((p) => lines.push(`★ New PR: ${p}`));
+        prs.forEach((p) => lines.push(`New PR: ${p}`));
       }
       if (topLifts.length) {
         lines.push("", "Top lifts:");
@@ -458,7 +459,10 @@ export function LoggerScreen({
               <View style={styles.insightBox}>
                 <Text style={styles.insightLabel}>LAST SESSION</Text>
                 <Text style={styles.insightLast}>{target.last}</Text>
-                <Text style={styles.insightTarget}>🎯 {target.target}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <Target size={12} color={colors.primary} />
+                  <Text style={styles.insightTarget}>{target.target}</Text>
+                </View>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Pressable
@@ -468,15 +472,21 @@ export function LoggerScreen({
                   }}
                   style={styles.noteToggle}
                 >
-                  <Text style={styles.noteToggleText}>
-                    {notes[ex] ? `📝 ${notes[ex]}` : "+ Add a note"}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    {notes[ex] ? <StickyNote size={12} color={colors.primary} /> : null}
+                    <Text style={styles.noteToggleText}>
+                      {notes[ex] ? notes[ex] : "+ Add a note"}
+                    </Text>
+                  </View>
                 </Pressable>
                 <Pressable
                   onPress={() => setPlatesFor(platesFor === ex ? null : ex)}
                   style={styles.noteToggle}
                 >
-                  <Text style={styles.noteToggleText}>🧮 Plates</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <Calculator size={12} color={colors.primary} />
+                    <Text style={styles.noteToggleText}>Plates</Text>
+                  </View>
                 </Pressable>
               </View>
               {platesFor === ex &&
@@ -571,7 +581,7 @@ export function LoggerScreen({
                     hitSlop={6}
                     style={[styles.setCheck, r.done && styles.setCheckDone]}
                   >
-                    <Text style={[styles.setCheckText, r.done && styles.setCheckTextDone]}>✓</Text>
+                    <Check size={14} color={r.done ? colors.background : colors.mutedForeground} strokeWidth={3} />
                   </Pressable>
                   <Pressable onPress={() => removeSet(ex, idx)} hitSlop={8}>
                     <Text style={styles.removeSet}>×</Text>
@@ -652,7 +662,10 @@ export function LoggerScreen({
         </Text>
         <View style={styles.bottomButtons}>
           <Pressable onPress={confirmReset} style={styles.resetButton}>
-            <Text style={styles.resetText}>↺ Reset</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <RotateCcw size={13} color={colors.mutedForeground} />
+              <Text style={styles.resetText}>Reset</Text>
+            </View>
           </Pressable>
           <View style={{ flex: 1 }}>
             <PrimaryButton
@@ -812,9 +825,13 @@ export function LoggerScreen({
       <Modal visible={!!savedSummary} transparent animationType="fade">
         <View style={styles.centerBackdrop}>
           <View style={styles.centerCard}>
-            {savedPRs.length > 0 && <Text style={styles.prTrophyBig}>🏆</Text>}
+            {savedPRs.length > 0 && (
+              <View style={{ alignItems: "center", marginBottom: 4 }}>
+                <Trophy size={44} color={colors.primary} strokeWidth={1.5} />
+              </View>
+            )}
             <Text style={styles.centerTitle}>
-              {savedPRs.length > 0 ? "New PR! 🔥" : "Workout saved 🎉"}
+              {savedPRs.length > 0 ? "New PR!" : "Workout saved"}
             </Text>
             <Text style={styles.centerBody}>{savedSummary}</Text>
             <View style={styles.centerButtons}>

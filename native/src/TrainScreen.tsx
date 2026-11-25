@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn, Wordmark } from "./ui";
+import { ArrowRight, Check, Sparkles } from "lucide-react-native";
 import {
   CustomDay,
   getCustomDays,
@@ -123,7 +124,7 @@ export function TrainScreen({
                       d.done && { color: colors.primaryForeground, fontWeight: "800" },
                     ]}
                   >
-                    {d.done ? "✓" : d.num}
+                    {d.done ? <Check size={13} color={colors.primary} strokeWidth={3} /> : d.num}
                   </Text>
                 </View>
               </View>
@@ -133,9 +134,9 @@ export function TrainScreen({
 
         <RiseIn delay={200} style={{ marginTop: 20 }}>
           <Pressable style={styles.coachRow} onPress={onOpenCoach}>
-            <Text style={{ fontSize: 16 }}>✨</Text>
+            <Sparkles size={16} color={colors.primary} />
             <Text style={styles.coachRowText}>Ask IronCoach about your training</Text>
-            <Text style={styles.coachRowArrow}>→</Text>
+            <ArrowRight size={16} color={colors.mutedForeground} />
           </Pressable>
         </RiseIn>
 
@@ -207,7 +208,7 @@ export function TrainScreen({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 110 },
+  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
   headerRow: { flexDirection: "row", justifyContent: "space-between" },
   coachRow: {
     flexDirection: "row",
