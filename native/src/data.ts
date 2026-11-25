@@ -16,8 +16,18 @@ export type CustomDay = {
 export type WorkoutSession = {
   id: string;
   user_id: string;
-  day_id: string | null;
+  day: string;
+  title: string | null;
   performed_at: string;
+};
+
+export type SetLogRow = {
+  id: string;
+  session_id: string;
+  exercise_name: string;
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
 };
 
 // Same defaults as the web app (src/lib/db.ts INITIAL_CUSTOM_DAYS)
@@ -156,7 +166,7 @@ export async function getRecentSessions(
   try {
     const { data, error } = await supabase
       .from("workout_sessions")
-      .select("id,user_id,day_id,performed_at")
+      .select("id,user_id,day,title,performed_at")
       .eq("user_id", userId)
       .gte("performed_at", since.toISOString())
       .order("performed_at", { ascending: false });
@@ -172,11 +182,11 @@ export async function getLastSessionDayId(userId: string | undefined): Promise<s
   try {
     const { data, error } = await supabase
       .from("workout_sessions")
-      .select("day_id")
+      .select("day")
       .eq("user_id", userId)
       .order("performed_at", { ascending: false })
       .limit(1);
-    if (!error && data && data.length > 0) return (data[0] as { day_id: string | null }).day_id;
+    if (!error && data && data.length > 0) return (data[0] as { day: string | null }).day;
   } catch {
     /* offline */
   }
@@ -231,4 +241,67 @@ export async function saveWorkoutSession(
     );
     if (lErr) throw lErr;
   }
+}
+
+// --- History ---
+
+export type SessionWithSets = WorkoutSession & { sets: SetLogRow[] };
+
+// Mirrors the web history page: latest 100 sessions + their set_logs.
+export async function getHistorySessions(
+  userId: string | undefined,
+): Promise<SessionWithSets[]> {
+  if (!userId) return [];
+  try {
+    const { data: sessions, error: sErr } = await supabase
+      .from("workout_sessions")
+      .select("id,user_id,day,title,performed_at")
+      .eq("user_id", userId)
+      .order("performed_at", { ascending: false })
+      .limit(100);
+    if (sErr || !sessions || sessions.length === 0) return [];
+    const ids = sessions.map((s) => s.id as string);
+    const { data: logs, error: lErr } = await supabase
+      .from("set_logs")
+      .select("id,session_id,exercise_name,set_number,weight,reps")
+      .eq("user_id", userId)
+      .in("session_id", ids)
+      .order("set_number", { ascending: true });
+    if (lErr) return sessions.map((s) => ({ ...(s as WorkoutSession), sets: [] }));
+    const rows = (logs ?? []) as SetLogRow[];
+    return (sessions as WorkoutSession[]).map((s) => ({
+      ...s,
+      sets: rows.filter((r) => r.session_id === s.id),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function updateSessionTitle(
+  id: string,
+  title: string | null,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("workout_sessions")
+    .update({ title })
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+export async function deleteSessionAndLogs(id: string, userId: string): Promise<void> {
+  const { error: lErr } = await supabase
+    .from("set_logs")
+    .delete()
+    .eq("session_id", id)
+    .eq("user_id", userId);
+  if (lErr) throw lErr;
+  const { error: sErr } = await supabase
+    .from("workout_sessions")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (sErr) throw sErr;
 }

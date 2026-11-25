@@ -15,6 +15,7 @@ import { supabase } from "./src/supabase";
 import { colors, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
 import { TrainScreen } from "./src/TrainScreen";
 import { LoggerScreen } from "./src/LoggerScreen";
+import { HistoryScreen } from "./src/HistoryScreen";
 import type { CustomDay } from "./src/data";
 
 function WelcomeScreen({ onStart }: { onStart: () => void }) {
@@ -152,11 +153,52 @@ function AuthScreen({
   );
 }
 
+function TabBar({
+  tab,
+  onChange,
+}: {
+  tab: "train" | "history";
+  onChange: (t: "train" | "history") => void;
+}) {
+  const tabs = [
+    { key: "train" as const, label: "Train", icon: "🏋️" },
+    { key: "history" as const, label: "History", icon: "📜" },
+  ];
+  return (
+    <SafeAreaView style={tabStyles.bar}>
+      {tabs.map((t) => {
+        const active = tab === t.key;
+        return (
+          <Pressable key={t.key} onPress={() => onChange(t.key)} style={tabStyles.item}>
+            <Text style={[tabStyles.icon, !active && { opacity: 0.5 }]}>{t.icon}</Text>
+            <Text style={[tabStyles.label, active && { color: colors.primary }]}>
+              {t.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </SafeAreaView>
+  );
+}
+
+const tabStyles = StyleSheet.create({
+  bar: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  item: { flex: 1, alignItems: "center", paddingVertical: 10 },
+  icon: { fontSize: 18 },
+  label: { color: colors.mutedForeground, fontSize: 11, fontWeight: "700", marginTop: 2 },
+});
+
 export default function App() {
   const [screen, setScreen] = useState<"welcome" | "auth">("welcome");
   const [session, setSession] = useState<Session | null>(null);
   const [restoring, setRestoring] = useState(true);
   const [activeDay, setActiveDay] = useState<CustomDay | null>(null);
+  const [tab, setTab] = useState<"train" | "history">("train");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -188,14 +230,21 @@ export default function App() {
           onSaved={() => setActiveDay(null)}
         />
       ) : session ? (
-        <TrainScreen
-          session={session}
-          onSignOut={() => {
-            setActiveDay(null);
-            void supabase.auth.signOut();
-          }}
-          onOpenDay={(d) => setActiveDay(d)}
-        />
+        <>
+          {tab === "train" ? (
+            <TrainScreen
+              session={session}
+              onSignOut={() => {
+                setActiveDay(null);
+                void supabase.auth.signOut();
+              }}
+              onOpenDay={(d) => setActiveDay(d)}
+            />
+          ) : (
+            <HistoryScreen session={session} />
+          )}
+          <TabBar tab={tab} onChange={setTab} />
+        </>
       ) : screen === "welcome" ? (
         <WelcomeScreen onStart={() => setScreen("auth")} />
       ) : (
