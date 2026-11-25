@@ -14,7 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
 import { useBackHandler } from "./back";
-import { ChevronDown, Trash2 } from "lucide-react-native";
+import { ChevronDown, Sparkles, Trash2 } from "lucide-react-native";
 import {
   ACCENT_COLORS,
   CustomDay,
@@ -22,6 +22,7 @@ import {
   getCustomDays,
   getSplitAccent,
 } from "./data";
+import { QuickImportSheet } from "./QuickImportSheet";
 
 const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -43,6 +44,7 @@ export function PlanScreen({
   const [deleting, setDeleting] = useState<CustomDay | null>(null);
   const [menuFor, setMenuFor] = useState<CustomDay | null>(null);
   const [pickerDay, setPickerDay] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useBackHandler(!!(pickerDay || menuFor || deleting), () => {
@@ -130,9 +132,15 @@ export function PlanScreen({
             <RiseIn delay={160}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Your routines</Text>
-                <Pressable onPress={onNewSplit} style={styles.newButton}>
-                  <Text style={styles.newButtonText}>+ New</Text>
-                </Pressable>
+                <View style={styles.headerButtons}>
+                  <Pressable onPress={() => setImportOpen(true)} style={styles.importButton}>
+                    <Sparkles color={colors.brand} size={13} strokeWidth={2.4} />
+                    <Text style={styles.importButtonText}>Import</Text>
+                  </Pressable>
+                  <Pressable onPress={onNewSplit} style={styles.newButton}>
+                    <Text style={styles.newButtonText}>+ New</Text>
+                  </Pressable>
+                </View>
               </View>
               <View style={styles.routineList}>
                 {days.map((s) => {
@@ -334,6 +342,16 @@ export function PlanScreen({
           </View>
         </View>
       </Modal>
+
+      <QuickImportSheet
+        visible={importOpen}
+        userId={userId}
+        onClose={() => setImportOpen(false)}
+        onSaved={() => {
+          setImportOpen(false);
+          void load();
+        }}
+      />
     </View>
   );
 }
@@ -473,6 +491,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   modalDangerText: { color: "#101411", fontSize: 15, fontWeight: "700" },
+  headerButtons: { flexDirection: "row", alignItems: "center", gap: 8 },
+  importButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  importButtonText: { color: colors.brand, fontSize: 12, fontWeight: "700" },
   newButton: {
     backgroundColor: colors.background,
     borderColor: colors.border,
