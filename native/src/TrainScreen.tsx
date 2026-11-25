@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn, Wordmark } from "./ui";
 import {
@@ -25,9 +25,11 @@ function startOfDay(d: Date) {
 export function TrainScreen({
   session,
   onSignOut,
+  onOpenDay,
 }: {
   session: Session;
   onSignOut: () => void;
+  onOpenDay: (day: CustomDay) => void;
 }) {
   const userId = session.user.id;
   const [days, setDays] = useState<CustomDay[] | null>(null);
@@ -155,15 +157,7 @@ export function TrainScreen({
                     </View>
                   ))}
               </View>
-              <PrimaryButton
-                label={`Open ${next.name}`}
-                onPress={() =>
-                  Alert.alert(
-                    "Coming soon",
-                    "The session logger is being rebuilt natively. For now, keep logging in the current app.",
-                  )
-                }
-              />
+              <PrimaryButton label={`Open ${next.name}`} onPress={() => onOpenDay(next)} />
             </View>
           </RiseIn>
         ) : null}
@@ -173,8 +167,9 @@ export function TrainScreen({
             <Text style={styles.routinesTitle}>Your routines</Text>
             <View style={[styles.card, { marginTop: 12, padding: 0 }]}>
               {days.map((d, i) => (
-                <View
+                <Pressable
                   key={d.id}
+                  onPress={() => onOpenDay(d)}
                   style={[styles.routineRow, i > 0 && styles.routineRowBorder]}
                 >
                   <View style={styles.routineBar} />
@@ -186,7 +181,7 @@ export function TrainScreen({
                         (d.subtitle || "")}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               ))}
             </View>
           </RiseIn>

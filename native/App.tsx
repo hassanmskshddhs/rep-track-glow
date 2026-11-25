@@ -14,6 +14,8 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/supabase";
 import { colors, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
 import { TrainScreen } from "./src/TrainScreen";
+import { LoggerScreen } from "./src/LoggerScreen";
+import type { CustomDay } from "./src/data";
 
 function WelcomeScreen({ onStart }: { onStart: () => void }) {
   return (
@@ -154,6 +156,7 @@ export default function App() {
   const [screen, setScreen] = useState<"welcome" | "auth">("welcome");
   const [session, setSession] = useState<Session | null>(null);
   const [restoring, setRestoring] = useState(true);
+  const [activeDay, setActiveDay] = useState<CustomDay | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -177,12 +180,21 @@ export default function App() {
   return (
     <View style={styles.flex}>
       <StatusBar style="light" />
-      {session ? (
+      {session && activeDay ? (
+        <LoggerScreen
+          day={activeDay}
+          session={session}
+          onBack={() => setActiveDay(null)}
+          onSaved={() => setActiveDay(null)}
+        />
+      ) : session ? (
         <TrainScreen
           session={session}
           onSignOut={() => {
+            setActiveDay(null);
             void supabase.auth.signOut();
           }}
+          onOpenDay={(d) => setActiveDay(d)}
         />
       ) : screen === "welcome" ? (
         <WelcomeScreen onStart={() => setScreen("auth")} />

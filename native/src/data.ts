@@ -182,3 +182,53 @@ export async function getLastSessionDayId(userId: string | undefined): Promise<s
   }
   return null;
 }
+
+export type SetRowInput = {
+  exercise_name: string;
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+};
+
+function uuidv4(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+// Mirrors the web app's save path (offline-queue pushWorkout):
+// one workout_sessions row, then its set_logs rows.
+export async function saveWorkoutSession(
+  userId: string,
+  dayId: string,
+  title: string,
+  rows: SetRowInput[],
+): Promise<void> {
+  const sessionId = uuidv4();
+  const performedAt = new Date().toISOString();
+  const { error: sErr } = await supabase.from("workout_sessions").insert({
+    id: sessionId,
+    user_id: userId,
+    day: dayId,
+    title,
+    performed_at: performedAt,
+  });
+  if (sErr) throw sErr;
+  if (rows.length > 0) {
+    const { error: lErr } = await supabase.from("set_logs").insert(
+      rows.map((r) => ({
+        id: uuidv4(),
+        user_id: userId,
+        session_id: sessionId,
+        exercise_name: r.exercise_name,
+        set_number: r.set_number,
+        weight: r.weight,
+        reps: r.reps,
+        created_at: performedAt,
+      })),
+    );
+    if (lErr) throw lErr;
+  }
+}
