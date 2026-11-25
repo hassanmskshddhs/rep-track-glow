@@ -8,5 +8,8 @@ await p.screenshot({path:'/downloads/NAT-1-Welcome.png'});
 await p.getByText('Get started').click();
 await p.waitForTimeout(1200);
 await p.screenshot({path:'/downloads/NAT-2-SignIn.png'});
+await p.getByText('Sign up').click();
+await p.waitForTimeout(600);
+await p.screenshot({path:'/downloads/NAT-3-SignUp.png'});
 await p.close(); await c.close(); await b.close();
 console.log(JSON.stringify({errors}));

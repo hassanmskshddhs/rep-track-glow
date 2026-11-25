@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "./src/supabase";
 
 // FORGED dark theme, same tokens as the web app (src/styles.css)
 const colors = {
@@ -118,9 +120,38 @@ function WelcomeScreen({ onStart }: { onStart: () => void }) {
   );
 }
 
-function SignInScreen({ onBack }: { onBack: () => void }) {
+function AuthScreen({ onBack, onSignedIn }: { onBack: () => void; onSignedIn: (s: Session) => void }) {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (mode === "signin") {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        if (data.session) onSignedIn(data.session);
+      } else {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        if (data.session) {
+          onSignedIn(data.session);
+        } else {
+          setError("Check your email to confirm your account, then sign in.");
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView
@@ -132,8 +163,14 @@ function SignInScreen({ onBack }: { onBack: () => void }) {
             <Wordmark size={18} />
           </RiseIn>
           <RiseIn delay={100} style={{ marginTop: 36 }}>
-            <Text style={styles.authTitle}>Welcome back</Text>
-            <Text style={styles.authSub}>Sign in to continue logging.</Text>
+            <Text style={styles.authTitle}>
+              {mode === "signin" ? "Welcome back" : "Create account"}
+            </Text>
+            <Text style={styles.authSub}>
+              {mode === "signin"
+                ? "Sign in to continue logging."
+                : "Start tracking your lifts in seconds."}
+            </Text>
           </RiseIn>
           <RiseIn delay={200} style={styles.card}>
             <Text style={styles.label}>Email</Text>
@@ -153,12 +190,30 @@ function SignInScreen({ onBack }: { onBack: () => void }) {
               placeholderTextColor={colors.mutedForeground}
               style={styles.input}
             />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
             <View style={{ marginTop: 24 }}>
-              <PrimaryButton label="Sign in" onPress={() => {}} />
+              <PrimaryButton
+                label={busy ? "One moment..." : mode === "signin" ? "Sign in" : "Create account"}
+                onPress={() => void submit()}
+              />
             </View>
-            <Pressable onPress={() => {}} style={{ marginTop: 16 }}>
+            <Pressable
+              onPress={() => {
+                setMode(mode === "signin" ? "signup" : "signin");
+                setError(null);
+              }}
+              style={{ marginTop: 16 }}
+            >
               <Text style={styles.switchMode}>
-                No account? <Text style={styles.switchModeStrong}>Sign up</Text>
+                {mode === "signin" ? (
+                  <>
+                    No account? <Text style={styles.switchModeStrong}>Sign up</Text>
+                  </>
+                ) : (
+                  <>
+                    Have an account? <Text style={styles.switchModeStrong}>Sign in</Text>
+                  </>
+                )}
               </Text>
             </Pressable>
           </RiseIn>
@@ -171,15 +226,65 @@ function SignInScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
+function HomeScreen({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
+  return (
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.welcomeBody}>
+        <RiseIn>
+          <Wordmark size={26} />
+        </RiseIn>
+        <RiseIn delay={120} style={{ marginTop: 48 }}>
+          <Text style={styles.heroTitle}>Your next{"\n"}rep.</Text>
+        </RiseIn>
+        <RiseIn delay={220} style={{ marginTop: 14 }}>
+          <Text style={styles.heroSub}>Signed in as {session.user.email}.</Text>
+        </RiseIn>
+      </View>
+      <RiseIn delay={340} style={styles.footer}>
+        <PrimaryButton label="Sign out" onPress={onSignOut} />
+      </RiseIn>
+    </SafeAreaView>
+  );
+}
+
 export default function App() {
-  const [screen, setScreen] = useState<"welcome" | "signin">("welcome");
+  const [screen, setScreen] = useState<"welcome" | "auth">("welcome");
+  const [session, setSession] = useState<Session | null>(null);
+  const [restoring, setRestoring] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setRestoring(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  if (restoring) {
+    return (
+      <View style={[styles.flex, { justifyContent: "center" }]}>
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.flex}>
       <StatusBar style="light" />
-      {screen === "welcome" ? (
-        <WelcomeScreen onStart={() => setScreen("signin")} />
+      {session ? (
+        <HomeScreen
+          session={session}
+          onSignOut={() => {
+            void supabase.auth.signOut();
+          }}
+        />
+      ) : screen === "welcome" ? (
+        <WelcomeScreen onStart={() => setScreen("auth")} />
       ) : (
-        <SignInScreen onBack={() => setScreen("welcome")} />
+        <AuthScreen onBack={() => setScreen("welcome")} onSignedIn={(s) => setSession(s)} />
       )}
     </View>
   );
@@ -254,4 +359,5 @@ const styles = StyleSheet.create({
   },
   switchModeStrong: { color: colors.primary, fontWeight: "700" },
   backLink: { paddingVertical: 16, alignItems: "center" },
+  errorText: { color: "#f17d79", fontSize: 13, marginTop: 12 },
 });
