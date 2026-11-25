@@ -20,7 +20,10 @@ import { ProgressScreen } from "./src/ProgressScreen";
 import { PlanScreen } from "./src/PlanScreen";
 import { SettingsScreen } from "./src/SettingsScreen";
 import { SplitEditorScreen } from "./src/SplitEditorScreen";
+import { NutritionScreen } from "./src/NutritionScreen";
 import type { CustomDay } from "./src/data";
+
+type TabKey = "train" | "plan" | "history" | "progress" | "fuel" | "settings";
 
 function WelcomeScreen({ onStart }: { onStart: () => void }) {
   return (
@@ -161,14 +164,15 @@ function TabBar({
   tab,
   onChange,
 }: {
-  tab: "train" | "plan" | "history" | "progress" | "settings";
-  onChange: (t: "train" | "plan" | "history" | "progress" | "settings") => void;
+  tab: TabKey;
+  onChange: (t: TabKey) => void;
 }) {
   const tabs = [
     { key: "train" as const, label: "Train", icon: "🏋️" },
     { key: "plan" as const, label: "Plan", icon: "🗓️" },
     { key: "history" as const, label: "History", icon: "📜" },
     { key: "progress" as const, label: "Progress", icon: "📈" },
+    { key: "fuel" as const, label: "Fuel", icon: "🍎" },
     { key: "settings" as const, label: "Settings", icon: "⚙️" },
   ];
   return (
@@ -206,7 +210,7 @@ export default function App() {
   const [restoring, setRestoring] = useState(true);
   const [activeDay, setActiveDay] = useState<CustomDay | null>(null);
   const [editingSplit, setEditingSplit] = useState<CustomDay | "new" | null>(null);
-  const [tab, setTab] = useState<"train" | "plan" | "history" | "progress" | "settings">("train");
+  const [tab, setTab] = useState<TabKey>("train");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -266,6 +270,8 @@ export default function App() {
             <HistoryScreen session={session} />
           ) : tab === "progress" ? (
             <ProgressScreen session={session} />
+          ) : tab === "fuel" ? (
+            <NutritionScreen session={session} />
           ) : (
             <SettingsScreen
               session={session}
