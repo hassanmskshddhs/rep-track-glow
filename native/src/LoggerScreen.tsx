@@ -31,7 +31,7 @@ const haptic = (fn: () => Promise<void>) => {
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn } from "./ui";
 import { useBackHandler } from "./back";
-import { ArrowRight, Calculator, Check, Flame, PartyPopper, RotateCcw, Sparkles, StickyNote, Trophy } from "lucide-react-native";
+import { ArrowRight, Calculator, Check, Flame, Link2, PartyPopper, RotateCcw, Sparkles, StickyNote, Trophy, Unlink } from "lucide-react-native";
 import {
   CustomDay,
   ExerciseInsight,
@@ -232,6 +232,10 @@ export function LoggerScreen({
 
   const draftKey = `ironlog:draft:${userId}:${day.id}`;
   const intensityKey = "ironlog:coach:intensity";
+  const supersetKey = `ironlog:supersets:${userId}:${day.id}`;
+  // Supersets: links[exercise] = run it straight into the NEXT exercise, no rest between.
+  // Device-local like rest timer prefs; no change to shared tables.
+  const [links, setLinks] = useState<Record<string, boolean>>({});
 
   const emptyState = (): SetsState =>
     Object.fromEntries(exercises.map((e) => [e, [{ weight: "", reps: "" }]]));
@@ -361,6 +365,11 @@ export function LoggerScreen({
             setElapsed(Math.floor((Date.now() - parsed.startedAt) / 1000));
           }
         }
+        const rawLinks = await AsyncStorage.getItem(supersetKey);
+        if (rawLinks) {
+          const parsed = JSON.parse(rawLinks) as Record<string, boolean>;
+          if (parsed && typeof parsed === "object") setLinks(parsed);
+        }
       } catch {
         /* ignore */
       }
@@ -407,12 +416,25 @@ export function LoggerScreen({
     });
     if (marking) {
       haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
+      // In a superset chain, rest only starts after the last linked exercise.
+      if (links[ex] && exercises.indexOf(ex) < exercises.length - 1) return;
       const t = restByEx[ex] ?? restTarget;
       setRestFor(ex);
       setRestTarget(t);
       setRestRemaining(t);
       setRestDeadline(Date.now() + t * 1000);
     }
+  };
+
+  const toggleLink = (ex: string) => {
+    haptic(() => Haptics.selectionAsync());
+    setLinks((cur) => {
+      const next = { ...cur };
+      if (next[ex]) delete next[ex];
+      else next[ex] = true;
+      AsyncStorage.setItem(supersetKey, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -620,7 +642,8 @@ export function LoggerScreen({
           const isPR =
             insight?.bestWeight != null && enteredBest > insight.bestWeight;
           return (
-          <RiseIn key={ex} delay={i * 70} style={{ marginTop: 14 }}>
+          <React.Fragment key={ex}>
+          <RiseIn delay={i * 70} style={{ marginTop: 14 }}>
             <View style={styles.card}>
               <View style={styles.exHeaderRow}>
                 <Text style={styles.exName}>{ex}</Text>
@@ -848,6 +871,25 @@ export function LoggerScreen({
               </Pressable>
             </View>
           </RiseIn>
+          {i < exercises.length - 1 ? (
+            <Pressable
+              onPress={() => toggleLink(ex)}
+              hitSlop={6}
+              style={[styles.linkRow, links[ex] && styles.linkRowOn]}
+            >
+              {links[ex] ? (
+                <Unlink size={12} color={colors.brand} />
+              ) : (
+                <Link2 size={12} color={colors.mutedForeground} />
+              )}
+              <Text style={[styles.linkText, links[ex] && styles.linkTextOn]}>
+                {links[ex]
+                  ? `Superset with ${exercises[i + 1]} · no rest between`
+                  : "Link as superset"}
+              </Text>
+            </Pressable>
+          ) : null}
+          </React.Fragment>
           );
         })}
         <Pressable onPress={() => setAddOpen(true)} style={styles.addExercise}>
@@ -1289,6 +1331,17 @@ const styles = StyleSheet.create({
   setCheckText: { color: colors.mutedForeground, fontSize: 15, fontWeight: "800" },
   setCheckTextDone: { color: colors.primaryForeground },
   addSet: { marginTop: 12, paddingVertical: 8, alignItems: "center" },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 7,
+    marginTop: 2,
+  },
+  linkRowOn: {},
+  linkText: { color: colors.mutedForeground, fontSize: 12 },
+  linkTextOn: { color: colors.brand, fontWeight: "700" },
   addSetText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
   prTrophyBig: { fontSize: 44, textAlign: "center" as const, marginBottom: 4 },
   setRowWarmup: { backgroundColor: "rgba(126,166,255,0.07)", borderRadius: 8 },
