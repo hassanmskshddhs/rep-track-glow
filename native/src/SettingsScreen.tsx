@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,10 +14,11 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
-import { Check, Download, Mail, Shield, Sparkles, User } from "lucide-react-native";
+import { Check, Download, Mail, Shield, Sparkles, Upload, User } from "lucide-react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import { exportHistoryCsv } from "./data";
+import * as DocumentPicker from "expo-document-picker";
+import { CsvImportGroup, exportHistoryCsv, importHistoryCsv, parseHistoryCsv } from "./data";
 
 // Same storage key and shape as the web profile (src/lib/profile.ts)
 const PROFILE_KEY = "ironlog.profile.v1";
@@ -43,6 +45,54 @@ export function SettingsScreen({
   const [coachEnabled, setCoachEnabled] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<CsvImportGroup[] | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+
+  const pickImport = async () => {
+    setImportMsg(null);
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (res.canceled || !res.assets?.[0]) return;
+      const asset = res.assets[0];
+      let text: string;
+      if (Platform.OS === "web" && (asset as any).file) {
+        text = await (asset as any).file.text();
+      } else {
+        text = await FileSystem.readAsStringAsync(asset.uri);
+      }
+      const groups = parseHistoryCsv(text);
+      if (groups.length === 0) {
+        setImportMsg("No valid rows found. Use the same CSV format IronLog exports.");
+        return;
+      }
+      setImportPreview(groups);
+    } catch {
+      setImportMsg("Could not read that file. Use the same CSV format IronLog exports.");
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!importPreview || importing) return;
+    setImporting(true);
+    try {
+      const r = await importHistoryCsv(session.user.id, importPreview);
+      setImportPreview(null);
+      setImportMsg(
+        `Imported ${r.sessions} ${r.sessions === 1 ? "workout" : "workouts"} · ${r.sets} sets` +
+          (r.skipped > 0 ? ` · ${r.skipped} already in history, skipped` : "") +
+          ".",
+      );
+    } catch {
+      setImportMsg("Import failed midway. Safe to re-run: workouts already imported are skipped.");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const exportCsv = async () => {
     setExporting(true);
@@ -248,6 +298,18 @@ export function SettingsScreen({
               </Text>
             </Pressable>
             {exportMsg ? <Text style={styles.exportMsg}>{exportMsg}</Text> : null}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 18 }}>
+              <Upload size={13} color={colors.mutedForeground} />
+              <Text style={styles.sectionLabel}>BRING YOUR HISTORY IN</Text>
+            </View>
+            <Text style={styles.sectionSub}>
+              Switching from another app or a spreadsheet? Import the same CSV format IronLog
+              exports. Workouts already in your history are skipped, never duplicated.
+            </Text>
+            <Pressable onPress={() => void pickImport()} style={styles.exportButton}>
+              <Text style={styles.exportButtonText}>Import history (CSV)</Text>
+            </Pressable>
+            {importMsg ? <Text style={styles.exportMsg}>{importMsg}</Text> : null}
           </View>
         </RiseIn>
 
@@ -271,6 +333,27 @@ export function SettingsScreen({
           <Text style={styles.version}>IronLog native · v1.0.0</Text>
         </RiseIn>
       </ScrollView>
+
+      <Modal visible={!!importPreview} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={styles.centerCard}>
+            <Text style={styles.centerTitle}>Import these workouts?</Text>
+            <Text style={styles.centerBody}>
+              {importPreview
+                ? `${importPreview.length} ${importPreview.length === 1 ? "workout" : "workouts"} · ${importPreview.reduce((a, g) => a + g.rows.length, 0)} sets found. Workouts already in your history are skipped, never duplicated.`
+                : ""}
+            </Text>
+            <View style={styles.centerButtons}>
+              <Pressable onPress={() => setImportPreview(null)} style={styles.centerGhost}>
+                <Text style={styles.centerGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={() => void confirmImport()} disabled={importing} style={styles.centerPrimary}>
+                <Text style={styles.centerPrimaryText}>{importing ? "Importing..." : "Import"}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -346,6 +429,42 @@ const styles = StyleSheet.create({
   },
   exportButtonText: { color: colors.foreground, fontSize: 13, fontWeight: "700" },
   exportMsg: { color: colors.primary, fontSize: 12, marginTop: 10 },
+  centerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  centerCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+  },
+  centerTitle: { color: colors.foreground, fontSize: 18, fontWeight: "800", textAlign: "center" },
+  centerBody: { color: colors.mutedForeground, fontSize: 14, textAlign: "center", marginTop: 10, lineHeight: 21 },
+  centerButtons: { flexDirection: "row", gap: 10, marginTop: 18 },
+  centerPrimary: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  centerPrimaryText: { color: colors.primaryForeground, fontSize: 15, fontWeight: "800" },
+  centerGhost: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  centerGhostText: { color: colors.mutedForeground, fontSize: 15, fontWeight: "700" },
   label: { color: colors.foreground, fontSize: 13, fontWeight: "600", marginTop: 14, marginBottom: 6 },
   input: {
     backgroundColor: colors.background,

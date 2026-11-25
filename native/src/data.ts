@@ -752,3 +752,128 @@ export async function exportHistoryCsv(
   }
   return { csv: lines.join("\n"), sessions: sessions?.length ?? 0, sets };
 }
+
+// --- CSV import (same format as exportHistoryCsv) ---
+
+export type CsvImportGroup = {
+  date: string;
+  title: string;
+  rows: SetRowInput[];
+};
+
+// Minimal RFC-4180-ish parser: quoted fields, escaped quotes, CRLF.
+export function parseHistoryCsv(text: string): CsvImportGroup[] {
+  const rows: string[][] = [];
+  let cur: string[] = [];
+  let field = "";
+  let inQ = false;
+  const pushField = () => {
+    cur.push(field);
+    field = "";
+  };
+  const pushRow = () => {
+    pushField();
+    rows.push(cur);
+    cur = [];
+  };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else inQ = false;
+      } else field += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === ",") pushField();
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      pushRow();
+    } else field += ch;
+  }
+  if (field.length > 0 || cur.length > 0) pushRow();
+
+  const header = rows[0]?.map((h) => h.trim().toLowerCase());
+  const need = ["date", "routine", "exercise", "set_number", "weight_kg", "reps"];
+  if (!header || need.some((h, i) => header[i] !== h)) {
+    throw new Error("Unexpected CSV format");
+  }
+  const groups = new Map<string, CsvImportGroup>();
+  for (const r of rows.slice(1)) {
+    if (r.length < 6 || !r[0]?.trim()) continue;
+    const date = r[0].trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const title = r[1].trim() || "Imported workout";
+    const key = `${title}|${date}`;
+    if (!groups.has(key)) groups.set(key, { date, title, rows: [] });
+    const w = r[4].trim();
+    const rp = r[5].trim();
+    groups.get(key)!.rows.push({
+      exercise_name: r[2].trim(),
+      set_number: parseInt(r[3], 10) || 1,
+      weight: w === "" ? null : Number(w),
+      reps: rp === "" ? null : parseInt(rp, 10),
+    });
+  }
+  return [...groups.values()];
+}
+
+// Inserts one workout_sessions row + its set_logs per group.
+// Groups already in history (same title + date) are skipped, never duplicated.
+export async function importHistoryCsv(
+  userId: string,
+  groups: CsvImportGroup[],
+): Promise<{ sessions: number; sets: number; skipped: number }> {
+  const { data: existing, error } = await supabase
+    .from("workout_sessions")
+    .select("title,performed_at")
+    .eq("user_id", userId)
+    .limit(5000);
+  if (error) throw error;
+  const seen = new Set(
+    (existing ?? []).map(
+      (s) => `${((s.title as string) ?? "").trim()}|${((s.performed_at as string) ?? "").slice(0, 10)}`,
+    ),
+  );
+  let sessions = 0;
+  let sets = 0;
+  let skipped = 0;
+  for (const g of groups) {
+    const key = `${g.title}|${g.date}`;
+    if (seen.has(key)) {
+      skipped++;
+      continue;
+    }
+    const sessionId = uuidv4();
+    const performedAt = new Date(`${g.date}T12:00:00`).toISOString();
+    const { error: sErr } = await supabase.from("workout_sessions").insert({
+      id: sessionId,
+      user_id: userId,
+      day: "imported",
+      title: g.title,
+      performed_at: performedAt,
+    });
+    if (sErr) throw sErr;
+    const rows = g.rows.filter((r) => r.exercise_name);
+    if (rows.length > 0) {
+      const { error: lErr } = await supabase.from("set_logs").insert(
+        rows.map((r) => ({
+          id: uuidv4(),
+          user_id: userId,
+          session_id: sessionId,
+          exercise_name: r.exercise_name,
+          set_number: r.set_number,
+          weight: r.weight,
+          reps: r.reps,
+          created_at: performedAt,
+        })),
+      );
+      if (lErr) throw lErr;
+    }
+    sessions++;
+    sets += rows.length;
+    seen.add(key);
+  }
+  return { sessions, sets, skipped };
+}
