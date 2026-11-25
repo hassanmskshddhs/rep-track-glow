@@ -1,0 +1,12 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({executablePath:'/usr/bin/google-chrome-stable',args:['--no-sandbox']});
+const c = await b.newContext({viewport:{width:390,height:844}});
+const p = await c.newPage(); const errors=[]; p.on('pageerror',e=>errors.push(e.message));
+await p.goto('http://localhost:8082/', {waitUntil:'networkidle'});
+await p.waitForTimeout(1400);
+await p.screenshot({path:'/downloads/NAT-1-Welcome.png'});
+await p.getByText('Get started').click();
+await p.waitForTimeout(1200);
+await p.screenshot({path:'/downloads/NAT-2-SignIn.png'});
+await p.close(); await c.close(); await b.close();
+console.log(JSON.stringify({errors}));
