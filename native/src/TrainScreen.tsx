@@ -26,10 +26,12 @@ export function TrainScreen({
   session,
   onSignOut,
   onOpenDay,
+  onOpenCoach,
 }: {
   session: Session;
   onSignOut: () => void;
   onOpenDay: (day: CustomDay) => void;
+  onOpenCoach: () => void;
 }) {
   const userId = session.user.id;
   const [days, setDays] = useState<CustomDay[] | null>(null);
@@ -129,6 +131,14 @@ export function TrainScreen({
           </View>
         </RiseIn>
 
+        <RiseIn delay={200} style={{ marginTop: 20 }}>
+          <Pressable style={styles.coachRow} onPress={onOpenCoach}>
+            <Text style={{ fontSize: 16 }}>✨</Text>
+            <Text style={styles.coachRowText}>Ask IronCoach about your training</Text>
+            <Text style={styles.coachRowArrow}>→</Text>
+          </Pressable>
+        </RiseIn>
+
         {days === null ? (
           <View style={[styles.card, { marginTop: 24, paddingVertical: 48 }]}>
             <Text style={styles.sub}>Loading routines…</Text>
@@ -199,6 +209,19 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
   headerRow: { flexDirection: "row", justifyContent: "space-between" },
+  coachRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  coachRowText: { color: colors.foreground, fontSize: 14, fontWeight: "600", flex: 1 },
+  coachRowArrow: { color: colors.mutedForeground, fontSize: 16 },
   eyebrow: { color: colors.mutedForeground, fontSize: 11, letterSpacing: 1.6, fontWeight: "700" },
   title: {
     color: colors.foreground,

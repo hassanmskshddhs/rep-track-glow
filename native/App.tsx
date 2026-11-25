@@ -21,6 +21,7 @@ import { PlanScreen } from "./src/PlanScreen";
 import { SettingsScreen } from "./src/SettingsScreen";
 import { SplitEditorScreen } from "./src/SplitEditorScreen";
 import { NutritionScreen } from "./src/NutritionScreen";
+import { CoachScreen } from "./src/CoachScreen";
 import type { CustomDay } from "./src/data";
 
 type TabKey = "train" | "plan" | "history" | "progress" | "fuel" | "settings";
@@ -210,6 +211,7 @@ export default function App() {
   const [restoring, setRestoring] = useState(true);
   const [activeDay, setActiveDay] = useState<CustomDay | null>(null);
   const [editingSplit, setEditingSplit] = useState<CustomDay | "new" | null>(null);
+  const [coachOpen, setCoachOpen] = useState(false);
   const [tab, setTab] = useState<TabKey>("train");
 
   useEffect(() => {
@@ -241,6 +243,8 @@ export default function App() {
           onDone={() => setEditingSplit(null)}
           onBack={() => setEditingSplit(null)}
         />
+      ) : session && coachOpen ? (
+        <CoachScreen session={session} onBack={() => setCoachOpen(false)} />
       ) : session && activeDay ? (
         <LoggerScreen
           day={activeDay}
@@ -258,6 +262,7 @@ export default function App() {
                 void supabase.auth.signOut();
               }}
               onOpenDay={(d) => setActiveDay(d)}
+              onOpenCoach={() => setCoachOpen(true)}
             />
           ) : tab === "plan" ? (
             <PlanScreen
