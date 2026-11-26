@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -323,6 +324,284 @@ function MacroRing({
   );
 }
 
+// Self-contained food search sheet: all typing state lives here, so every
+// keystroke re-renders only the sheet, not the whole Fuel page behind it.
+// The food list is a FlatList, so long lists render in windows instead of
+// all at once (this is what made scrolling stutter).
+function FoodSearchSheet({
+  visible,
+  meal,
+  recents,
+  onClose,
+  onAdd,
+  onRecent,
+}: {
+  visible: boolean;
+  meal: MealType;
+  recents: FoodDBItem[];
+  onClose: () => void;
+  onAdd: (log: FoodLog) => void;
+  onRecent: (food: FoodDBItem) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [selectedFood, setSelectedFood] = useState<FoodDBItem | null>(null);
+  const [unit, setUnit] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [unitPickerOpen, setUnitPickerOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  // Reset every time the sheet opens.
+  useEffect(() => {
+    if (visible) {
+      setQuery("");
+      setSelectedFood(null);
+      setUnitPickerOpen(false);
+      setAiError("");
+      setQuantity("1");
+    }
+  }, [visible]);
+
+  // Hardware back: close dialogs, then the food detail, before the sheet itself.
+  useBackHandler(visible && !!(unitPickerOpen || selectedFood), () => {
+    if (unitPickerOpen) setUnitPickerOpen(false);
+    else if (selectedFood) setSelectedFood(null);
+    else return false;
+    return true;
+  });
+
+  const filteredFoods = useMemo(() => {
+    if (!query) return recents.length > 0 ? recents : FOOD_DB;
+    const q = query.toLowerCase();
+    return FOOD_DB.filter((f) => f.name.toLowerCase().includes(q));
+  }, [query, recents]);
+
+  const calculated = useMemo(() => {
+    if (!selectedFood) return null;
+    const qty = parseFloat(quantity) || 0;
+    const unitObj = selectedFood.supportedUnits.find((u) => u.unit === unit);
+    if (!unitObj) return null;
+    const totalBase = qty * unitObj.multiplier;
+    const ratio = totalBase / selectedFood.baseAmount;
+    return {
+      calories: selectedFood.calories * ratio,
+      protein: selectedFood.protein * ratio,
+      carbs: selectedFood.carbs * ratio,
+      fat: selectedFood.fat * ratio,
+    };
+  }, [selectedFood, unit, quantity]);
+
+  const searchOnline = async () => {
+    const q = query.trim();
+    if (!q || aiLoading) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const { data: sd } = await supabase.auth.getSession();
+      const token = sd.session?.access_token;
+      if (!token) throw new Error("Sign in to use AI food search.");
+      const res = await fetch(NUTRITION_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ query: q }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(res.status === 401 ? "Sign in to use AI food search." : detail || "AI search is unavailable right now.");
+      }
+      const parsed = (await res.json()) as AIFoodResponse;
+      if (!parsed || typeof parsed.calories !== "number") {
+        throw new Error("Couldn't identify that food — try describing it differently.");
+      }
+      const item: FoodDBItem = {
+        id: `ai_${Date.now().toString(36)}`,
+        name: parsed.food_name,
+        baseAmount: parsed.serving_size_quantity,
+        baseUnit: parsed.serving_size_unit,
+        calories: parsed.calories,
+        protein: parsed.protein,
+        carbs: parsed.carbs,
+        fat: parsed.fats,
+        supportedUnits: [
+          { unit: parsed.serving_size_unit, multiplier: 1 },
+          { unit: "serving", multiplier: parsed.serving_size_quantity },
+        ],
+      };
+      setSelectedFood(item);
+      setUnit(item.supportedUnits[0].unit);
+      setQuantity(item.baseAmount.toString());
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "AI search failed.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const addFood = () => {
+    if (!selectedFood || !calculated) return;
+    onAdd({
+      id: uuid(),
+      mealType: meal,
+      foodId: selectedFood.id,
+      name: selectedFood.name,
+      quantity: parseFloat(quantity) || 1,
+      unit,
+      ...calculated,
+    });
+    onRecent(selectedFood);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.searchBackdrop}
+      >
+        <View style={styles.searchSheet}>
+          <View style={styles.searchHeader}>
+            <Text style={styles.searchTitle}>Add to {meal}</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search foods..."
+              placeholderTextColor={colors.mutedForeground}
+              value={query}
+              onChangeText={(t) => {
+                setQuery(t);
+                setSelectedFood(null);
+              }}
+            />
+          </View>
+          {!selectedFood ? (
+            <FlatList
+              style={{ flex: 1 }}
+              data={filteredFoods}
+              keyExtractor={(f) => f.id}
+              keyboardShouldPersistTaps="handled"
+              initialNumToRender={18}
+              maxToRenderPerBatch={18}
+              windowSize={7}
+              removeClippedSubviews
+              ListHeaderComponent={
+                <View>
+                  {!query && (
+                    <Text style={styles.searchSection}>
+                      {recents.length > 0 ? "RECENT FOODS" : "DATABASE"}
+                    </Text>
+                  )}
+                  {query.trim().length > 0 && (
+                    <Pressable style={styles.aiRow} onPress={() => void searchOnline()} disabled={aiLoading}>
+                      <Sparkles size={16} color={colors.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.aiRowTitle}>
+                          {aiLoading ? "Searching online..." : `Search online for "${query.trim()}"`}
+                        </Text>
+                        <Text style={styles.aiRowSub}>Get precise macros for any food or meal</Text>
+                      </View>
+                    </Pressable>
+                  )}
+                  {aiError !== "" && <Text style={styles.aiError}>{aiError}</Text>}
+                </View>
+              }
+              ListEmptyComponent={
+                <Text style={styles.searchEmpty}>Not found in the database — try Search online above.</Text>
+              }
+              renderItem={({ item: food }) => (
+                <Pressable
+                  style={styles.searchRow}
+                  onPress={() => {
+                    setSelectedFood(food);
+                    setUnit(food.supportedUnits[0].unit);
+                    setQuantity(food.baseAmount.toString());
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.foodName}>{food.name}</Text>
+                    <Text style={styles.foodMeta}>
+                      {food.baseAmount} {food.baseUnit} · {Math.round(food.calories)} kcal
+                    </Text>
+                  </View>
+                  <Text style={styles.searchPlus}>+</Text>
+                </Pressable>
+              )}
+            />
+          ) : (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+              <Pressable onPress={() => setSelectedFood(null)}>
+                <Text style={styles.backToSearch}>← Back to Search</Text>
+              </Pressable>
+              <Text style={styles.selectedName}>{selectedFood.name}</Text>
+              <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Quantity</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={quantity}
+                    onChangeText={setQuantity}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Unit</Text>
+                  <Pressable style={styles.input} onPress={() => setUnitPickerOpen(true)}>
+                    <Text style={{ color: colors.foreground, fontSize: 15 }}>{unit}</Text>
+                  </Pressable>
+                </View>
+              </View>
+              {calculated && (
+                <View style={[styles.card, { marginTop: 18 }]}>
+                  <Text style={styles.calcCals}>{Math.round(calculated.calories)}</Text>
+                  <Text style={styles.calcCalsLabel}>CALORIES</Text>
+                  <View style={styles.calsRow}>
+                    <View style={styles.calsCell}>
+                      <Text style={styles.calcMacroValue}>{Math.round(calculated.protein)}g</Text>
+                      <Text style={styles.calcMacroLabel}>Protein</Text>
+                    </View>
+                    <View style={styles.calsCell}>
+                      <Text style={styles.calcMacroValue}>{Math.round(calculated.carbs)}g</Text>
+                      <Text style={styles.calcMacroLabel}>Carbs</Text>
+                    </View>
+                    <View style={styles.calsCell}>
+                      <Text style={styles.calcMacroValue}>{Math.round(calculated.fat)}g</Text>
+                      <Text style={styles.calcMacroLabel}>Fat</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+              <View style={{ marginTop: 18 }}>
+                <PrimaryButton label="Log Food" onPress={addFood} />
+              </View>
+            </ScrollView>
+          )}
+          <Pressable onPress={onClose} style={styles.searchClose}>
+            <Text style={styles.wizardBack}>Close</Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+
+      {/* Unit picker */}
+      <Modal visible={unitPickerOpen} transparent animationType="fade">
+        <Pressable style={styles.sheetBackdrop} onPress={() => setUnitPickerOpen(false)}>
+          <View style={styles.sheet}>
+            {selectedFood?.supportedUnits.map((u) => (
+              <Pressable
+                key={u.unit}
+                style={styles.sheetItem}
+                onPress={() => {
+                  setUnit(u.unit);
+                  setUnitPickerOpen(false);
+                }}
+              >
+                <Text style={styles.sheetItemText}>{u.unit}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+    </Modal>
+  );
+}
+
 export function NutritionScreen({ session }: { session: Session }) {
   const [targets, setTargets] = useState<MacroTargets | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -339,28 +618,15 @@ export function NutritionScreen({ session }: { session: Session }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
 
-  // Search modal state
-  const [query, setQuery] = useState("");
-  const [selectedFood, setSelectedFood] = useState<FoodDBItem | null>(null);
-  const [unit, setUnit] = useState("");
-  const [quantity, setQuantity] = useState("1");
-  const [unitPickerOpen, setUnitPickerOpen] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
-
-  // Hardware back: close dialogs, then the food detail, then the search sheet.
-  useBackHandler(
-    !!(resetConfirm || settingsOpen || unitPickerOpen || selectedFood || searchOpen),
-    () => {
-      if (resetConfirm) setResetConfirm(false);
-      else if (settingsOpen) setSettingsOpen(false);
-      else if (unitPickerOpen) setUnitPickerOpen(false);
-      else if (selectedFood) setSelectedFood(null);
-      else if (searchOpen) setSearchOpen(false);
-      else return false;
-      return true;
-    },
-  );
+  // Hardware back: close dialogs, then the search sheet. The sheet's own
+  // handler (registered later, so it runs first) closes its inner dialogs.
+  useBackHandler(!!(resetConfirm || settingsOpen || searchOpen), () => {
+    if (resetConfirm) setResetConfirm(false);
+    else if (settingsOpen) setSettingsOpen(false);
+    else if (searchOpen) setSearchOpen(false);
+    else return false;
+    return true;
+  });
 
   useEffect(() => {
     (async () => {
@@ -413,27 +679,6 @@ export function NutritionScreen({ session }: { session: Session }) {
     }
   };
 
-  const filteredFoods = useMemo(() => {
-    if (!query) return recentFoods.length > 0 ? recentFoods : FOOD_DB;
-    const q = query.toLowerCase();
-    return FOOD_DB.filter((f) => f.name.toLowerCase().includes(q));
-  }, [query, recentFoods]);
-
-  const calculated = useMemo(() => {
-    if (!selectedFood) return null;
-    const qty = parseFloat(quantity) || 0;
-    const unitObj = selectedFood.supportedUnits.find((u) => u.unit === unit);
-    if (!unitObj) return null;
-    const totalBase = qty * unitObj.multiplier;
-    const ratio = totalBase / selectedFood.baseAmount;
-    return {
-      calories: selectedFood.calories * ratio,
-      protein: selectedFood.protein * ratio,
-      carbs: selectedFood.carbs * ratio,
-      fat: selectedFood.fat * ratio,
-    };
-  }, [selectedFood, unit, quantity]);
-
   const ds = dateStr(currentDate);
   const todaysLogs = useMemo(() => {
     const raw = logsStorage[ds];
@@ -461,75 +706,7 @@ export function NutritionScreen({ session }: { session: Session }) {
 
   const openSearch = (meal: MealType) => {
     setSelectedMeal(meal);
-    setQuery("");
-    setSelectedFood(null);
-    setUnitPickerOpen(false);
-    setAiError("");
     setSearchOpen(true);
-  };
-
-  const searchOnline = async () => {
-    const q = query.trim();
-    if (!q || aiLoading) return;
-    setAiLoading(true);
-    setAiError("");
-    try {
-      const { data: sd } = await supabase.auth.getSession();
-      const token = sd.session?.access_token;
-      if (!token) throw new Error("Sign in to use AI food search.");
-      const res = await fetch(NUTRITION_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ query: q }),
-      });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        throw new Error(res.status === 401 ? "Sign in to use AI food search." : detail || "AI search is unavailable right now.");
-      }
-      const parsed = (await res.json()) as AIFoodResponse;
-      if (!parsed || typeof parsed.calories !== "number") {
-        throw new Error("Couldn't identify that food — try describing it differently.");
-      }
-      const item: FoodDBItem = {
-        id: `ai_${Date.now().toString(36)}`,
-        name: parsed.food_name,
-        baseAmount: parsed.serving_size_quantity,
-        baseUnit: parsed.serving_size_unit,
-        calories: parsed.calories,
-        protein: parsed.protein,
-        carbs: parsed.carbs,
-        fat: parsed.fats,
-        supportedUnits: [
-          { unit: parsed.serving_size_unit, multiplier: 1 },
-          { unit: "serving", multiplier: parsed.serving_size_quantity },
-        ],
-      };
-      setSelectedFood(item);
-      setUnit(item.supportedUnits[0].unit);
-      setQuantity(item.baseAmount.toString());
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : "AI search failed.");
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const addFood = () => {
-    if (!selectedFood || !calculated) return;
-    const log: FoodLog = {
-      id: uuid(),
-      mealType: selectedMeal,
-      foodId: selectedFood.id,
-      name: selectedFood.name,
-      quantity: parseFloat(quantity) || 1,
-      unit,
-      ...calculated,
-    };
-    void saveLogs({ ...logsStorage, [ds]: [...todaysLogs, log] });
-    void saveRecents([selectedFood, ...recentFoods.filter((f) => f.id !== selectedFood.id)].slice(0, 15));
-    setSearchOpen(false);
-    setSelectedFood(null);
-    setQuery("");
   };
 
   const removeFood = (id: string) => {
@@ -663,143 +840,17 @@ export function NutritionScreen({ session }: { session: Session }) {
         })}
       </ScrollView>
 
-      {/* Food search modal */}
-      <Modal visible={searchOpen} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.searchBackdrop}
-        >
-          <View style={styles.searchSheet}>
-            <View style={styles.searchHeader}>
-              <Text style={styles.searchTitle}>Add to {selectedMeal}</Text>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search foods..."
-                placeholderTextColor={colors.mutedForeground}
-                value={query}
-                onChangeText={(t) => {
-                  setQuery(t);
-                  setSelectedFood(null);
-                }}
-              />
-            </View>
-            {!selectedFood ? (
-              <ScrollView style={{ flex: 1 }}>
-                {!query && (
-                  <Text style={styles.searchSection}>
-                    {recentFoods.length > 0 ? "RECENT FOODS" : "DATABASE"}
-                  </Text>
-                )}
-                {query.trim().length > 0 && (
-                  <Pressable style={styles.aiRow} onPress={() => void searchOnline()} disabled={aiLoading}>
-                    <Sparkles size={16} color={colors.primary} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.aiRowTitle}>
-                        {aiLoading ? "Searching online..." : `Search online for "${query.trim()}"`}
-                      </Text>
-                      <Text style={styles.aiRowSub}>Get precise macros for any food or meal</Text>
-                    </View>
-                  </Pressable>
-                )}
-                {aiError !== "" && <Text style={styles.aiError}>{aiError}</Text>}
-                {filteredFoods.length === 0 ? (
-                  <Text style={styles.searchEmpty}>Not found in the database — try Search online above.</Text>
-                ) : (
-                  filteredFoods.map((food) => (
-                    <Pressable
-                      key={food.id}
-                      style={styles.searchRow}
-                      onPress={() => {
-                        setSelectedFood(food);
-                        setUnit(food.supportedUnits[0].unit);
-                        setQuantity(food.baseAmount.toString());
-                      }}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.foodName}>{food.name}</Text>
-                        <Text style={styles.foodMeta}>
-                          {food.baseAmount} {food.baseUnit} · {Math.round(food.calories)} kcal
-                        </Text>
-                      </View>
-                      <Text style={styles.searchPlus}>+</Text>
-                    </Pressable>
-                  ))
-                )}
-              </ScrollView>
-            ) : (
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-                <Pressable onPress={() => setSelectedFood(null)}>
-                  <Text style={styles.backToSearch}>← Back to Search</Text>
-                </Pressable>
-                <Text style={styles.selectedName}>{selectedFood.name}</Text>
-                <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Quantity</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={quantity}
-                      onChangeText={setQuantity}
-                      keyboardType="decimal-pad"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Unit</Text>
-                    <Pressable style={styles.input} onPress={() => setUnitPickerOpen(true)}>
-                      <Text style={{ color: colors.foreground, fontSize: 15 }}>{unit}</Text>
-                    </Pressable>
-                  </View>
-                </View>
-                {calculated && (
-                  <View style={[styles.card, { marginTop: 18 }]}>
-                    <Text style={styles.calcCals}>{Math.round(calculated.calories)}</Text>
-                    <Text style={styles.calcCalsLabel}>CALORIES</Text>
-                    <View style={styles.calsRow}>
-                      <View style={styles.calsCell}>
-                        <Text style={styles.calcMacroValue}>{Math.round(calculated.protein)}g</Text>
-                        <Text style={styles.calcMacroLabel}>Protein</Text>
-                      </View>
-                      <View style={styles.calsCell}>
-                        <Text style={styles.calcMacroValue}>{Math.round(calculated.carbs)}g</Text>
-                        <Text style={styles.calcMacroLabel}>Carbs</Text>
-                      </View>
-                      <View style={styles.calsCell}>
-                        <Text style={styles.calcMacroValue}>{Math.round(calculated.fat)}g</Text>
-                        <Text style={styles.calcMacroLabel}>Fat</Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-                <View style={{ marginTop: 18 }}>
-                  <PrimaryButton label="Log Food" onPress={addFood} />
-                </View>
-              </ScrollView>
-            )}
-            <Pressable onPress={() => setSearchOpen(false)} style={styles.searchClose}>
-              <Text style={styles.wizardBack}>Close</Text>
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <FoodSearchSheet
+        visible={searchOpen}
+        meal={selectedMeal}
+        recents={recentFoods}
+        onClose={() => setSearchOpen(false)}
+        onAdd={(log) => void saveLogs({ ...logsStorage, [ds]: [...todaysLogs, log] })}
+        onRecent={(food) =>
+          void saveRecents([food, ...recentFoods.filter((f) => f.id !== food.id)].slice(0, 15))
+        }
+      />
 
-      {/* Unit picker */}
-      <Modal visible={unitPickerOpen} transparent animationType="fade">
-        <Pressable style={styles.sheetBackdrop} onPress={() => setUnitPickerOpen(false)}>
-          <View style={styles.sheet}>
-            {selectedFood?.supportedUnits.map((u) => (
-              <Pressable
-                key={u.unit}
-                style={styles.sheetItem}
-                onPress={() => {
-                  setUnit(u.unit);
-                  setUnitPickerOpen(false);
-                }}
-              >
-                <Text style={styles.sheetItemText}>{u.unit}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
 
       {/* Settings */}
       <Modal visible={settingsOpen} transparent animationType="fade">

@@ -219,11 +219,15 @@ export function LoggerScreen({
   session,
   onBack,
   onSaved,
+  onHide,
 }: {
   day: CustomDay;
   session: Session;
   onBack: () => void;
   onSaved: () => void;
+  // Leave the workout without ending it: the screen stays mounted (hidden),
+  // so the timer and every typed set survive. App shows a resume banner.
+  onHide?: (startedAt: number) => void;
 }) {
   const userId = session.user.id;
   const [exercises, setExercises] = useState<string[]>(
@@ -648,7 +652,7 @@ export function LoggerScreen({
       style={styles.screen}
     >
       <View style={styles.topBar}>
-        <Pressable onPress={onBack} hitSlop={12}>
+        <Pressable onPress={() => (onHide ? onHide(startRef.current) : onBack())} hitSlop={12}>
           <Text style={styles.backText}>← All workouts</Text>
         </Pressable>
         <Text style={styles.timer}>{formatClock(elapsed)}</Text>

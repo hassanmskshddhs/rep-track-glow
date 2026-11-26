@@ -213,6 +213,26 @@ function TabBar({
   );
 }
 
+const bannerStyles = StyleSheet.create({
+  bar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 14,
+    marginBottom: 10,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: "#c8f2cb44",
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  pulse: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.brand },
+  title: { color: colors.foreground, fontSize: 14, fontWeight: "700" },
+  sub: { color: colors.mutedForeground, fontSize: 11, marginTop: 2 },
+  time: { color: colors.primary, fontSize: 18, fontWeight: "800" },
+});
+
 const tabStyles = StyleSheet.create({
   bar: {
     flexDirection: "row",
@@ -242,6 +262,18 @@ function AppInner() {
   const [coachOpen, setCoachOpen] = useState(false);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [tab, setTab] = useState<TabKey>("train");
+  // Workout left in progress: logger stays mounted but hidden, banner shows.
+  const [loggerHidden, setLoggerHidden] = useState(false);
+  const [hiddenStartedAt, setHiddenStartedAt] = useState<number | null>(null);
+  const [hiddenElapsed, setHiddenElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!loggerHidden || !hiddenStartedAt) return;
+    const tick = () => setHiddenElapsed(Math.floor((Date.now() - hiddenStartedAt) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [loggerHidden, hiddenStartedAt]);
 
   // Android hardware back: let open modals/sub-views handle it first, then walk
   // the app hierarchy up (editor -> coach -> logger -> first tab), exit only at root.
@@ -256,8 +288,8 @@ function AppInner() {
         setCoachOpen(false);
         return true;
       }
-      if (activeDay) {
-        setActiveDay(null);
+      if (activeDay && !loggerHidden) {
+        setLoggerHidden(true);
         return true;
       }
       if (session && tab !== "train") {
@@ -271,7 +303,7 @@ function AppInner() {
       return false;
     });
     return () => sub.remove();
-  }, [editingSplit, coachOpen, activeDay, session, tab, screen]);
+  }, [editingSplit, coachOpen, activeDay, session, tab, screen, loggerHidden]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -318,12 +350,20 @@ function AppInner() {
         <OnboardingScreen userId={session.user.id} onDone={() => setOnboarded(true)} />
       ) : session && coachOpen ? (
         <CoachScreen session={session} onBack={() => setCoachOpen(false)} />
-      ) : session && activeDay ? (
+      ) : session && activeDay && !loggerHidden ? (
         <LoggerScreen
           day={activeDay}
           session={session}
           onBack={() => setActiveDay(null)}
-          onSaved={() => setActiveDay(null)}
+          onSaved={() => {
+            setActiveDay(null);
+            setLoggerHidden(false);
+            setHiddenStartedAt(null);
+          }}
+          onHide={(startedAt) => {
+            setHiddenStartedAt(startedAt);
+            setLoggerHidden(true);
+          }}
         />
       ) : session ? (
         <>
@@ -362,6 +402,21 @@ function AppInner() {
             />
           )}
           </View>
+          {activeDay && loggerHidden ? (
+            <Pressable onPress={() => setLoggerHidden(false)} style={bannerStyles.bar}>
+              <View style={bannerStyles.pulse} />
+              <View style={{ flex: 1 }}>
+                <Text style={bannerStyles.title} numberOfLines={1}>
+                  {activeDay.name} in progress
+                </Text>
+                <Text style={bannerStyles.sub}>Your sets are saved - tap to resume</Text>
+              </View>
+              <Text style={bannerStyles.time}>
+                {String(Math.floor(hiddenElapsed / 60)).padStart(2, "0")}:
+                {String(hiddenElapsed % 60).padStart(2, "0")}
+              </Text>
+            </Pressable>
+          ) : null}
           <TabBar tab={tab} onChange={setTab} />
         </>
       ) : screen === "welcome" ? (
