@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
-import { colors, RiseIn, Wordmark } from "./ui";
+import { AnimatedPressable, colors, RiseIn, Wordmark } from "./ui";
 import { useBackHandler } from "./back";
 import { ChevronDown, Sparkles, Trash2 } from "lucide-react-native";
 import {
@@ -133,13 +133,13 @@ export function PlanScreen({
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Your routines</Text>
                 <View style={styles.headerButtons}>
-                  <Pressable onPress={() => setImportOpen(true)} style={styles.importButton}>
+                  <AnimatedPressable onPress={() => setImportOpen(true)} style={styles.importButton}>
                     <Sparkles color={colors.brand} size={13} strokeWidth={2.4} />
                     <Text style={styles.importButtonText}>Import</Text>
-                  </Pressable>
-                  <Pressable onPress={onNewSplit} style={styles.newButton}>
+                  </AnimatedPressable>
+                  <AnimatedPressable onPress={onNewSplit} style={styles.newButton}>
                     <Text style={styles.newButtonText}>+ New</Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 </View>
               </View>
               <View style={styles.routineList}>
@@ -149,7 +149,7 @@ export function PlanScreen({
                   const muscles = s.muscle_groups ?? [];
                   return (
                     <View key={s.id} style={styles.routineRow}>
-                      <Pressable style={styles.routineMain} onPress={() => onOpenDay(s)}>
+                      <AnimatedPressable style={styles.routineMain} onPress={() => onOpenDay(s)}>
                         <View
                           style={[
                             styles.accentBar,
@@ -169,7 +169,7 @@ export function PlanScreen({
                                 .join(", ")}`}
                           </Text>
                         </View>
-                      </Pressable>
+                      </AnimatedPressable>
                       <Pressable
                         onPress={() => setMenuFor(s)}
                         hitSlop={8}

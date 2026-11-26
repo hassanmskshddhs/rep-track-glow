@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Modal,
   Pressable,
   RefreshControl,
@@ -64,6 +65,33 @@ function computePRs(sessions: SessionWithSets[]): Map<string, Set<string>> {
     if (sessionPRs.size > 0) prSessions.set(s.id, sessionPRs);
   }
   return prSessions;
+}
+
+// PR badge pops in with a spring instead of appearing statically.
+function PrBadge() {
+  const a = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(a, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 14 }).start();
+  }, [a]);
+  return (
+    <Animated.View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        borderRadius: 8,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        opacity: a,
+        transform: [{ scale: a.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
+      }}
+    >
+      <Trophy size={11} color={colors.primary} />
+      <Text style={{ color: colors.primary, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 }}>New PR</Text>
+    </Animated.View>
+  );
 }
 
 export function HistoryScreen({ session }: { session: Session }) {
@@ -244,12 +272,7 @@ export function HistoryScreen({ session }: { session: Session }) {
                     <View key={ex} style={styles.exRow}>
                       <View style={styles.exTitleRow}>
                         <Text style={styles.exName}>{ex}</Text>
-                        {prSet.has(ex) && (
-                          <View style={styles.prBadge}>
-                            <Trophy size={11} color={colors.primary} />
-                            <Text style={styles.prText}>New PR</Text>
-                          </View>
-                        )}
+                        {prSet.has(ex) && <PrBadge />}
                       </View>
                       <View style={styles.chipsRow}>
                         {sets.map((x) => (
