@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -270,6 +271,8 @@ function Wizard({
   );
 }
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 function MacroRing({
   label,
   icon: Icon,
@@ -288,6 +291,12 @@ function MacroRing({
   const stroke = 8;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
+  // Ring fills with a smooth sweep on mount and on every change.
+  const fill = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fill, { toValue: pct, duration: 900, useNativeDriver: false }).start();
+  }, [fill, pct]);
+  const dashOffset = fill.interpolate({ inputRange: [0, 1], outputRange: [c, 0] });
   return (
     <View style={styles.ringCard}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 }}>
@@ -304,7 +313,7 @@ function MacroRing({
             strokeWidth={stroke}
             fill="none"
           />
-          <Circle
+          <AnimatedCircle
             cx={size / 2}
             cy={size / 2}
             r={r}
@@ -312,7 +321,7 @@ function MacroRing({
             strokeWidth={stroke}
             fill="none"
             strokeDasharray={`${c}`}
-            strokeDashoffset={c * (1 - pct)}
+            strokeDashoffset={dashOffset}
             strokeLinecap="round"
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
           />

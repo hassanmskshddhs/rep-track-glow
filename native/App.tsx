@@ -22,7 +22,8 @@ import * as AuthSession from "expo-auth-session";
 WebBrowser.maybeCompleteAuthSession();
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/supabase";
-import { AnimatedPressable, colors, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
+import { AnimatedPressable, colors, haptic, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
+import * as Haptics from "expo-haptics";
 import { TrainScreen } from "./src/TrainScreen";
 import { LoggerScreen } from "./src/LoggerScreen";
 import { HistoryScreen } from "./src/HistoryScreen";
@@ -42,6 +43,7 @@ function WelcomeScreen({ onStart }: { onStart: () => void }) {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.welcomeBody}>
+        <View style={styles.authGlow} pointerEvents="none" />
         <RiseIn>
           <Wordmark size={26} />
         </RiseIn>
@@ -254,6 +256,10 @@ function TabItem({
   active: boolean;
   onChange: (t: TabKey) => void;
 }) {
+  const change = () => {
+    haptic(() => Haptics.selectionAsync());
+    onChange(t.key);
+  };
   const anim = useRef(new Animated.Value(active ? 1 : 0)).current;
   useEffect(() => {
     Animated.timing(anim, { toValue: active ? 1 : 0, duration: 200, useNativeDriver: false }).start();
@@ -261,7 +267,7 @@ function TabItem({
   const Icon = t.icon;
   return (
     <AnimatedPressable
-      onPress={() => onChange(t.key)}
+      onPress={change}
       style={[
         tabStyles.item,
         {
@@ -480,7 +486,8 @@ function AppInner() {
         />
       ) : session ? (
         <>
-          <View style={styles.flex}>
+          {/* keyed remount gives every tab switch a soft rise-in */}
+          <RiseIn key={tab} style={styles.flex}>
             {tab === "train" ? (
             <TrainScreen
               session={session}
@@ -514,7 +521,7 @@ function AppInner() {
               }}
             />
           )}
-          </View>
+          </RiseIn>
           {activeDay && loggerHidden ? (
             <Pressable onPress={() => setLoggerHidden(false)} style={bannerStyles.bar}>
               <View style={bannerStyles.pulse} />

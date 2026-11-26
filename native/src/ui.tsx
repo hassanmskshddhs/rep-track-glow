@@ -1,5 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
+
+// Fire-and-forget haptic; silently no-ops on web and unsupported devices.
+export const haptic = (fn: () => Promise<void>) => {
+  fn().catch(() => {});
+};
 
 // FORGED dark theme, same tokens as the web app (src/styles.css)
 export const colors = {
@@ -116,7 +122,14 @@ export function PrimaryButton({
   disabled?: boolean;
 }) {
   return (
-    <AnimatedPressable onPress={onPress} disabled={disabled} style={[ui.primaryButton, disabled ? { opacity: 0.4 } : {}]}>
+    <AnimatedPressable
+      onPress={() => {
+        haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+        onPress();
+      }}
+      disabled={disabled}
+      style={[ui.primaryButton, disabled ? { opacity: 0.4 } : {}]}
+    >
       <Text style={ui.primaryButtonText}>{label}</Text>
     </AnimatedPressable>
   );
