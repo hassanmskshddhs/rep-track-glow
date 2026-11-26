@@ -39,7 +39,8 @@
           "backgroundColor": "#101411"
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-web-browser"
     ]
   }
 }

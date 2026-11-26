@@ -13,8 +13,12 @@ import {
 } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { runTopBackHandler, useBackHandler } from "./src/back";
-import { Apple, CalendarDays, Dumbbell, ScrollText, Settings as SettingsIcon, TrendingUp } from "lucide-react-native";
+import { Apple, CalendarDays, Dumbbell, LockKeyhole, Mail, ScrollText, Settings as SettingsIcon, TrendingUp } from "lucide-react-native";
 import { StatusBar } from "expo-status-bar";
+import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
+
+WebBrowser.maybeCompleteAuthSession();
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/supabase";
 import { colors, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
@@ -67,6 +71,7 @@ function AuthScreen({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
@@ -94,6 +99,46 @@ function AuthScreen({
     }
   };
 
+  // Google sign-in via Supabase OAuth. Opens the provider page in an
+  // in-app browser and lands back on the ironlog:// scheme.
+  const googleSignIn = async () => {
+    if (googleBusy) return;
+    setGoogleBusy(true);
+    setError(null);
+    try {
+      const redirectTo = AuthSession.makeRedirectUri({ scheme: "ironlog", path: "auth/callback" });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo, skipBrowserRedirect: true },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error("Google sign-in is unavailable right now.");
+      const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (res.type === "success" && res.url) {
+        const codeMatch = res.url.match(/[?&]code=([^&#]+)/);
+        if (codeMatch) {
+          const { error: exErr } = await supabase.auth.exchangeCodeForSession(codeMatch[1]);
+          if (exErr) throw exErr;
+        } else {
+          const hash = res.url.split("#")[1] ?? "";
+          const params = new URLSearchParams(hash);
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
+          if (access_token && refresh_token) {
+            const { error: ssErr } = await supabase.auth.setSession({ access_token, refresh_token });
+            if (ssErr) throw ssErr;
+          }
+        }
+        // onAuthStateChange picks the session up from here.
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Google sign-in failed.";
+      setError(/provider|enabled|Unsupported/i.test(msg) ? "Google sign-in is being set up - use email for now." : msg);
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView
@@ -106,7 +151,7 @@ function AuthScreen({
           </RiseIn>
           <RiseIn delay={100} style={{ marginTop: 36 }}>
             <Text style={styles.authTitle}>
-              {mode === "signin" ? "Welcome back" : "Create account"}
+              {mode === "signin" ? "Welcome Back" : "Create Account"}
             </Text>
             <Text style={styles.authSub}>
               {mode === "signin"
@@ -115,36 +160,53 @@ function AuthScreen({
             </Text>
           </RiseIn>
           <RiseIn delay={200} style={styles.card}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholderTextColor={colors.mutedForeground}
-              style={styles.input}
-            />
-            <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholderTextColor={colors.mutedForeground}
-              style={styles.input}
-            />
+            <View style={styles.fieldWrap}>
+              <Mail size={16} color={colors.mutedForeground} />
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="Email"
+                placeholderTextColor={colors.mutedForeground}
+                style={styles.fieldInput}
+              />
+            </View>
+            <View style={[styles.fieldWrap, { marginTop: 12 }]}>
+              <LockKeyhole size={16} color={colors.mutedForeground} />
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                placeholder="Password"
+                placeholderTextColor={colors.mutedForeground}
+                style={styles.fieldInput}
+              />
+            </View>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            <View style={{ marginTop: 24 }}>
+            <View style={{ marginTop: 22 }}>
               <PrimaryButton
-                label={busy ? "One moment..." : mode === "signin" ? "Sign in" : "Create account"}
+                label={busy ? "One moment..." : mode === "signin" ? "Sign In" : "Create Account"}
                 onPress={() => void submit()}
               />
             </View>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or continue with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+            <Pressable style={styles.googleBtn} onPress={() => void googleSignIn()} disabled={googleBusy}>
+              <View style={styles.googleBadge}>
+                <Text style={styles.googleG}>G</Text>
+              </View>
+              <Text style={styles.googleText}>{googleBusy ? "Opening Google..." : "Continue with Google"}</Text>
+            </Pressable>
             <Pressable
               onPress={() => {
                 setMode(mode === "signin" ? "signup" : "signin");
                 setError(null);
               }}
-              style={{ marginTop: 16 }}
+              style={{ marginTop: 18 }}
             >
               <Text style={styles.switchMode}>
                 {mode === "signin" ? (
@@ -330,8 +392,14 @@ function AppInner() {
 
   if (restoring || (session && onboarded === null)) {
     return (
-      <View style={[styles.flex, { justifyContent: "center" }]}>
+      <View style={[styles.flex, { justifyContent: "center", alignItems: "center" }]}>
         <StatusBar style="light" />
+        <RiseIn>
+          <Wordmark size={30} />
+        </RiseIn>
+        <RiseIn delay={200} style={{ marginTop: 14 }}>
+          <Text style={styles.splashTag}>YOUR NEXT REP</Text>
+        </RiseIn>
       </View>
     );
   }
@@ -480,6 +548,39 @@ const styles = StyleSheet.create({
   switchModeStrong: { color: colors.primary, fontWeight: "700" },
   backLink: { paddingVertical: 16, alignItems: "center" },
   errorText: { color: colors.destructive, fontSize: 13, marginTop: 12 },
+  fieldWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.background,
+    borderColor: colors.input,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+  },
+  fieldInput: { flex: 1, paddingVertical: 13, color: colors.foreground, fontSize: 15 },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { color: colors.mutedForeground, fontSize: 12 },
+  googleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    paddingVertical: 13,
+    marginTop: 14,
+  },
+  googleBadge: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
+  googleG: { color: "#4285F4", fontWeight: "800", fontSize: 17 },
+  googleText: { color: "#101411", fontWeight: "700", fontSize: 14 },
+  splashTag: {
+    color: colors.mutedForeground,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 3,
+  },
 });
 
 export default function App() {
