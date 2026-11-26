@@ -18,6 +18,10 @@ import { useBackHandler } from "./back";
 import { Beef, Droplet, RotateCcw, Settings as SettingsIcon, Sparkles, Trash2, Wheat } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 import { FOOD_DB, FoodDBItem } from "./food";
+import { getNamespacedItem, nsKey } from "./data";
+
+// Same storage key and shape as the web profile (src/lib/profile.ts)
+const PROFILE_KEY = "ironlog.profile.v1";
 import { supabase } from "./supabase";
 
 // Same server endpoint the web app calls; auth via the user's Supabase token.
@@ -97,12 +101,18 @@ const RATES = [
   { value: "0.75", label: "Aggressive (0.75 kg/week)" },
 ];
 
-function Wizard({ onComplete }: { onComplete: (t: MacroTargets) => void }) {
+function Wizard({
+  onComplete,
+  initial,
+}: {
+  onComplete: (t: MacroTargets) => void;
+  initial?: { age?: string; height?: string; weight?: string };
+}) {
   const [step, setStep] = useState(1);
   const [sex, setSex] = useState<"Male" | "Female">("Male");
-  const [age, setAge] = useState("28");
-  const [height, setHeight] = useState("178");
-  const [weight, setWeight] = useState("80");
+  const [age, setAge] = useState(initial?.age || "28");
+  const [height, setHeight] = useState(initial?.height || "178");
+  const [weight, setWeight] = useState(initial?.weight || "80");
   const [activity, setActivity] = useState("1.55");
   const [goal, setGoal] = useState<"Lose" | "Maintain" | "Gain">("Maintain");
   const [rate, setRate] = useState("0.5");
@@ -316,6 +326,11 @@ function MacroRing({
 export function NutritionScreen({ session }: { session: Session }) {
   const [targets, setTargets] = useState<MacroTargets | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [profileDefaults, setProfileDefaults] = useState<{ age?: string; height?: string; weight?: string }>({});
+  const uid = session.user.id;
+  const targetsKey = nsKey(TARGETS_KEY, uid);
+  const logsKey = nsKey(LOGS_KEY, uid);
+  const recentsKey = nsKey(RECENTS_KEY, uid);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [logsStorage, setLogsStorage] = useState<Record<string, FoodLog[]>>({});
   const [recentFoods, setRecentFoods] = useState<FoodDBItem[]>([]);
@@ -350,14 +365,19 @@ export function NutritionScreen({ session }: { session: Session }) {
   useEffect(() => {
     (async () => {
       try {
-        const [t, l, r] = await Promise.all([
-          AsyncStorage.getItem(TARGETS_KEY),
-          AsyncStorage.getItem(LOGS_KEY),
-          AsyncStorage.getItem(RECENTS_KEY),
+        const [t, l, r, prof] = await Promise.all([
+          getNamespacedItem(TARGETS_KEY, uid),
+          getNamespacedItem(LOGS_KEY, uid),
+          getNamespacedItem(RECENTS_KEY, uid),
+          getNamespacedItem(PROFILE_KEY, uid),
         ]);
         if (t) setTargets(JSON.parse(t));
         if (l) setLogsStorage(JSON.parse(l));
         if (r) setRecentFoods(JSON.parse(r));
+        if (prof) {
+          const p = JSON.parse(prof) as { age?: string; height?: string; weight?: string };
+          setProfileDefaults({ age: p.age, height: p.height, weight: p.weight });
+        }
       } catch {
         /* ignore */
       }
@@ -368,8 +388,8 @@ export function NutritionScreen({ session }: { session: Session }) {
   const saveTargets = async (t: MacroTargets | null) => {
     setTargets(t);
     try {
-      if (t) await AsyncStorage.setItem(TARGETS_KEY, JSON.stringify(t));
-      else await AsyncStorage.removeItem(TARGETS_KEY);
+      if (t) await AsyncStorage.setItem(targetsKey, JSON.stringify(t));
+      else await AsyncStorage.removeItem(targetsKey);
     } catch {
       /* ignore */
     }
@@ -378,7 +398,7 @@ export function NutritionScreen({ session }: { session: Session }) {
   const saveLogs = async (next: Record<string, FoodLog[]>) => {
     setLogsStorage(next);
     try {
-      await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(next));
+      await AsyncStorage.setItem(logsKey, JSON.stringify(next));
     } catch {
       /* ignore */
     }
@@ -387,7 +407,7 @@ export function NutritionScreen({ session }: { session: Session }) {
   const saveRecents = async (next: FoodDBItem[]) => {
     setRecentFoods(next);
     try {
-      await AsyncStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+      await AsyncStorage.setItem(recentsKey, JSON.stringify(next));
     } catch {
       /* ignore */
     }
@@ -433,7 +453,7 @@ export function NutritionScreen({ session }: { session: Session }) {
   if (!loaded) return <View style={styles.screen} />;
 
   if (!targets) {
-    return <Wizard onComplete={(t) => void saveTargets(t)} />;
+    return <Wizard onComplete={(t) => void saveTargets(t)} initial={profileDefaults} />;
   }
 
   const remainingCals = targets.calories - consumed.calories;

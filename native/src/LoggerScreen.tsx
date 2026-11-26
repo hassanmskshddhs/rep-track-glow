@@ -96,11 +96,17 @@ function normalizeDigits(v: string): string {
     .replace(/[٫،]/g, ".");
 }
 
-const INTENSITY_META: Record<Intensity, { label: string; inc: number }> = {
-  easy: { label: "Easy", inc: 1.25 },
-  steady: { label: "Steady", inc: 2.5 },
-  savage: { label: "Savage", inc: 5 },
+// Intensity changes the math, not just the mood:
+// easy = earn the jump with 4 extra reps at the top, steady = classic double
+// progression, savage = double the weight jump.
+const INTENSITY_META: Record<Intensity, { label: string; bonusReps: number; jump: number }> = {
+  easy: { label: "Easy", bonusReps: 4, jump: 2.5 },
+  steady: { label: "Steady", bonusReps: 0, jump: 2.5 },
+  savage: { label: "Savage", bonusReps: 0, jump: 5 },
 };
+
+// Epley estimate: the one number every suggestion is checked against.
+const e1rm = (weight: number, reps: number) => weight * (1 + reps / 30);
 
 type CoachCall = {
   headline: string;
@@ -116,14 +122,17 @@ function formatShortDate(iso: string | null | undefined): string | null {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// The transparent coach: every suggestion ships with the numbers behind it.
+// The transparent coach: every suggestion is a calculation from your own log,
+// shown with its numbers. Double progression on the top weight, checked
+// against the Epley e1RM of your best set, rounded to loadable plates.
 function buildCoachCall(
   exercise: string,
   insight: ExerciseInsight | undefined,
   intensity: Intensity,
 ): CoachCall {
   const range = parseRepRange(exercise);
-  const inc = INTENSITY_META[intensity].inc;
+  const { bonusReps, jump } = INTENSITY_META[intensity];
+  const cap = range.max + bonusReps;
   const lastSets = insight?.lastSets;
   if (!lastSets || lastSets.length === 0) {
     return {
@@ -144,26 +153,37 @@ function buildCoachCall(
   }
   const topWeight = Math.max(...valid.map((s) => s.weight as number));
   const topSets = valid.filter((s) => s.weight === topWeight);
+  const maxReps = Math.max(...topSets.map((s) => s.reps as number));
+  // e1RM guards the suggestion so it never outruns what his best set supports.
+  // Computed internally only - Hassan wants the answer, not the equation.
+  const est = e1rm(topWeight, maxReps);
   const date = formatShortDate(insight?.lastDate);
-  const when = date ? ` on ${date}` : " last session";
+  const when = date ? `On ${date}` : "Last session";
   const lastStr = valid.map((s) => `${s.weight}×${s.reps}`).join(", ");
-  const allHit = topSets.every((s) => (s.reps as number) >= range.max);
+  const allHit = topSets.every((s) => (s.reps as number) >= cap);
   if (allHit) {
-    const next = +(topWeight + inc).toFixed(2);
+    const targetReps = intensity === "savage" ? range.min + 2 : range.min;
+    let next = round25(topWeight + jump);
+    // Never suggest more than his e1RM supports for the target reps.
+    const saneCap = round25(est / (1 + targetReps / 30));
+    if (next > saneCap && saneCap > topWeight) next = saneCap;
+    if (next <= topWeight) next = topWeight + 2.5;
     return {
       headline: `Go ${next}kg today`,
-      why: `${when} you did ${lastStr}. Every set at ${topWeight}kg hit the top of your range, and that's earned +${inc}kg. Aim for ${range.min}-${range.min + 2} reps.`,
+      why: `${when}: ${lastStr}. Every top set reached ${cap}+ reps, so the jump is earned. Aim for ${targetReps} clean reps at the new weight.`,
       applyWeight: next,
-      applyReps: range.min,
+      applyReps: targetReps,
     };
   }
   const got = topSets.reduce((sum, s) => sum + (s.reps as number), 0);
-  const want = topSets.length * range.max;
+  const want = topSets.length * cap;
+  const pushBy = intensity === "savage" ? 3 : intensity === "steady" ? 2 : 1;
+  const target = Math.min(cap, maxReps + pushBy);
   return {
     headline: `Hold at ${topWeight}kg`,
-    why: `${when} you did ${lastStr}, ${got} of ${want} reps at the top weight. Bank the full ${range.max} first, then we jump.`,
+    why: `${when}: ${lastStr} - ${got} of ${want} reps at the top weight. Hold until every set reaches ${cap}, then we jump ${jump}kg. Today: aim for ${target} on your first set.`,
     applyWeight: topWeight,
-    applyReps: range.max,
+    applyReps: target,
   };
 }
 
@@ -300,15 +320,22 @@ export function LoggerScreen({
     haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
     setState((cur) => {
       const rows = [...(cur[ex] ?? [{ weight: "", reps: "" }])];
-      const emptyIdx = rows.findIndex((r) => r.weight === "" && !r.done);
-      const i = emptyIdx === -1 ? rows.length - 1 : emptyIdx;
-      const fillReps = call.applyReps != null && rows[i].reps === "";
-      rows[i] = {
-        ...rows[i],
-        weight: String(call.applyWeight),
-        ...(fillReps ? { reps: String(call.applyReps) } : {}),
-      };
-      return { ...cur, [ex]: rows };
+      // Fill every untouched working set so the whole exercise follows the call.
+      let filled = 0;
+      const nextRows = rows.map((r) => {
+        if (r.done || r.weight !== "") return r;
+        filled++;
+        return {
+          ...r,
+          weight: String(call.applyWeight),
+          ...(call.applyReps != null && r.reps === "" ? { reps: String(call.applyReps) } : {}),
+        };
+      });
+      if (filled === 0) {
+        const i = nextRows.length - 1;
+        nextRows[i] = { ...nextRows[i], weight: String(call.applyWeight) };
+      }
+      return { ...cur, [ex]: nextRows };
     });
   };
 
@@ -692,42 +719,43 @@ export function LoggerScreen({
                 ) : null}
               </View>
               ) : null}
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={styles.toolsRow}>
                 <Pressable
                   onPress={() => {
                     setNoteEditing(ex);
                     setNoteDraft(notes[ex] ?? "");
                   }}
-                  style={styles.noteToggle}
+                  style={[styles.toolChip, !!notes[ex] && styles.toolChipOn]}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    {notes[ex] ? <StickyNote size={12} color={colors.primary} /> : null}
-                    <Text style={styles.noteToggleText}>
-                      {notes[ex] ? notes[ex] : "+ Add a note"}
-                    </Text>
-                  </View>
+                  <StickyNote size={13} color={notes[ex] ? colors.primary : colors.mutedForeground} />
+                  <Text style={[styles.toolChipText, !!notes[ex] && styles.toolChipTextOn]}>Note</Text>
                 </Pressable>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                  <Pressable
-                    onPress={() => setWarmFor(warmFor === ex ? null : ex)}
-                    style={styles.noteToggle}
-                  >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                      <Flame size={12} color={colors.primary} />
-                      <Text style={styles.noteToggleText}>Warm-up</Text>
-                    </View>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setPlatesFor(platesFor === ex ? null : ex)}
-                    style={styles.noteToggle}
-                  >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                      <Calculator size={12} color={colors.primary} />
-                      <Text style={styles.noteToggleText}>Plates</Text>
-                    </View>
-                  </Pressable>
-                </View>
+                <Pressable
+                  onPress={() => setWarmFor(warmFor === ex ? null : ex)}
+                  style={[styles.toolChip, warmFor === ex && styles.toolChipOn]}
+                >
+                  <Flame size={13} color={warmFor === ex ? colors.primary : colors.mutedForeground} />
+                  <Text style={[styles.toolChipText, warmFor === ex && styles.toolChipTextOn]}>Warm-up</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setPlatesFor(platesFor === ex ? null : ex)}
+                  style={[styles.toolChip, platesFor === ex && styles.toolChipOn]}
+                >
+                  <Calculator size={13} color={platesFor === ex ? colors.primary : colors.mutedForeground} />
+                  <Text style={[styles.toolChipText, platesFor === ex && styles.toolChipTextOn]}>Plates</Text>
+                </Pressable>
               </View>
+              {notes[ex] ? (
+                <Pressable
+                  onPress={() => {
+                    setNoteEditing(ex);
+                    setNoteDraft(notes[ex] ?? "");
+                  }}
+                  style={styles.noteLine}
+                >
+                  <Text style={styles.noteLineText} numberOfLines={2}>{notes[ex]}</Text>
+                </Pressable>
+              ) : null}
               {warmFor === ex &&
                 (() => {
                   const entered = [...(state[ex] ?? [])]
@@ -1331,6 +1359,29 @@ const styles = StyleSheet.create({
   setCheckText: { color: colors.mutedForeground, fontSize: 15, fontWeight: "800" },
   setCheckTextDone: { color: colors.primaryForeground },
   addSet: { marginTop: 12, paddingVertical: 8, alignItems: "center" },
+  toolsRow: { flexDirection: "row", gap: 8, marginTop: 10 },
+  toolChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingVertical: 7,
+  },
+  toolChipOn: { borderColor: "#c8f2cb55", backgroundColor: "#c8f2cb12" },
+  toolChipText: { color: colors.mutedForeground, fontSize: 12, fontWeight: "600" },
+  toolChipTextOn: { color: colors.primary },
+  noteLine: {
+    marginTop: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: "#c8f2cb55",
+    paddingLeft: 10,
+    paddingVertical: 2,
+  },
+  noteLineText: { color: colors.mutedForeground, fontSize: 12, lineHeight: 17 },
   linkRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -20,6 +20,7 @@ import { colors, RiseIn } from "./ui";
 import { useBackHandler } from "./back";
 import { ArrowUp, Bot, Camera, Trash2 } from "lucide-react-native";
 import { supabase } from "./supabase";
+import { getNamespacedItem } from "./data";
 
 // Streams through the deployed web app's server route, same as the web client.
 const COACH_API = "https://ironlog-orcin.vercel.app/api/coach";
@@ -47,9 +48,9 @@ function titleFrom(text: string): string {
   return clean.length > 42 ? `${clean.slice(0, 42)}…` : clean;
 }
 
-async function readThreads(): Promise<CoachThread[]> {
+async function readThreads(uid: string): Promise<CoachThread[]> {
   try {
-    const raw = await AsyncStorage.getItem(THREADS_KEY);
+    const raw = await AsyncStorage.getItem(`${THREADS_KEY}:${uid}`);
     if (!raw) return [];
     const list = JSON.parse(raw) as CoachThread[];
     return Array.isArray(list) ? list.sort((a, b) => b.updatedAt - a.updatedAt) : [];
@@ -58,9 +59,9 @@ async function readThreads(): Promise<CoachThread[]> {
   }
 }
 
-async function persist(list: CoachThread[]) {
+async function persist(uid: string, list: CoachThread[]) {
   try {
-    await AsyncStorage.setItem(THREADS_KEY, JSON.stringify(list));
+    await AsyncStorage.setItem(`${THREADS_KEY}:${uid}`, JSON.stringify(list));
   } catch {
     /* ignore */
   }
@@ -211,7 +212,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
   const listRef = useRef<FlatList<CoachMessage>>(null);
 
   const reload = useCallback(async () => {
-    setThreads(await readThreads());
+    setThreads(await readThreads(session.user.id));
   }, []);
 
   useEffect(() => {
@@ -222,23 +223,23 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
     if (id === null) {
       const now = Date.now();
       const thread: CoachThread = { id: newId(), title: "New chat", createdAt: now, updatedAt: now, messages: [] };
-      await persist([thread, ...(await readThreads())]);
+      await persist(session.user.id, [thread, ...(await readThreads(session.user.id))]);
       setChatId(thread.id);
       setMessages([]);
     } else {
-      const t = (await readThreads()).find((x) => x.id === id);
+      const t = (await readThreads(session.user.id)).find((x) => x.id === id);
       setChatId(id);
       setMessages(t?.messages ?? []);
     }
   };
 
   const saveMessages = async (id: string, msgs: CoachMessage[]) => {
-    const list = await readThreads();
+    const list = await readThreads(session.user.id);
     const idx = list.findIndex((t) => t.id === id);
     const now = Date.now();
     const firstUser = msgs.find((m) => m.role === "user");
     if (idx === -1) {
-      await persist([
+      await persist(session.user.id, [
         { id, title: firstUser ? titleFrom(firstUser.text) : "New chat", createdAt: now, updatedAt: now, messages: msgs },
         ...list,
       ]);
@@ -250,7 +251,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
         updatedAt: now,
         messages: msgs,
       };
-      await persist(list);
+      await persist(session.user.id, list);
     }
     void reload();
   };
@@ -258,7 +259,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
   const buildContext = async (): Promise<string> => {
     const bits: string[] = [];
     try {
-      const raw = await AsyncStorage.getItem(PROFILE_KEY);
+      const raw = await getNamespacedItem(PROFILE_KEY, session.user.id);
       if (raw) {
         const p = JSON.parse(raw) as { displayName?: string; firstName?: string; age?: string; weight?: string; height?: string };
         const name = (p.displayName ?? "").trim() || (p.firstName ?? "").trim();
@@ -387,7 +388,7 @@ export function CoachScreen({ session, onBack }: { session: Session; onBack: () 
   };
 
   const deleteThread = async (id: string) => {
-    await persist((await readThreads()).filter((t) => t.id !== id));
+    await persist(session.user.id, (await readThreads(session.user.id)).filter((t) => t.id !== id));
     setDeleting(null);
     void reload();
   };

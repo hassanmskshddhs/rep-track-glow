@@ -193,7 +193,11 @@ function TabBar({
         const active = tab === t.key;
         const Icon = t.icon;
         return (
-          <Pressable key={t.key} onPress={() => onChange(t.key)} style={tabStyles.item}>
+          <Pressable
+            key={t.key}
+            onPress={() => onChange(t.key)}
+            style={[tabStyles.item, active && tabStyles.itemActive]}
+          >
             <Icon
               size={21}
               color={active ? colors.primary : colors.mutedForeground}
@@ -212,11 +216,20 @@ function TabBar({
 const tabStyles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
     backgroundColor: colors.card,
+    marginHorizontal: 14,
+    marginBottom: 12,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: "#000",
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
-  item: { flex: 1, alignItems: "center", paddingVertical: 9, gap: 3 },
+  item: { flex: 1, alignItems: "center", paddingVertical: 9, gap: 3, margin: 4, borderRadius: 20 },
+  itemActive: { backgroundColor: "#c8f2cb1a" },
   label: { color: colors.mutedForeground, fontSize: 10, fontWeight: "700" },
 });
 

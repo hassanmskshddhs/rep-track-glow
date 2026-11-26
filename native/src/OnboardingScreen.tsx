@@ -109,8 +109,8 @@ export function OnboardingScreen({
   const finish = async (withTargets: boolean) => {
     try {
       if (withTargets && targets && goal) {
-        await AsyncStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
-        await AsyncStorage.setItem(GOAL_KEY, goal);
+        await AsyncStorage.setItem(`${TARGETS_KEY}:${userId}`, JSON.stringify(targets));
+        await AsyncStorage.setItem(`${GOAL_KEY}:${userId}`, goal);
       }
       await AsyncStorage.setItem(`ironlog:onboarded:${userId}`, "1");
     } catch {

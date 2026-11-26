@@ -877,3 +877,27 @@ export async function importHistoryCsv(
   }
   return { sessions, sets, skipped };
 }
+
+// --- Per-account device storage ---
+// Device-local data (profile, food logs, macro targets) must never leak
+// across accounts on a shared phone: everything is namespaced by user id.
+export const nsKey = (base: string, userId: string) => `${base}:${userId}`;
+
+// Reads the namespaced key first; on first read after the change, migrates a
+// legacy un-namespaced value into the user's namespace and removes it.
+export async function getNamespacedItem(base: string, userId: string): Promise<string | null> {
+  try {
+    const namespaced = nsKey(base, userId);
+    const v = await AsyncStorage.getItem(namespaced);
+    if (v != null) return v;
+    const legacy = await AsyncStorage.getItem(base);
+    if (legacy != null) {
+      await AsyncStorage.setItem(namespaced, legacy).catch(() => {});
+      await AsyncStorage.removeItem(base).catch(() => {});
+      return legacy;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}

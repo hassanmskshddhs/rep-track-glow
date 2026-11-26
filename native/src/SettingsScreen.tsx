@@ -26,7 +26,7 @@ import {
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
-import { CsvImportGroup, exportHistoryCsv, importHistoryCsv, parseHistoryCsv } from "./data";
+import { CsvImportGroup, exportHistoryCsv, getNamespacedItem, importHistoryCsv, nsKey, parseHistoryCsv } from "./data";
 
 // Same storage key and shape as the web profile (src/lib/profile.ts)
 const PROFILE_KEY = "ironlog.profile.v1";
@@ -144,7 +144,7 @@ export function SettingsScreen({
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(PROFILE_KEY);
+        const raw = await getNamespacedItem(PROFILE_KEY, session.user.id);
         if (raw) {
           const loaded = { ...EMPTY, ...(JSON.parse(raw) as Partial<LocalProfile>) };
           setDraft(loaded);
@@ -156,11 +156,12 @@ export function SettingsScreen({
         setEditingProfile(true);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const save = async () => {
     try {
-      await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(draft));
+      await AsyncStorage.setItem(nsKey(PROFILE_KEY, session.user.id), JSON.stringify(draft));
       setSavedTick(true);
       setEditingProfile(false);
       setTimeout(() => setSavedTick(false), 2500);
