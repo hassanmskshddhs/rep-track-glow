@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,18 +12,22 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useBackHandler } from "./back";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
 import {
+  Camera,
   Check,
   ChevronRight,
   Download,
   LogOut,
   Shield,
   Sparkles,
+  Trash2,
   Upload,
 } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
@@ -30,6 +35,8 @@ import { CsvImportGroup, exportHistoryCsv, getNamespacedItem, importHistoryCsv, 
 
 // Same storage key and shape as the web profile (src/lib/profile.ts)
 const PROFILE_KEY = "ironlog.profile.v1";
+// Device-local profile photo, namespaced per account like the rest.
+const PHOTO_KEY = "ironlog.profile.photo.v1";
 
 type LocalProfile = {
   firstName: string;
@@ -53,6 +60,12 @@ export function SettingsScreen({
 }) {
   const [draft, setDraft] = useState<LocalProfile>(EMPTY);
   const [editingProfile, setEditingProfile] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  useBackHandler(photoSheetOpen, () => {
+    setPhotoSheetOpen(false);
+    return true;
+  });
   const [savedTick, setSavedTick] = useState(false);
   const [coachEnabled, setCoachEnabled] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -144,7 +157,11 @@ export function SettingsScreen({
   useEffect(() => {
     (async () => {
       try {
-        const raw = await getNamespacedItem(PROFILE_KEY, session.user.id);
+        const [raw, photo] = await Promise.all([
+          getNamespacedItem(PROFILE_KEY, session.user.id),
+          getNamespacedItem(PHOTO_KEY, session.user.id),
+        ]);
+        if (photo) setPhotoUri(photo);
         if (raw) {
           const loaded = { ...EMPTY, ...(JSON.parse(raw) as Partial<LocalProfile>) };
           setDraft(loaded);
@@ -171,6 +188,42 @@ export function SettingsScreen({
   };
 
   const update = (k: keyof LocalProfile, v: string) => setDraft((d) => ({ ...d, [k]: v }));
+
+  const pickPhoto = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (res.canceled || !res.assets?.[0]) return;
+      let uri = res.assets[0].uri;
+      // On native, copy into app storage so the photo survives cache clears.
+      if (Platform.OS !== "web") {
+        const dir = `${FileSystem.documentDirectory}profile-photos`;
+        await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+        const dest = `${dir}/${session.user.id}.jpg`;
+        await FileSystem.copyAsync({ from: uri, to: dest });
+        uri = dest;
+      }
+      await AsyncStorage.setItem(nsKey(PHOTO_KEY, session.user.id), uri);
+      setPhotoUri(uri);
+      setPhotoSheetOpen(false);
+    } catch {
+      /* user cancelled or picker unavailable */
+    }
+  };
+
+  const removePhoto = async () => {
+    try {
+      await AsyncStorage.removeItem(nsKey(PHOTO_KEY, session.user.id));
+    } catch {
+      /* ignore */
+    }
+    setPhotoUri(null);
+    setPhotoSheetOpen(false);
+  };
 
   const email = session.user.email ?? "";
   const fullName =
@@ -202,9 +255,18 @@ export function SettingsScreen({
 
         <RiseIn delay={140}>
           <View style={styles.accountCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarInitial}>{initial}</Text>
-            </View>
+            <Pressable onPress={() => setPhotoSheetOpen(true)} hitSlop={6} accessibilityLabel="Change profile photo">
+              <View style={styles.avatar}>
+                {photoUri ? (
+                  <Image source={{ uri: photoUri }} style={styles.avatarImg} />
+                ) : (
+                  <Text style={styles.avatarInitial}>{initial}</Text>
+                )}
+              </View>
+              <View style={styles.avatarBadge}>
+                <Camera size={10} color={colors.primaryForeground} />
+              </View>
+            </Pressable>
             <View style={{ flex: 1 }}>
               <Text style={styles.accountName} numberOfLines={1}>
                 {greet}
@@ -393,6 +455,28 @@ export function SettingsScreen({
         </RiseIn>
       </ScrollView>
 
+      {/* Profile photo actions */}
+      <Modal visible={photoSheetOpen} transparent animationType="fade">
+        <Pressable style={styles.centerBackdrop} onPress={() => setPhotoSheetOpen(false)}>
+          <View style={styles.centerCard}>
+            <Text style={styles.photoTitle}>Profile photo</Text>
+            <Pressable onPress={() => void pickPhoto()} style={styles.photoOption}>
+              <Camera size={16} color={colors.primary} />
+              <Text style={styles.photoOptionText}>{photoUri ? "Change photo" : "Choose a photo"}</Text>
+            </Pressable>
+            {photoUri ? (
+              <Pressable onPress={() => void removePhoto()} style={styles.photoOption}>
+                <Trash2 size={16} color={colors.destructive} />
+                <Text style={[styles.photoOptionText, { color: colors.destructive }]}>Remove photo</Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => setPhotoSheetOpen(false)} style={{ alignSelf: "center", marginTop: 8 }}>
+              <Text style={styles.photoCancel}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
       <Modal visible={!!importPreview} transparent animationType="fade">
         <View style={styles.centerBackdrop}>
           <View style={styles.centerCard}>
@@ -447,6 +531,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarInitial: { color: colors.primary, fontSize: 20, fontWeight: "800" },
+  avatarImg: { width: 48, height: 48, borderRadius: 24 },
+  avatarBadge: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.card,
+  },
+  photoTitle: {
+    color: colors.foreground,
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 10,
+  },
+  photoOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  photoOptionText: { color: colors.foreground, fontSize: 14, fontWeight: "600" },
+  photoCancel: { color: colors.mutedForeground, fontSize: 13, fontWeight: "600" },
   accountName: { color: colors.foreground, fontSize: 18, fontWeight: "700" },
   accountEmail: { color: colors.mutedForeground, fontSize: 12, marginTop: 3 },
   groupLabel: {

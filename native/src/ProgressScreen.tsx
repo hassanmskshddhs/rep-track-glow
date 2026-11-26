@@ -14,8 +14,7 @@ import type { Session } from "@supabase/supabase-js";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { colors, RiseIn, Wordmark } from "./ui";
 import { useBackHandler } from "./back";
-import { ChevronDown, Dumbbell, Flame, TrendingUp, Trophy } from "lucide-react-native";
-import type { LucideIcon } from "lucide-react-native";
+import { ChevronDown, TrendingUp, Trophy } from "lucide-react-native";
 import {
   BodyMeasurement,
   ProgressData,
@@ -259,33 +258,6 @@ const MONTHS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-function MetricCard({
-  icon: Icon,
-  value,
-  label,
-  change,
-  positive,
-}: {
-  icon: LucideIcon;
-  value: string;
-  label: string;
-  change: string;
-  positive: boolean;
-}) {
-  return (
-    <View style={styles.metricCard}>
-      <Icon size={20} color={colors.mutedForeground} strokeWidth={1.8} />
-      <View>
-        <Text style={styles.metricValue}>{value}</Text>
-        <Text style={styles.metricLabel}>{label}</Text>
-        <Text style={[styles.metricChange, { color: positive ? colors.primary : colors.destructive }]}>
-          {change}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 export function ProgressScreen({ session }: { session: Session }) {
   const userId = session.user.id;
   const [data, setData] = useState<ProgressData | null>(null);
@@ -322,12 +294,7 @@ export function ProgressScreen({ session }: { session: Session }) {
     () => (exercise && data?.exerciseHistory[exercise]) || [],
     [data, exercise],
   );
-  const maxHist = Math.max(...history.map((h) => h.val), 1);
   const maxWeekly = Math.max(...(data?.weeklyVolume.map((w) => w.val) ?? [1]), 1);
-
-  const now = new Date();
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const range = `${MONTHS[now.getMonth()]} 1 - ${MONTHS[now.getMonth()]} ${monthEnd.getDate()}`;
 
   return (
     <View style={styles.screen}>
@@ -342,7 +309,7 @@ export function ProgressScreen({ session }: { session: Session }) {
         </RiseIn>
         <RiseIn delay={100}>
           <Text style={styles.title}>Progress</Text>
-          <Text style={styles.subtitle}>PRs, volume and consistency.</Text>
+          <Text style={styles.subtitle}>Your training at a glance.</Text>
         </RiseIn>
 
         {loading ? (
@@ -351,67 +318,53 @@ export function ProgressScreen({ session }: { session: Session }) {
           <Text style={styles.errorText}>Could not load progress. Pull to retry.</Text>
         ) : (
           <>
+            {/* One glance: the three numbers that matter this month */}
             <RiseIn delay={160}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>This Month</Text>
-                <Text style={styles.sectionRange}>{range}</Text>
-              </View>
-              <View style={styles.grid}>
-                <MetricCard
-                  icon={Dumbbell}
-                  value={`${data.overview.workoutsThisMonth}`}
-                  label="Workouts"
-                  change={`${data.overview.workoutsDiff >= 0 ? "+" : ""}${data.overview.workoutsDiff} vs last month`}
-                  positive={data.overview.workoutsDiff >= 0}
-                />
-                <MetricCard
-                  icon={TrendingUp}
-                  value={`${Math.round(data.overview.volumeThisMonth).toLocaleString("en-US")} kg`}
-                  label="Total Volume"
-                  change={`${data.overview.volumeUp ? "↑" : "↓"} ${data.overview.volumeDiffPct}% vs last month`}
-                  positive={data.overview.volumeUp}
-                />
-                <MetricCard
-                  icon={Trophy}
-                  value={`${data.overview.prsThisMonth}`}
-                  label="New PRs"
-                  change="This Month"
-                  positive
-                />
-                <MetricCard
-                  icon={Flame}
-                  value={data.overview.workoutsThisMonth > 0 ? "Active" : "Idle"}
-                  label="Status"
-                  change={data.overview.workoutsThisMonth > 0 ? "Keep it up" : "Start working out"}
-                  positive={data.overview.workoutsThisMonth > 0}
-                />
-              </View>
-            </RiseIn>
-
-            <RiseIn delay={220} style={styles.streakRow}>
-              <View style={styles.streakCard}>
-                <Flame size={20} color={colors.primary} />
-                <View>
-                  <Text style={styles.streakLabel}>CURRENT STREAK</Text>
-                  <Text style={styles.streakValue}>
-                    {data.overview.currentStreak} {data.overview.currentStreak === 1 ? "day" : "days"}
+              <View style={styles.statCard}>
+                <View style={styles.statCell}>
+                  <Text style={styles.statValue}>{data.overview.workoutsThisMonth}</Text>
+                  <Text style={styles.statLabel}>Workouts</Text>
+                  <Text
+                    style={[
+                      styles.statDelta,
+                      { color: data.overview.workoutsDiff >= 0 ? colors.primary : colors.destructive },
+                    ]}
+                  >
+                    {data.overview.workoutsDiff >= 0 ? "+" : ""}
+                    {data.overview.workoutsDiff} vs last month
                   </Text>
                 </View>
-              </View>
-              <View style={styles.streakCard}>
-                <Trophy size={20} color={colors.primary} />
-                <View>
-                  <Text style={styles.streakLabel}>LONGEST STREAK</Text>
-                  <Text style={styles.streakValue}>
-                    {data.overview.longestStreak} {data.overview.longestStreak === 1 ? "day" : "days"}
+                <View style={styles.statDivider} />
+                <View style={styles.statCell}>
+                  <Text style={styles.statValue}>
+                    {Math.round(data.overview.volumeThisMonth).toLocaleString("en-US")}
                   </Text>
+                  <Text style={styles.statLabel}>kg lifted</Text>
+                  <Text
+                    style={[
+                      styles.statDelta,
+                      { color: data.overview.volumeUp ? colors.primary : colors.destructive },
+                    ]}
+                  >
+                    {data.overview.volumeUp ? "↑" : "↓"} {data.overview.volumeDiffPct}% vs last month
+                  </Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statCell}>
+                  <Text style={styles.statValue}>{data.overview.currentStreak}</Text>
+                  <Text style={styles.statLabel}>
+                    {data.overview.currentStreak === 1 ? "day" : "days"} streak
+                  </Text>
+                  <Text style={styles.statDelta}>best {data.overview.longestStreak}</Text>
                 </View>
               </View>
             </RiseIn>
 
-            <RiseIn delay={280}>
+            {/* Consistency: weekly volume bars */}
+            <RiseIn delay={220}>
               <View style={styles.chartCard}>
-                <Text style={styles.chartTitle}>Weekly volume (kg)</Text>
+                <Text style={styles.chartTitle}>Weekly volume</Text>
+                <Text style={styles.chartSubHeader}>Total kg lifted per week</Text>
                 <View style={styles.barRow}>
                   {data.weeklyVolume.map((w, i) => (
                     <View key={w.w} style={styles.barCol}>
@@ -434,77 +387,19 @@ export function ProgressScreen({ session }: { session: Session }) {
               </View>
             </RiseIn>
 
-            {data.prs.length > 0 && (
-              <RiseIn delay={340}>
-                <Text style={styles.sectionTitle}>Recent PRs</Text>
-                {data.prs.slice(0, 5).map((pr) => (
-                  <View key={`${pr.ex}-${pr.date}`} style={styles.prRow}>
-                    <Trophy size={16} color={colors.primary} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.prEx}>{pr.ex}</Text>
-                      <Text style={styles.prDate}>
-                        {new Date(pr.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </Text>
-                    </View>
-                    <Text style={styles.prWeight}>{pr.weight}kg</Text>
-                    {pr.prev > 0 && <Text style={styles.prPrev}>was {pr.prev}</Text>}
-                  </View>
-                ))}
-              </RiseIn>
-            )}
-
-            {data.prBoard.length > 0 && (
-              <RiseIn delay={380}>
-                <Text style={styles.sectionTitle}>PR Board</Text>
-                <Text style={styles.boardSub}>All-time best on every lift</Text>
-                <View style={styles.boardGrid}>
-                  {data.prBoard.slice(0, 8).map((p) => (
-                    <View key={p.ex} style={styles.boardCell}>
-                      <Text style={styles.boardWeight}>{p.weight}kg</Text>
-                      <Text style={styles.boardEx} numberOfLines={1}>{p.ex}</Text>
-                      <Text style={styles.boardDate}>
-                        {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </RiseIn>
-            )}
-
+            {/* Strength: one exercise, one clean line */}
             {history.length > 1 && exercise && (
-              <RiseIn delay={400}>
+              <RiseIn delay={280}>
                 <View style={styles.chartCard}>
-                  <Pressable onPress={() => setPickerOpen(!pickerOpen)}>
-                    <Text style={styles.chartTitle}>
-                      {exercise} <ChevronDown size={14} color={colors.mutedForeground} />
-                    </Text>
-                  </Pressable>
-                  {pickerOpen && (
-                    <View style={styles.picker}>
-                      {data.uniqueExercises.slice(0, 12).map((ex) => (
-                        <Pressable
-                          key={ex}
-                          onPress={() => {
-                            setExercise(ex);
-                            setPickerOpen(false);
-                          }}
-                          style={styles.pickerItem}
-                        >
-                          <Text
-                            style={[
-                              styles.pickerItemText,
-                              ex === exercise && { color: colors.primary },
-                            ]}
-                          >
-                            {ex}
-                          </Text>
-                        </Pressable>
-                      ))}
+                  <Pressable style={styles.pickerRow} onPress={() => setPickerOpen(true)}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pickerLabel}>EXERCISE</Text>
+                      <Text style={styles.pickerValue} numberOfLines={1}>
+                        {exercise}
+                      </Text>
                     </View>
-                  )}
+                    <ChevronDown size={16} color={colors.mutedForeground} />
+                  </Pressable>
                   <View style={styles.metricToggle}>
                     {(["oneRm", "weight"] as const).map((m) => (
                       <Pressable
@@ -529,9 +424,36 @@ export function ProgressScreen({ session }: { session: Session }) {
                   />
                   <Text style={styles.chartSub}>
                     {metric === "oneRm"
-                      ? "Estimated one-rep max per session (Epley)"
+                      ? "Estimated one-rep max per session"
                       : "Top weight per session (kg)"}
                   </Text>
+                </View>
+              </RiseIn>
+            )}
+
+            {/* Personal records: one clean list */}
+            {data.prBoard.length > 0 && (
+              <RiseIn delay={340}>
+                <View style={styles.chartCard}>
+                  <Text style={styles.chartTitle}>Personal records</Text>
+                  <Text style={styles.chartSubHeader}>All-time best on every lift</Text>
+                  {data.prBoard.slice(0, 8).map((p, i) => (
+                    <View key={p.ex} style={[styles.prListRow, i > 0 && styles.prListRowBorder]}>
+                      <Trophy size={14} color={colors.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.prListEx} numberOfLines={1}>
+                          {p.ex}
+                        </Text>
+                        <Text style={styles.prListMeta}>
+                          {new Date(p.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </Text>
+                      </View>
+                      <Text style={styles.prListWeight}>{p.weight} kg</Text>
+                    </View>
+                  ))}
                 </View>
               </RiseIn>
             )}
@@ -550,6 +472,36 @@ export function ProgressScreen({ session }: { session: Session }) {
           </>
         )}
       </ScrollView>
+
+      {/* Exercise picker */}
+      <Modal visible={pickerOpen} transparent animationType="fade">
+        <Pressable style={styles.pickerBackdrop} onPress={() => setPickerOpen(false)}>
+          <View style={styles.pickerSheet}>
+            <Text style={styles.pickerTitle}>Choose exercise</Text>
+            <ScrollView style={{ maxHeight: 380 }}>
+              {(data?.uniqueExercises ?? []).map((ex) => (
+                <Pressable
+                  key={ex}
+                  onPress={() => {
+                    setExercise(ex);
+                    setPickerOpen(false);
+                  }}
+                  style={styles.pickerOption}
+                >
+                  <Text
+                    style={[
+                      styles.pickerOptionText,
+                      ex === exercise && { color: colors.primary },
+                    ]}
+                  >
+                    {ex}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -739,32 +691,72 @@ const styles = StyleSheet.create({
   },
   boardWeight: { color: colors.primary, fontSize: 16, fontWeight: "800" },
   boardEx: { color: colors.foreground, fontSize: 11, fontWeight: "600", marginTop: 2 },
-  boardDate: { color: colors.mutedForeground, fontSize: 10, marginTop: 2 },
-  prRow: {
+  statCard: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
     backgroundColor: colors.card,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 8,
+    borderRadius: 24,
+    paddingVertical: 18,
+    marginTop: 18,
   },
-  prTrophy: { fontSize: 20 },
-  prEx: { color: colors.foreground, fontSize: 14, fontWeight: "700" },
-  prDate: { color: colors.mutedForeground, fontSize: 11, marginTop: 1 },
-  prWeight: { color: colors.primary, fontSize: 16, fontWeight: "800" },
-  prPrev: { color: colors.mutedForeground, fontSize: 11 },
-  pickerHint: { color: colors.mutedForeground, fontSize: 14 },
-  picker: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 6,
+  statCell: { flex: 1, alignItems: "center", gap: 2 },
+  statValue: {
+    color: colors.foreground,
+    fontSize: 22,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
   },
-  pickerItem: { paddingVertical: 8 },
-  pickerItemText: { color: colors.foreground, fontSize: 14 },
+  statLabel: { color: colors.mutedForeground, fontSize: 11, fontWeight: "600" },
+  statDelta: { color: colors.mutedForeground, fontSize: 9, marginTop: 3, textAlign: "center" },
+  statDivider: { width: 1, backgroundColor: colors.border, marginVertical: 4 },
+  chartSubHeader: { color: colors.mutedForeground, fontSize: 12, marginTop: 2, marginBottom: 4 },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginBottom: 12,
+  },
+  pickerLabel: {
+    color: colors.mutedForeground,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  pickerValue: { color: colors.foreground, fontSize: 15, fontWeight: "700" },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    padding: 28,
+  },
+  pickerSheet: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 20,
+  },
+  pickerTitle: { color: colors.foreground, fontSize: 17, fontWeight: "800", marginBottom: 8 },
+  pickerOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  pickerOptionText: { color: colors.foreground, fontSize: 14 },
+  prListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 11,
+  },
+  prListRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  prListEx: { color: colors.foreground, fontSize: 14, fontWeight: "600" },
+  prListMeta: { color: colors.mutedForeground, fontSize: 11, marginTop: 1 },
+  prListWeight: { color: colors.primary, fontSize: 15, fontWeight: "800" },
   empty: {
     marginTop: 48,
     borderWidth: 1,
