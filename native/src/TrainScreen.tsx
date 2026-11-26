@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AnimatedPressable } from "./ui";
 import type { Session } from "@supabase/supabase-js";
 import { colors, PrimaryButton, RiseIn, Wordmark } from "./ui";
 import { ArrowRight, Check, Sparkles } from "lucide-react-native";
@@ -133,11 +134,11 @@ export function TrainScreen({
         </RiseIn>
 
         <RiseIn delay={200} style={{ marginTop: 20 }}>
-          <Pressable style={styles.coachRow} onPress={onOpenCoach}>
+          <AnimatedPressable style={styles.coachRow} onPress={onOpenCoach}>
             <Sparkles size={16} color={colors.primary} />
             <Text style={styles.coachRowText}>Ask IronCoach about your training</Text>
             <ArrowRight size={16} color={colors.mutedForeground} />
-          </Pressable>
+          </AnimatedPressable>
         </RiseIn>
 
         {days === null ? (
@@ -178,7 +179,7 @@ export function TrainScreen({
             <Text style={styles.routinesTitle}>Your routines</Text>
             <View style={[styles.card, { marginTop: 12, padding: 0 }]}>
               {days.map((d, i) => (
-                <Pressable
+                <AnimatedPressable
                   key={d.id}
                   onPress={() => onOpenDay(d)}
                   style={[styles.routineRow, i > 0 && styles.routineRowBorder]}
@@ -192,7 +193,7 @@ export function TrainScreen({
                         (d.subtitle || "")}
                     </Text>
                   </View>
-                </Pressable>
+                </AnimatedPressable>
               ))}
             </View>
           </RiseIn>

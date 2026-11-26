@@ -64,6 +64,48 @@ export function Wordmark({ size = 22 }: { size?: number }) {
   );
 }
 
+const AnimatedPressableBase = Animated.createAnimatedComponent(Pressable);
+
+// Pressable with a springy press-down: the whole app feels alive when
+// everything you touch responds with a quick scale animation.
+export function AnimatedPressable({
+  onPress,
+  disabled,
+  style,
+  children,
+  accessibilityLabel,
+  hitSlop,
+}: {
+  onPress?: () => void;
+  disabled?: boolean;
+  style?: object | object[];
+  children: React.ReactNode;
+  accessibilityLabel?: string;
+  hitSlop?: number;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const pressIn = () => {
+    Animated.spring(scale, { toValue: 0.965, useNativeDriver: true, speed: 60, bounciness: 0 }).start();
+  };
+  const pressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 24, bounciness: 6 }).start();
+  };
+  const flat = Array.isArray(style) ? style : [style];
+  return (
+    <AnimatedPressableBase
+      onPress={onPress}
+      onPressIn={pressIn}
+      onPressOut={pressOut}
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={hitSlop}
+      style={[...flat, { transform: [{ scale }] }]}
+    >
+      {children}
+    </AnimatedPressableBase>
+  );
+}
+
 export function PrimaryButton({
   label,
   onPress,
@@ -74,17 +116,9 @@ export function PrimaryButton({
   disabled?: boolean;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        ui.primaryButton,
-        pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-        disabled && { opacity: 0.4 },
-      ]}
-    >
+    <AnimatedPressable onPress={onPress} disabled={disabled} style={[ui.primaryButton, disabled ? { opacity: 0.4 } : {}]}>
       <Text style={ui.primaryButtonText}>{label}</Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

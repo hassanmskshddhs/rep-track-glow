@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   BackHandler,
   KeyboardAvoidingView,
   Modal,
@@ -21,7 +22,7 @@ import * as AuthSession from "expo-auth-session";
 WebBrowser.maybeCompleteAuthSession();
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/supabase";
-import { colors, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
+import { AnimatedPressable, colors, PrimaryButton, RiseIn, Wordmark } from "./src/ui";
 import { TrainScreen } from "./src/TrainScreen";
 import { LoggerScreen } from "./src/LoggerScreen";
 import { HistoryScreen } from "./src/HistoryScreen";
@@ -146,20 +147,22 @@ function AuthScreen({
         style={styles.flex}
       >
         <View style={styles.authBody}>
+          {/* soft brand glow behind the header */}
+          <View style={styles.authGlow} pointerEvents="none" />
           <RiseIn>
-            <Wordmark size={18} />
+            <Wordmark size={20} />
           </RiseIn>
-          <RiseIn delay={100} style={{ marginTop: 36 }}>
+          <RiseIn delay={100} style={{ marginTop: 40 }}>
             <Text style={styles.authTitle}>
-              {mode === "signin" ? "Welcome Back" : "Create Account"}
+              {mode === "signin" ? "Welcome\nBack" : "Create\nAccount"}
             </Text>
             <Text style={styles.authSub}>
               {mode === "signin"
-                ? "Sign in to continue logging."
+                ? "Sign in to pick up right where you left off."
                 : "Start tracking your lifts in seconds."}
             </Text>
           </RiseIn>
-          <RiseIn delay={200} style={styles.card}>
+          <RiseIn delay={220} style={styles.authForm}>
             <View style={styles.fieldWrap}>
               <Mail size={16} color={colors.mutedForeground} />
               <TextInput
@@ -195,12 +198,12 @@ function AuthScreen({
               <Text style={styles.dividerText}>or continue with</Text>
               <View style={styles.dividerLine} />
             </View>
-            <Pressable style={styles.googleBtn} onPress={() => void googleSignIn()} disabled={googleBusy}>
+            <AnimatedPressable style={styles.googleBtn} onPress={() => void googleSignIn()} disabled={googleBusy}>
               <View style={styles.googleBadge}>
                 <Text style={styles.googleG}>G</Text>
               </View>
               <Text style={styles.googleText}>{googleBusy ? "Opening Google..." : "Continue with Google"}</Text>
-            </Pressable>
+            </AnimatedPressable>
             <Pressable
               onPress={() => {
                 setMode(mode === "signin" ? "signup" : "signin");
@@ -241,6 +244,44 @@ const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
   { key: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
+/** One tab item: the active pill fades in and every tap springs. */
+function TabItem({
+  t,
+  active,
+  onChange,
+}: {
+  t: { key: TabKey; label: string; icon: LucideIcon };
+  active: boolean;
+  onChange: (t: TabKey) => void;
+}) {
+  const anim = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(anim, { toValue: active ? 1 : 0, duration: 200, useNativeDriver: false }).start();
+  }, [active, anim]);
+  const Icon = t.icon;
+  return (
+    <AnimatedPressable
+      onPress={() => onChange(t.key)}
+      style={[
+        tabStyles.item,
+        {
+          backgroundColor: anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: ["rgba(200,242,203,0)", "rgba(200,242,203,0.10)"],
+          }),
+        },
+      ]}
+    >
+      <Icon
+        size={21}
+        color={active ? colors.primary : colors.mutedForeground}
+        strokeWidth={active ? 2.4 : 1.8}
+      />
+      <Text style={[tabStyles.label, active && { color: colors.primary }]}>{t.label}</Text>
+    </AnimatedPressable>
+  );
+}
+
 /** Bottom navigation bar with vector icons. */
 function TabBar({
   tab,
@@ -251,26 +292,9 @@ function TabBar({
 }) {
   return (
     <SafeAreaView style={tabStyles.bar}>
-      {TABS.map((t) => {
-        const active = tab === t.key;
-        const Icon = t.icon;
-        return (
-          <Pressable
-            key={t.key}
-            onPress={() => onChange(t.key)}
-            style={[tabStyles.item, active && tabStyles.itemActive]}
-          >
-            <Icon
-              size={21}
-              color={active ? colors.primary : colors.mutedForeground}
-              strokeWidth={active ? 2.4 : 1.8}
-            />
-            <Text style={[tabStyles.label, active && { color: colors.primary }]}>
-              {t.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+      {TABS.map((t) => (
+        <TabItem key={t.key} t={t} active={tab === t.key} onChange={onChange} />
+      ))}
     </SafeAreaView>
   );
 }
@@ -314,6 +338,32 @@ const tabStyles = StyleSheet.create({
   itemActive: { backgroundColor: "#c8f2cb1a" },
   label: { color: colors.mutedForeground, fontSize: 10, fontWeight: "700" },
 });
+
+/** Launch splash: wordmark fades in, brand bar pulses while we restore. */
+function SplashMark() {
+  const pulse = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 650, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.3, duration: 650, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <View style={{ alignItems: "center" }}>
+      <RiseIn>
+        <Wordmark size={32} />
+      </RiseIn>
+      <Animated.View style={[styles.splashBar, { opacity: pulse }]} />
+      <RiseIn delay={220}>
+        <Text style={styles.splashTag}>YOUR NEXT REP</Text>
+      </RiseIn>
+    </View>
+  );
+}
 
 function AppInner() {
   const [screen, setScreen] = useState<"welcome" | "auth">("welcome");
@@ -394,12 +444,7 @@ function AppInner() {
     return (
       <View style={[styles.flex, { justifyContent: "center", alignItems: "center" }]}>
         <StatusBar style="light" />
-        <RiseIn>
-          <Wordmark size={30} />
-        </RiseIn>
-        <RiseIn delay={200} style={{ marginTop: 14 }}>
-          <Text style={styles.splashTag}>YOUR NEXT REP</Text>
-        </RiseIn>
+        <SplashMark />
       </View>
     );
   }
@@ -514,13 +559,27 @@ const styles = StyleSheet.create({
   },
   footer: { paddingHorizontal: 24, paddingBottom: 24 },
   authBody: { flex: 1, paddingHorizontal: 24, paddingTop: 24 },
+  authGlow: {
+    position: "absolute",
+    top: -70,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: colors.brand,
+    opacity: 0.07,
+  },
   authTitle: {
     color: colors.foreground,
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    lineHeight: 40,
   },
-  authSub: { color: colors.mutedForeground, fontSize: 14, marginTop: 4 },
+  authSub: { color: colors.mutedForeground, fontSize: 14, marginTop: 8, lineHeight: 20 },
+  authForm: {
+    marginTop: 30,
+  },
   card: {
     marginTop: 24,
     backgroundColor: colors.card,
@@ -580,6 +639,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 3,
+    marginTop: 16,
+  },
+  splashBar: {
+    width: 64,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.brand,
+    marginTop: 20,
   },
 });
 
