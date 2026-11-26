@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { runTopBackHandler, useBackHandler } from "./src/back";
 import { Apple, CalendarDays, Dumbbell, ScrollText, Settings as SettingsIcon, TrendingUp } from "lucide-react-native";
 import { StatusBar } from "expo-status-bar";
@@ -219,7 +220,7 @@ const tabStyles = StyleSheet.create({
   label: { color: colors.mutedForeground, fontSize: 10, fontWeight: "700" },
 });
 
-export default function App() {
+function AppInner() {
   const [screen, setScreen] = useState<"welcome" | "auth">("welcome");
   const [session, setSession] = useState<Session | null>(null);
   const [restoring, setRestoring] = useState(true);
@@ -280,6 +281,8 @@ export default function App() {
       .catch(() => setOnboarded(true));
   }, [session]);
 
+  const insets = useSafeAreaInsets();
+
   if (restoring || (session && onboarded === null)) {
     return (
       <View style={[styles.flex, { justifyContent: "center" }]}>
@@ -289,7 +292,7 @@ export default function App() {
   }
 
   return (
-    <View style={styles.flex}>
+    <View style={[styles.flex, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <StatusBar style="light" />
       {session && editingSplit ? (
         <SplitEditorScreen
@@ -410,3 +413,11 @@ const styles = StyleSheet.create({
   backLink: { paddingVertical: 16, alignItems: "center" },
   errorText: { color: colors.destructive, fontSize: 13, marginTop: 12 },
 });
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppInner />
+    </SafeAreaProvider>
+  );
+}

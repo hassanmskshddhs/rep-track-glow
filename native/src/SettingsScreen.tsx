@@ -14,7 +14,15 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 import { colors, RiseIn, Wordmark } from "./ui";
-import { Check, Download, Mail, Shield, Sparkles, Upload, User } from "lucide-react-native";
+import {
+  Check,
+  ChevronRight,
+  Download,
+  LogOut,
+  Shield,
+  Sparkles,
+  Upload,
+} from "lucide-react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
@@ -33,6 +41,9 @@ type LocalProfile = {
 
 const EMPTY: LocalProfile = { firstName: "", displayName: "", age: "", weight: "", height: "" };
 
+const hasProfileData = (p: LocalProfile) =>
+  !!(p.firstName.trim() || p.displayName.trim() || p.age.trim() || p.weight.trim() || p.height.trim());
+
 export function SettingsScreen({
   session,
   onSignOut,
@@ -41,6 +52,7 @@ export function SettingsScreen({
   onSignOut: () => void;
 }) {
   const [draft, setDraft] = useState<LocalProfile>(EMPTY);
+  const [editingProfile, setEditingProfile] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
   const [coachEnabled, setCoachEnabled] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -100,7 +112,7 @@ export function SettingsScreen({
     try {
       const { csv, sessions, sets } = await exportHistoryCsv(session.user.id);
       if (sets === 0) {
-        setExportMsg("No logged sets yet — finish a workout first.");
+        setExportMsg("No logged sets yet - finish a workout first.");
         return;
       }
       const uri = `${FileSystem.cacheDirectory}ironlog-history.csv`;
@@ -112,7 +124,7 @@ export function SettingsScreen({
         setExportMsg("Sharing is not available on this device.");
       }
     } catch {
-      setExportMsg("Export failed — check your connection and try again.");
+      setExportMsg("Export failed - check your connection and try again.");
     } finally {
       setExporting(false);
     }
@@ -133,9 +145,15 @@ export function SettingsScreen({
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(PROFILE_KEY);
-        if (raw) setDraft({ ...EMPTY, ...(JSON.parse(raw) as Partial<LocalProfile>) });
+        if (raw) {
+          const loaded = { ...EMPTY, ...(JSON.parse(raw) as Partial<LocalProfile>) };
+          setDraft(loaded);
+          setEditingProfile(!hasProfileData(loaded));
+        } else {
+          setEditingProfile(true);
+        }
       } catch {
-        /* keep empty */
+        setEditingProfile(true);
       }
     })();
   }, []);
@@ -144,7 +162,8 @@ export function SettingsScreen({
     try {
       await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(draft));
       setSavedTick(true);
-      setTimeout(() => setSavedTick(false), 2000);
+      setEditingProfile(false);
+      setTimeout(() => setSavedTick(false), 2500);
     } catch {
       /* ignore */
     }
@@ -160,6 +179,12 @@ export function SettingsScreen({
     draft.displayName.trim() ||
     draft.firstName.trim() ||
     (fullName ? fullName.split(/\s+/)[0] : "Athlete");
+  const initial = greet.charAt(0).toUpperCase();
+
+  const profileChips: string[] = [];
+  if (draft.age.trim()) profileChips.push(`${draft.age.trim()} yrs`);
+  if (draft.weight.trim()) profileChips.push(`${draft.weight.trim()} kg`);
+  if (draft.height.trim()) profileChips.push(`${draft.height.trim()} cm`);
 
   return (
     <KeyboardAvoidingView
@@ -170,14 +195,14 @@ export function SettingsScreen({
         <RiseIn>
           <Wordmark size={20} />
         </RiseIn>
-        <RiseIn delay={100}>
+        <RiseIn delay={80}>
           <Text style={styles.title}>Settings</Text>
         </RiseIn>
 
-        <RiseIn delay={160}>
+        <RiseIn delay={140}>
           <View style={styles.accountCard}>
             <View style={styles.avatar}>
-              <User size={22} color={colors.primary} />
+              <Text style={styles.avatarInitial}>{initial}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.accountName} numberOfLines={1}>
@@ -190,86 +215,113 @@ export function SettingsScreen({
           </View>
         </RiseIn>
 
-        <RiseIn delay={220}>
-          <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Profile</Text>
-              <Text style={styles.sectionBadge}>SAVED ON DEVICE</Text>
-            </View>
-            <Text style={styles.sectionSub}>
-              Personal info stays on this device - used to greet you across the app.
-            </Text>
-
-            <Text style={styles.label}>First name</Text>
-            <TextInput
-              style={styles.input}
-              value={draft.firstName}
-              onChangeText={(v) => update("firstName", v)}
-              placeholder="Alex"
-              placeholderTextColor={colors.mutedForeground}
-            />
-            <Text style={styles.label}>Display name</Text>
-            <TextInput
-              style={styles.input}
-              value={draft.displayName}
-              onChangeText={(v) => update("displayName", v)}
-              placeholder="Used in welcome message"
-              placeholderTextColor={colors.mutedForeground}
-            />
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Age</Text>
+        <RiseIn delay={200}>
+          <Text style={styles.groupLabel}>PROFILE</Text>
+          <View style={styles.group}>
+            {editingProfile ? (
+              <View style={styles.groupPadded}>
+                <Text style={styles.label}>First name</Text>
                 <TextInput
                   style={styles.input}
-                  value={draft.age}
-                  onChangeText={(v) => update("age", v)}
-                  placeholder="years"
+                  value={draft.firstName}
+                  onChangeText={(v) => update("firstName", v)}
+                  placeholder="e.g. Hassan"
+                  placeholderTextColor={colors.mutedForeground}
+                />
+                <Text style={styles.label}>Display name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={draft.displayName}
+                  onChangeText={(v) => update("displayName", v)}
+                  placeholder="Used in welcome message"
+                  placeholderTextColor={colors.mutedForeground}
+                />
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Age</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={draft.age}
+                      onChangeText={(v) => update("age", v)}
+                      placeholder="years"
+                      placeholderTextColor={colors.mutedForeground}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Weight (kg)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={draft.weight}
+                      onChangeText={(v) => update("weight", v)}
+                      placeholder="e.g. 78"
+                      placeholderTextColor={colors.mutedForeground}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+                <Text style={styles.label}>Height (cm)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={draft.height}
+                  onChangeText={(v) => update("height", v)}
+                  placeholder="e.g. 178"
                   placeholderTextColor={colors.mutedForeground}
                   keyboardType="number-pad"
                 />
+                <Pressable onPress={save} style={styles.saveButton}>
+                  <Text style={styles.saveButtonText}>Save profile</Text>
+                </Pressable>
+                {hasProfileData(draft) ? (
+                  <Pressable onPress={() => setEditingProfile(false)} style={styles.cancelEdit}>
+                    <Text style={styles.cancelEditText}>Cancel</Text>
+                  </Pressable>
+                ) : null}
+                <Text style={styles.onDeviceNote}>Stored on this device only.</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Weight (kg)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={draft.weight}
-                  onChangeText={(v) => update("weight", v)}
-                  placeholder="e.g. 78"
-                  placeholderTextColor={colors.mutedForeground}
-                  keyboardType="decimal-pad"
-                />
+            ) : (
+              <View style={styles.groupPadded}>
+                <View style={styles.profileHeaderRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.profileName}>{greet}</Text>
+                    <Text style={styles.profileSavedAs}>
+                      {savedTick ? "Saved" : "On this device"}
+                    </Text>
+                  </View>
+                  {savedTick ? (
+                    <Check size={16} color={colors.primary} strokeWidth={3} />
+                  ) : null}
+                  <Pressable onPress={() => setEditingProfile(true)} style={styles.editButton} hitSlop={6}>
+                    <Text style={styles.editButtonText}>Edit</Text>
+                  </Pressable>
+                </View>
+                {profileChips.length > 0 ? (
+                  <View style={styles.chipsRow}>
+                    {profileChips.map((c) => (
+                      <View key={c} style={styles.chip}>
+                        <Text style={styles.chipText}>{c}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.profileEmpty}>No body stats added yet.</Text>
+                )}
               </View>
-            </View>
-            <Text style={styles.label}>Height (cm)</Text>
-            <TextInput
-              style={styles.input}
-              value={draft.height}
-              onChangeText={(v) => update("height", v)}
-              placeholder="e.g. 178"
-              placeholderTextColor={colors.mutedForeground}
-              keyboardType="number-pad"
-            />
-
-            <Pressable onPress={save} style={styles.saveButton}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                {savedTick ? <Check size={15} color={colors.primaryForeground} strokeWidth={3} /> : null}
-                <Text style={styles.saveButtonText}>{savedTick ? "Saved" : "Save profile"}</Text>
-              </View>
-            </Pressable>
+            )}
           </View>
         </RiseIn>
 
         <RiseIn delay={240}>
-          <View style={styles.section}>
-            <View style={styles.coachRow}>
+          <Text style={styles.groupLabel}>PREFERENCES</Text>
+          <View style={styles.group}>
+            <View style={styles.rowItem}>
+              <View style={[styles.rowIcon, { backgroundColor: "#ff845922" }]}>
+                <Sparkles size={16} color={colors.brand} />
+              </View>
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Sparkles size={13} color={colors.brand} />
-                  <Text style={styles.sectionLabel}>COACH'S CALL</Text>
-                </View>
-                <Text style={styles.sectionSub}>
-                  Weight suggestions with the reason behind them, shown while you log. Fully
-                  optional, your numbers are only ever suggestions until you tap to use them.
+                <Text style={styles.rowTitle}>Coach's Call</Text>
+                <Text style={styles.rowSub}>
+                  Weight suggestions with the reason behind them, while you log.
                 </Text>
               </View>
               <Switch
@@ -282,52 +334,58 @@ export function SettingsScreen({
           </View>
         </RiseIn>
 
-        <RiseIn delay={260}>
-          <View style={styles.section}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Download size={13} color={colors.mutedForeground} />
-              <Text style={styles.sectionLabel}>YOUR DATA</Text>
-            </View>
-            <Text style={styles.sectionSub}>
-              Every set you ever logged, as a CSV you can open anywhere. No lock-in, no paywall
-              on your own history.
-            </Text>
-            <Pressable onPress={() => void exportCsv()} style={styles.exportButton} disabled={exporting}>
-              <Text style={styles.exportButtonText}>
-                {exporting ? "Preparing..." : "Export history (CSV)"}
-              </Text>
-            </Pressable>
-            {exportMsg ? <Text style={styles.exportMsg}>{exportMsg}</Text> : null}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 18 }}>
-              <Upload size={13} color={colors.mutedForeground} />
-              <Text style={styles.sectionLabel}>BRING YOUR HISTORY IN</Text>
-            </View>
-            <Text style={styles.sectionSub}>
-              Switching from another app or a spreadsheet? Import the same CSV format IronLog
-              exports. Workouts already in your history are skipped, never duplicated.
-            </Text>
-            <Pressable onPress={() => void pickImport()} style={styles.exportButton}>
-              <Text style={styles.exportButtonText}>Import history (CSV)</Text>
-            </Pressable>
-            {importMsg ? <Text style={styles.exportMsg}>{importMsg}</Text> : null}
-          </View>
-        </RiseIn>
-
         <RiseIn delay={280}>
-          <View style={styles.section}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Shield size={13} color={colors.mutedForeground} />
-              <Text style={styles.sectionLabel}>PRIVACY</Text>
-            </View>
-            <Text style={styles.sectionSub}>
-              Your splits and logs are private to your account. Profile info is stored only on
-              this device.
-            </Text>
+          <Text style={styles.groupLabel}>YOUR DATA</Text>
+          <View style={styles.group}>
+            <Pressable onPress={() => void exportCsv()} disabled={exporting} style={styles.rowItem}>
+              <View style={styles.rowIcon}>
+                <Download size={16} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>{exporting ? "Preparing..." : "Export history"}</Text>
+                <Text style={styles.rowSub}>
+                  {exportMsg ?? "Every set you ever logged, as a CSV. Yours forever."}
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable onPress={() => void pickImport()} style={styles.rowItem}>
+              <View style={styles.rowIcon}>
+                <Upload size={16} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>Import history</Text>
+                <Text style={styles.rowSub}>
+                  {importMsg ?? "Bring a CSV in. Existing workouts are never duplicated."}
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
           </View>
         </RiseIn>
 
-        <RiseIn delay={340}>
-          <Pressable onPress={onSignOut} style={styles.signOutButton}>
+        <RiseIn delay={320}>
+          <Text style={styles.groupLabel}>ABOUT</Text>
+          <View style={styles.group}>
+            <View style={styles.rowItem}>
+              <View style={styles.rowIcon}>
+                <Shield size={16} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>Private by default</Text>
+                <Text style={styles.rowSub}>
+                  Splits and logs stay private to your account. Profile info never leaves this
+                  device.
+                </Text>
+              </View>
+            </View>
+          </View>
+        </RiseIn>
+
+        <RiseIn delay={360}>
+          <Pressable onPress={onSignOut} style={styles.signOutRow}>
+            <LogOut size={15} color={colors.destructive} />
             <Text style={styles.signOutText}>Sign out</Text>
           </Pressable>
           <Text style={styles.version}>IronLog native · v1.0.0</Text>
@@ -382,53 +440,117 @@ const styles = StyleSheet.create({
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 24,
     backgroundColor: "#c8f2cb26",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: 22 },
+  avatarInitial: { color: colors.primary, fontSize: 20, fontWeight: "800" },
   accountName: { color: colors.foreground, fontSize: 18, fontWeight: "700" },
   accountEmail: { color: colors.mutedForeground, fontSize: 12, marginTop: 3 },
-  section: {
+  groupLabel: {
+    color: colors.mutedForeground,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginTop: 26,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  group: {
     backgroundColor: colors.card,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 20,
-    padding: 20,
-    marginTop: 16,
+    overflow: "hidden",
   },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionTitle: { color: colors.foreground, fontSize: 16, fontWeight: "700" },
-  sectionBadge: {
-    color: colors.mutedForeground,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  sectionLabel: {
-    color: colors.mutedForeground,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  sectionSub: { color: colors.mutedForeground, fontSize: 12, marginTop: 8, lineHeight: 18 },
-  coachRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  exportButton: {
-    alignSelf: "flex-start",
+  groupPadded: { padding: 18 },
+  profileHeaderRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  profileName: { color: colors.foreground, fontSize: 17, fontWeight: "700" },
+  profileSavedAs: { color: colors.primary, fontSize: 11, marginTop: 3 },
+  profileEmpty: { color: colors.mutedForeground, fontSize: 13, marginTop: 12 },
+  editButton: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 9,
-    marginTop: 10,
+    paddingVertical: 7,
   },
-  exportButtonText: { color: colors.foreground, fontSize: 13, fontWeight: "700" },
-  exportMsg: { color: colors.primary, fontSize: 12, marginTop: 10 },
+  editButtonText: { color: colors.foreground, fontSize: 13, fontWeight: "700" },
+  chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
+  chip: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chipText: { color: colors.foreground, fontSize: 13, fontWeight: "600" },
+  rowItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+  },
+  rowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#c8f2cb1f",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowTitle: { color: colors.foreground, fontSize: 15, fontWeight: "700" },
+  rowSub: { color: colors.mutedForeground, fontSize: 12, marginTop: 2, lineHeight: 17 },
+  divider: { height: 1, backgroundColor: colors.border, marginLeft: 62 },
+  label: { color: colors.foreground, fontSize: 13, fontWeight: "600", marginTop: 12, marginBottom: 6 },
+  input: {
+    backgroundColor: colors.background,
+    borderColor: colors.input,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.foreground,
+    fontSize: 15,
+  },
+  row: { flexDirection: "row", gap: 12 },
+  saveButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 18,
+  },
+  saveButtonText: { color: colors.primaryForeground, fontSize: 15, fontWeight: "700" },
+  cancelEdit: { alignItems: "center", paddingVertical: 10, marginTop: 4 },
+  cancelEditText: { color: colors.mutedForeground, fontSize: 13, fontWeight: "600" },
+  onDeviceNote: {
+    color: colors.mutedForeground,
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 6,
+  },
+  signOutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 14,
+    marginTop: 28,
+  },
+  signOutText: { color: colors.destructive, fontSize: 15, fontWeight: "700" },
+  version: {
+    color: colors.mutedForeground,
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 14,
+  },
   centerBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
@@ -465,39 +587,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   centerGhostText: { color: colors.mutedForeground, fontSize: 15, fontWeight: "700" },
-  label: { color: colors.foreground, fontSize: 13, fontWeight: "600", marginTop: 14, marginBottom: 6 },
-  input: {
-    backgroundColor: colors.background,
-    borderColor: colors.input,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: colors.foreground,
-    fontSize: 15,
-  },
-  row: { flexDirection: "row", gap: 12 },
-  saveButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  saveButtonText: { color: colors.primaryForeground, fontSize: 15, fontWeight: "700" },
-  signOutButton: {
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  signOutText: { color: colors.foreground, fontSize: 15, fontWeight: "600" },
-  version: {
-    color: colors.mutedForeground,
-    fontSize: 11,
-    textAlign: "center",
-    marginTop: 16,
-  },
 });
