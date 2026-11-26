@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -214,6 +216,57 @@ function formatClock(totalSeconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+// Set completion check: springs and fills when a set is marked done.
+function DoneCheck({ done }: { done?: boolean }) {
+  const a = useRef(new Animated.Value(done ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.spring(a, {
+      toValue: done ? 1 : 0,
+      useNativeDriver: false,
+      speed: 20,
+      bounciness: 12,
+    }).start();
+  }, [done, a]);
+  return (
+    <Animated.View
+      style={{
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        borderWidth: 1.5,
+        alignItems: "center",
+        justifyContent: "center",
+        borderColor: a.interpolate({ inputRange: [0, 1], outputRange: [colors.border, colors.primary] }),
+        backgroundColor: a.interpolate({ inputRange: [0, 1], outputRange: ["rgba(200,242,203,0)", colors.primary] }),
+      }}
+    >
+      <Animated.View style={{ transform: [{ scale: a.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.3, 1] }) }] }}>
+        <Check size={14} color={done ? colors.background : colors.mutedForeground} strokeWidth={3} />
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+// Thin animated progress line under the rest bar, drains as the timer runs.
+function RestProgress({ remaining, total }: { remaining: number; total: number }) {
+  const a = useRef(new Animated.Value(1)).current;
+  const frac = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
+  useEffect(() => {
+    Animated.timing(a, { toValue: frac, duration: 300, easing: Easing.linear, useNativeDriver: false }).start();
+  }, [frac, a]);
+  return (
+    <View style={{ height: 3, backgroundColor: colors.border, borderRadius: 2, overflow: "hidden", marginBottom: 8 }}>
+      <Animated.View
+        style={{
+          height: 3,
+          backgroundColor: colors.primary,
+          width: a.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
+        }}
+      />
+    </View>
+  );
+}
+
 export function LoggerScreen({
   day,
   session,
@@ -273,6 +326,7 @@ export function LoggerScreen({
   const [restByEx, setRestByEx] = useState<Record<string, number>>({});
   const [restDeadline, setRestDeadline] = useState<number | null>(null);
   const [restRemaining, setRestRemaining] = useState(90);
+  const [restTotal, setRestTotal] = useState(90);
   const [reviewOpen, setReviewOpen] = useState(false);
   // Hardware back: close whatever sheet/dialog is open, topmost first.
   const anyOverlay = !!(
@@ -453,6 +507,7 @@ export function LoggerScreen({
       setRestFor(ex);
       setRestTarget(t);
       setRestRemaining(t);
+      setRestTotal(t);
       setRestDeadline(Date.now() + t * 1000);
     }
   };
@@ -886,12 +941,8 @@ export function LoggerScreen({
                     placeholderTextColor={colors.mutedForeground}
                     style={styles.setInput}
                   />
-                  <Pressable
-                    onPress={() => toggleSetDone(ex, idx)}
-                    hitSlop={6}
-                    style={[styles.setCheck, r.done && styles.setCheckDone]}
-                  >
-                    <Check size={14} color={r.done ? colors.background : colors.mutedForeground} strokeWidth={3} />
+                  <Pressable onPress={() => toggleSetDone(ex, idx)} hitSlop={6}>
+                    <DoneCheck done={r.done} />
                   </Pressable>
                   <Pressable onPress={() => removeSet(ex, idx)} hitSlop={8}>
                     <Text style={styles.removeSet}>×</Text>
@@ -931,6 +982,7 @@ export function LoggerScreen({
       </ScrollView>
 
       <View style={styles.restBar}>
+        {restDeadline ? <RestProgress remaining={restRemaining} total={restTotal} /> : null}
         {restDeadline ? (
           <View style={styles.restActiveRow}>
             <View style={{ flex: 1 }}>
@@ -944,6 +996,7 @@ export function LoggerScreen({
               style={styles.restButton}
               onPress={() => {
                 setRestRemaining((r) => r + 30);
+                setRestTotal((t) => t + 30);
                 setRestDeadline(restDeadline + 30000);
               }}
             >
@@ -969,6 +1022,7 @@ export function LoggerScreen({
                   onPress={() => {
                     setRestTarget(t);
                     setRestRemaining(t);
+                    setRestTotal(t);
                     setRestDeadline(Date.now() + t * 1000);
                     if (restFor) rememberRest(restFor, t);
                   }}
